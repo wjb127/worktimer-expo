@@ -1,6 +1,15 @@
 import { useCallback, useState, useMemo } from 'react';
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Modal,
+  FlatList,
+} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
 
 const MONTHS = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
@@ -15,18 +24,29 @@ const formatDuration = (seconds: number): string => {
   return `${mins}분`;
 };
 
+// 연도 옵션 생성 (현재 연도부터 5년 전까지)
+const getYearOptions = (): number[] => {
+  const currentYear = new Date().getFullYear();
+  const years: number[] = [];
+  for (let i = 0; i <= 5; i++) {
+    years.push(currentYear - i);
+  }
+  return years;
+};
+
 export default function HeatmapView() {
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [showYearPicker, setShowYearPicker] = useState(false);
   const [yearData, setYearData] = useState<Record<string, number>>({});
   const [totalDuration, setTotalDuration] = useState(0);
   const [totalDays, setTotalDays] = useState(0);
 
-  const loadYearData = async () => {
-    const today = new Date();
-    const oneYearAgo = new Date(today);
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+  const yearOptions = useMemo(() => getYearOptions(), []);
 
-    const startDate = oneYearAgo.toISOString().split('T')[0];
-    const endDate = today.toISOString().split('T')[0];
+  const loadYearData = async (year: number) => {
+    const startDate = `${year}-01-01`;
+    const endDate = `${year}-12-31`;
 
     const { data, error } = await supabase
       .from('work_sessions')
@@ -58,25 +78,24 @@ export default function HeatmapView() {
 
   useFocusEffect(
     useCallback(() => {
-      loadYearData();
-    }, [])
+      loadYearData(selectedYear);
+    }, [selectedYear])
   );
 
   const heatmapData = useMemo(() => {
-    const today = new Date();
     const weeks: { date: string; duration: number }[][] = [];
     let currentWeek: { date: string; duration: number }[] = [];
 
-    // Start from 52 weeks ago
-    const startDate = new Date(today);
-    startDate.setDate(startDate.getDate() - 364);
+    // 선택된 연도의 1월 1일부터 시작
+    const startDate = new Date(selectedYear, 0, 1);
 
-    // Align to Sunday
+    // 첫 번째 일요일로 정렬
     while (startDate.getDay() !== 0) {
       startDate.setDate(startDate.getDate() - 1);
     }
 
-    const endDate = new Date(today);
+    // 선택된 연도의 12월 31일까지
+    const endDate = new Date(selectedYear, 11, 31);
 
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
       const dateString = d.toISOString().split('T')[0];
@@ -95,7 +114,7 @@ export default function HeatmapView() {
     }
 
     return weeks;
-  }, [yearData]);
+  }, [yearData, selectedYear]);
 
   const getColor = (duration: number): string => {
     if (duration === 0) return '#EBEDF0';
@@ -113,7 +132,7 @@ export default function HeatmapView() {
       if (week.length > 0) {
         const date = new Date(week[0].date);
         const month = date.getMonth();
-        if (month !== lastMonth) {
+        if (month !== lastMonth && date.getFullYear() === selectedYear) {
           labels.push({ month: MONTHS[month], weekIndex: index });
           lastMonth = month;
         }
@@ -121,10 +140,26 @@ export default function HeatmapView() {
     });
 
     return labels;
-  }, [heatmapData]);
+  }, [heatmapData, selectedYear]);
+
+  const handleYearSelect = (year: number) => {
+    setSelectedYear(year);
+    setShowYearPicker(false);
+  };
 
   return (
     <View style={styles.container}>
+      {/* 연도 선택 드롭다운 */}
+      <View style={styles.yearSelectorContainer}>
+        <TouchableOpacity
+          style={styles.yearSelector}
+          onPress={() => setShowYearPicker(true)}
+        >
+          <Text style={styles.yearText}>{selectedYear}년</Text>
+          <Ionicons name="chevron-down" size={18} color="#007AFF" />
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
           <Text style={styles.statValue}>{formatDuration(totalDuration)}</Text>
@@ -142,41 +177,31 @@ export default function HeatmapView() {
         </View>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.heatmapContainer}>
-          <View style={styles.monthLabels}>
-            {monthLabels.map((label, index) => (
-              <Text
-                key={`month-${index}`}
-                style={[
-                  styles.monthLabel,
-                  { left: label.weekIndex * 14 },
-                ]}
-              >
-                {label.month}
+          {/* 요일 헤더 (가로) */}
+          <View style={styles.weekdayHeader}>
+            <View style={styles.monthLabelSpace} />
+            {WEEKDAYS.map((day) => (
+              <Text key={day} style={styles.weekdayLabel}>
+                {day}
               </Text>
             ))}
           </View>
 
-          <View style={styles.heatmapRow}>
-            <View style={styles.weekdayLabels}>
-              {WEEKDAYS.map((day, index) => (
-                <Text
-                  key={day}
-                  style={[
-                    styles.weekdayLabel,
-                    index % 2 === 1 && styles.hiddenLabel,
-                  ]}
-                >
-                  {index % 2 === 0 ? day : ''}
-                </Text>
-              ))}
-            </View>
+          {/* 히트맵 그리드 (세로 스크롤) */}
+          <View style={styles.heatmapGrid}>
+            {heatmapData.map((week, weekIndex) => {
+              const monthLabel = monthLabels.find((l) => l.weekIndex === weekIndex);
 
-            <View style={styles.heatmapGrid}>
-              {heatmapData.map((week, weekIndex) => (
-                <View key={`week-${weekIndex}`} style={styles.weekColumn}>
-                  {week.map((day, dayIndex) => (
+              return (
+                <View key={`week-${weekIndex}`} style={styles.weekRow}>
+                  <View style={styles.monthLabelContainer}>
+                    {monthLabel && (
+                      <Text style={styles.monthLabel}>{monthLabel.month}</Text>
+                    )}
+                  </View>
+                  {week.map((day) => (
                     <View
                       key={day.date}
                       style={[
@@ -185,9 +210,15 @@ export default function HeatmapView() {
                       ]}
                     />
                   ))}
+                  {week.length < 7 &&
+                    Array(7 - week.length)
+                      .fill(null)
+                      .map((_, i) => (
+                        <View key={`empty-${i}`} style={styles.emptyCell} />
+                      ))}
                 </View>
-              ))}
-            </View>
+              );
+            })}
           </View>
 
           <View style={styles.legend}>
@@ -207,11 +238,54 @@ export default function HeatmapView() {
       </ScrollView>
 
       <View style={styles.infoSection}>
-        <Text style={styles.infoTitle}>최근 1년 업무 기록</Text>
+        <Text style={styles.infoTitle}>{selectedYear}년 업무 기록</Text>
         <Text style={styles.infoText}>
           색상이 진할수록 해당 날짜에 더 많은 시간을 일했습니다.
         </Text>
       </View>
+
+      {/* 연도 선택 모달 */}
+      <Modal
+        visible={showYearPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowYearPicker(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowYearPicker(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>연도 선택</Text>
+            <FlatList
+              data={yearOptions}
+              keyExtractor={(item) => item.toString()}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.yearOption,
+                    item === selectedYear && styles.yearOptionSelected,
+                  ]}
+                  onPress={() => handleYearSelect(item)}
+                >
+                  <Text
+                    style={[
+                      styles.yearOptionText,
+                      item === selectedYear && styles.yearOptionTextSelected,
+                    ]}
+                  >
+                    {item}년
+                  </Text>
+                  {item === selectedYear && (
+                    <Ionicons name="checkmark" size={20} color="#007AFF" />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -221,10 +295,30 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  yearSelectorContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  yearSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#F0F0F0',
+    borderRadius: 8,
+  },
+  yearText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#007AFF',
+    marginRight: 4,
+  },
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: 20,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
   },
@@ -244,52 +338,51 @@ const styles = StyleSheet.create({
   heatmapContainer: {
     padding: 16,
   },
-  monthLabels: {
-    height: 20,
-    position: 'relative',
-    marginLeft: 30,
+  weekdayHeader: {
+    flexDirection: 'row',
     marginBottom: 4,
   },
+  monthLabelSpace: {
+    width: 40,
+  },
+  weekdayLabel: {
+    width: 14,
+    marginHorizontal: 1,
+    fontSize: 11,
+    color: '#666',
+    textAlign: 'center',
+  },
+  heatmapGrid: {
+    flexDirection: 'column',
+  },
+  weekRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  monthLabelContainer: {
+    width: 40,
+  },
   monthLabel: {
-    position: 'absolute',
     fontSize: 11,
     color: '#666',
   },
-  heatmapRow: {
-    flexDirection: 'row',
-  },
-  weekdayLabels: {
-    width: 24,
-    marginRight: 4,
-  },
-  weekdayLabel: {
-    height: 12,
-    fontSize: 10,
-    color: '#666',
-    textAlign: 'right',
-    paddingRight: 4,
-  },
-  hiddenLabel: {
-    opacity: 0,
-  },
-  heatmapGrid: {
-    flexDirection: 'row',
-  },
-  weekColumn: {
-    marginRight: 2,
-  },
   dayCell: {
-    width: 12,
-    height: 12,
+    width: 14,
+    height: 14,
     borderRadius: 2,
-    marginBottom: 2,
+    marginHorizontal: 1,
+  },
+  emptyCell: {
+    width: 14,
+    height: 14,
+    marginHorizontal: 1,
   },
   legend: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    marginTop: 8,
-    marginLeft: 30,
+    marginTop: 16,
   },
   legendText: {
     fontSize: 11,
@@ -316,5 +409,43 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    width: '70%',
+    maxHeight: '50%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  yearOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  yearOptionSelected: {
+    backgroundColor: '#F0F8FF',
+  },
+  yearOptionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  yearOptionTextSelected: {
+    color: '#007AFF',
+    fontWeight: '600',
   },
 });
