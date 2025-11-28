@@ -234,29 +234,63 @@ export default function CalendarView() {
       </View>
 
       {selectedDate && (
-        <View style={styles.sessionList}>
+        <View style={styles.timelineContainer}>
           <Text style={styles.sessionListTitle}>
             {selectedDate} 기록 ({sessions.length}개)
           </Text>
-          {sessions.length === 0 ? (
-            <Text style={styles.noSessions}>기록이 없습니다</Text>
-          ) : (
-            <FlatList
-              data={sessions}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <View style={styles.sessionItem}>
-                  <View style={styles.sessionTime}>
-                    <Text style={styles.sessionTimeText}>
-                      {formatTime(item.start_time)} - {formatTime(item.end_time!)}
-                    </Text>
-                  </View>
-                  <Text style={styles.sessionDuration}>
-                    {formatDuration(item.duration)}
-                  </Text>
+          <View style={styles.timeline}>
+            {Array.from({ length: 24 }, (_, hour) => (
+              <View key={hour} style={styles.timelineRow}>
+                <Text style={styles.timelineHour}>{String(hour).padStart(2, '0')}</Text>
+                <View style={styles.timelineSlot}>
+                  {sessions.map((session) => {
+                    const startDate = new Date(session.start_time);
+                    const endDate = new Date(session.end_time!);
+                    const startHour = startDate.getHours();
+                    const startMin = startDate.getMinutes();
+                    const endHour = endDate.getHours();
+                    const endMin = endDate.getMinutes();
+
+                    // 이 시간대에 세션이 포함되는지 확인
+                    const sessionStartInMinutes = startHour * 60 + startMin;
+                    const sessionEndInMinutes = endHour * 60 + endMin;
+                    const slotStart = hour * 60;
+                    const slotEnd = (hour + 1) * 60;
+
+                    if (sessionEndInMinutes <= slotStart || sessionStartInMinutes >= slotEnd) {
+                      return null;
+                    }
+
+                    // 이 시간대 내에서의 시작/끝 위치 계산 (0-100%)
+                    const blockStart = Math.max(0, ((sessionStartInMinutes - slotStart) / 60) * 100);
+                    const blockEnd = Math.min(100, ((sessionEndInMinutes - slotStart) / 60) * 100);
+                    const blockWidth = blockEnd - blockStart;
+
+                    return (
+                      <View
+                        key={session.id + '-' + hour}
+                        style={[
+                          styles.timelineBlock,
+                          {
+                            left: `${blockStart}%`,
+                            width: `${blockWidth}%`,
+                          },
+                        ]}
+                      />
+                    );
+                  })}
                 </View>
-              )}
-            />
+              </View>
+            ))}
+          </View>
+          {sessions.length > 0 && (
+            <View style={styles.sessionSummary}>
+              {sessions.map((session) => (
+                <Text key={session.id} style={styles.sessionSummaryText}>
+                  {formatTime(session.start_time)} - {formatTime(session.end_time!)} ({formatDuration(session.duration)})
+                </Text>
+              ))}
+            </View>
           )}
         </View>
       )}
@@ -347,7 +381,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 2,
   },
-  sessionList: {
+  timelineContainer: {
     padding: 16,
     borderTopWidth: 1,
     borderTopColor: '#E5E5E5',
@@ -357,30 +391,49 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 12,
   },
-  noSessions: {
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 20,
+  timeline: {
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    borderRadius: 8,
+    overflow: 'hidden',
   },
-  sessionItem: {
+  timelineRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    height: 24,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
-  sessionTime: {
+  timelineHour: {
+    width: 28,
+    fontSize: 10,
+    color: '#999',
+    textAlign: 'center',
+    backgroundColor: '#FAFAFA',
+  },
+  timelineSlot: {
     flex: 1,
+    height: '100%',
+    backgroundColor: '#fff',
+    position: 'relative',
   },
-  sessionTimeText: {
-    fontSize: 15,
+  timelineBlock: {
+    position: 'absolute',
+    top: 2,
+    bottom: 2,
+    backgroundColor: '#007AFF',
+    borderRadius: 3,
+  },
+  sessionSummary: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#F8F8F8',
+    borderRadius: 8,
+  },
+  sessionSummaryText: {
+    fontSize: 13,
     color: '#333',
-  },
-  sessionDuration: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#007AFF',
+    marginBottom: 4,
   },
   optionRow: {
     flexDirection: 'row',
