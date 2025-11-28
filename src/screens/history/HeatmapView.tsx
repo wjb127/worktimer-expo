@@ -24,7 +24,6 @@ const formatDuration = (seconds: number): string => {
   return `${mins}분`;
 };
 
-// 연도 옵션 생성 (현재 연도부터 5년 전까지)
 const getYearOptions = (): number[] => {
   const currentYear = new Date().getFullYear();
   const years: number[] = [];
@@ -82,19 +81,16 @@ export default function HeatmapView() {
     }, [selectedYear])
   );
 
-  const heatmapData = useMemo(() => {
-    const weeks: { date: string; duration: number }[][] = [];
+  // 주 단위 데이터
+  const weeks = useMemo(() => {
+    const result: { date: string; duration: number }[][] = [];
     let currentWeek: { date: string; duration: number }[] = [];
 
-    // 선택된 연도의 1월 1일부터 시작
     const startDate = new Date(selectedYear, 0, 1);
-
-    // 첫 번째 일요일로 정렬
     while (startDate.getDay() !== 0) {
       startDate.setDate(startDate.getDate() - 1);
     }
 
-    // 선택된 연도의 12월 31일까지
     const endDate = new Date(selectedYear, 11, 31);
 
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
@@ -104,17 +100,49 @@ export default function HeatmapView() {
       currentWeek.push({ date: dateString, duration });
 
       if (d.getDay() === 6) {
-        weeks.push(currentWeek);
+        result.push(currentWeek);
         currentWeek = [];
       }
     }
 
     if (currentWeek.length > 0) {
-      weeks.push(currentWeek);
+      result.push(currentWeek);
     }
 
-    return weeks;
+    return result;
   }, [yearData, selectedYear]);
+
+  // 2주씩 그룹화
+  const weekPairs = useMemo(() => {
+    const pairs: { week1: typeof weeks[0]; week2: typeof weeks[0] | null; pairIndex: number }[] = [];
+    for (let i = 0; i < weeks.length; i += 2) {
+      pairs.push({
+        week1: weeks[i],
+        week2: weeks[i + 1] || null,
+        pairIndex: i / 2,
+      });
+    }
+    return pairs;
+  }, [weeks]);
+
+  // 월 라벨 (주 인덱스 기준)
+  const monthLabels = useMemo(() => {
+    const labels: Record<number, string> = {};
+    let lastMonth = -1;
+
+    weeks.forEach((week, index) => {
+      if (week.length > 0) {
+        const date = new Date(week[0].date);
+        const month = date.getMonth();
+        if (month !== lastMonth && date.getFullYear() === selectedYear) {
+          labels[index] = MONTHS[month];
+          lastMonth = month;
+        }
+      }
+    });
+
+    return labels;
+  }, [weeks, selectedYear]);
 
   const getColor = (duration: number): string => {
     if (duration === 0) return '#EBEDF0';
@@ -124,27 +152,35 @@ export default function HeatmapView() {
     return '#216E39';
   };
 
-  const monthLabels = useMemo(() => {
-    const labels: { month: string; weekIndex: number }[] = [];
-    let lastMonth = -1;
-
-    heatmapData.forEach((week, index) => {
-      if (week.length > 0) {
-        const date = new Date(week[0].date);
-        const month = date.getMonth();
-        if (month !== lastMonth && date.getFullYear() === selectedYear) {
-          labels.push({ month: MONTHS[month], weekIndex: index });
-          lastMonth = month;
-        }
-      }
-    });
-
-    return labels;
-  }, [heatmapData, selectedYear]);
-
   const handleYearSelect = (year: number) => {
     setSelectedYear(year);
     setShowYearPicker(false);
+  };
+
+  const renderWeek = (week: typeof weeks[0] | null, weekIndex: number) => {
+    if (!week) {
+      return <View style={styles.weekPlaceholder} />;
+    }
+
+    return (
+      <View style={styles.weekBlock}>
+        {week.map((day) => (
+          <View
+            key={day.date}
+            style={[
+              styles.dayCell,
+              { backgroundColor: getColor(day.duration) },
+            ]}
+          />
+        ))}
+        {week.length < 7 &&
+          Array(7 - week.length)
+            .fill(null)
+            .map((_, i) => (
+              <View key={`empty-${i}`} style={styles.emptyCell} />
+            ))}
+      </View>
+    );
   };
 
   return (
@@ -177,45 +213,46 @@ export default function HeatmapView() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+      >
         <View style={styles.heatmapContainer}>
-          {/* 요일 헤더 (가로) */}
+          {/* 요일 헤더 - 2주분 */}
           <View style={styles.weekdayHeader}>
             <View style={styles.monthLabelSpace} />
             {WEEKDAYS.map((day) => (
-              <Text key={day} style={styles.weekdayLabel}>
+              <Text key={`w1-${day}`} style={styles.weekdayLabel}>
+                {day}
+              </Text>
+            ))}
+            <View style={styles.weekGap} />
+            {WEEKDAYS.map((day) => (
+              <Text key={`w2-${day}`} style={styles.weekdayLabel}>
                 {day}
               </Text>
             ))}
           </View>
 
-          {/* 히트맵 그리드 (세로 스크롤) */}
+          {/* 히트맵 그리드 - 2주씩 */}
           <View style={styles.heatmapGrid}>
-            {heatmapData.map((week, weekIndex) => {
-              const monthLabel = monthLabels.find((l) => l.weekIndex === weekIndex);
+            {weekPairs.map((pair) => {
+              const week1Index = pair.pairIndex * 2;
+              const week2Index = pair.pairIndex * 2 + 1;
+              const monthLabel1 = monthLabels[week1Index];
+              const monthLabel2 = monthLabels[week2Index];
 
               return (
-                <View key={`week-${weekIndex}`} style={styles.weekRow}>
+                <View key={`pair-${pair.pairIndex}`} style={styles.weekPairRow}>
                   <View style={styles.monthLabelContainer}>
-                    {monthLabel && (
-                      <Text style={styles.monthLabel}>{monthLabel.month}</Text>
-                    )}
+                    <Text style={styles.monthLabel}>
+                      {monthLabel1 || monthLabel2 || ''}
+                    </Text>
                   </View>
-                  {week.map((day) => (
-                    <View
-                      key={day.date}
-                      style={[
-                        styles.dayCell,
-                        { backgroundColor: getColor(day.duration) },
-                      ]}
-                    />
-                  ))}
-                  {week.length < 7 &&
-                    Array(7 - week.length)
-                      .fill(null)
-                      .map((_, i) => (
-                        <View key={`empty-${i}`} style={styles.emptyCell} />
-                      ))}
+                  {renderWeek(pair.week1, week1Index)}
+                  <View style={styles.weekGap} />
+                  {renderWeek(pair.week2, week2Index)}
                 </View>
               );
             })}
@@ -234,15 +271,15 @@ export default function HeatmapView() {
             ))}
             <Text style={styles.legendText}>많음</Text>
           </View>
+
+          <View style={styles.infoSection}>
+            <Text style={styles.infoTitle}>{selectedYear}년 업무 기록</Text>
+            <Text style={styles.infoText}>
+              색상이 진할수록 해당 날짜에 더 많은 시간을 일했습니다.
+            </Text>
+          </View>
         </View>
       </ScrollView>
-
-      <View style={styles.infoSection}>
-        <Text style={styles.infoTitle}>{selectedYear}년 업무 기록</Text>
-        <Text style={styles.infoText}>
-          색상이 진할수록 해당 날짜에 더 많은 시간을 일했습니다.
-        </Text>
-      </View>
 
       {/* 연도 선택 모달 */}
       <Modal
@@ -335,47 +372,62 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
   heatmapContainer: {
     padding: 16,
   },
   weekdayHeader: {
     flexDirection: 'row',
     marginBottom: 4,
+    alignItems: 'center',
   },
   monthLabelSpace: {
-    width: 40,
+    width: 36,
   },
   weekdayLabel: {
-    width: 14,
-    marginHorizontal: 1,
-    fontSize: 11,
+    width: 18,
+    fontSize: 10,
     color: '#666',
     textAlign: 'center',
+  },
+  weekGap: {
+    width: 12,
   },
   heatmapGrid: {
     flexDirection: 'column',
   },
-  weekRow: {
+  weekPairRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 2,
   },
   monthLabelContainer: {
-    width: 40,
+    width: 36,
   },
   monthLabel: {
     fontSize: 11,
     color: '#666',
   },
+  weekBlock: {
+    flexDirection: 'row',
+  },
+  weekPlaceholder: {
+    width: 126, // 7 * 18
+  },
   dayCell: {
-    width: 14,
-    height: 14,
-    borderRadius: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 3,
     marginHorizontal: 1,
   },
   emptyCell: {
-    width: 14,
-    height: 14,
+    width: 16,
+    height: 16,
     marginHorizontal: 1,
   },
   legend: {
@@ -396,9 +448,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 1,
   },
   infoSection: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
+    paddingTop: 20,
+    paddingBottom: 40,
   },
   infoTitle: {
     fontSize: 16,
