@@ -171,22 +171,27 @@ export default function CalendarView() {
         />
       </View>
 
-      <View style={styles.weekdayRow}>
-        {WEEKDAYS.map((day, index) => (
-          <Text
-            key={day}
-            style={[
-              styles.weekday,
-              index === 0 && styles.sunday,
-              index === 6 && styles.saturday,
-            ]}
-          >
-            {day}
-          </Text>
-        ))}
-      </View>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+      >
+        <View style={styles.weekdayRow}>
+          {WEEKDAYS.map((day, index) => (
+            <Text
+              key={day}
+              style={[
+                styles.weekday,
+                index === 0 && styles.sunday,
+                index === 6 && styles.saturday,
+              ]}
+            >
+              {day}
+            </Text>
+          ))}
+        </View>
 
-      <View style={styles.calendarGrid}>
+        <View style={styles.calendarGrid}>
         {calendarDays.map((day, index) => {
           if (day === null) {
             return <View key={`empty-${index}`} style={styles.dayCell} />;
@@ -255,6 +260,7 @@ export default function CalendarView() {
           )}
         </View>
       )}
+      </ScrollView>
     </View>
   );
 }
@@ -263,6 +269,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
   },
   header: {
     flexDirection: 'row',
@@ -335,7 +348,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   sessionList: {
-    flex: 1,
     padding: 16,
     borderTopWidth: 1,
     borderTopColor: '#E5E5E5',
@@ -375,9 +387,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    paddingVertical: 4,
   },
   optionLabel: {
     fontSize: 15,
