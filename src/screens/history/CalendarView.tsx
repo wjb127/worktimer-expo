@@ -5,8 +5,10 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  FlatList,
   Switch,
+  Modal,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -50,6 +52,9 @@ export default function CalendarView() {
   const [sessions, setSessions] = useState<WorkSession[]>([]);
   const [monthData, setMonthData] = useState<Record<string, number>>({});
   const [showColors, setShowColors] = useState(true);
+  const [editingSession, setEditingSession] = useState<WorkSession | null>(null);
+  const [editStartTime, setEditStartTime] = useState('');
+  const [editEndTime, setEditEndTime] = useState('');
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -95,6 +100,87 @@ export default function CalendarView() {
     }
 
     setSessions(data || []);
+  };
+
+  const openEditModal = (session: WorkSession) => {
+    const start = new Date(session.start_time);
+    const end = new Date(session.end_time!);
+    setEditStartTime(
+      `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`
+    );
+    setEditEndTime(
+      `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`
+    );
+    setEditingSession(session);
+  };
+
+  const handleSaveSession = async () => {
+    if (!editingSession || !selectedDate) return;
+
+    const [startH, startM] = editStartTime.split(':').map(Number);
+    const [endH, endM] = editEndTime.split(':').map(Number);
+
+    if (isNaN(startH) || isNaN(startM) || isNaN(endH) || isNaN(endM)) {
+      Alert.alert('오류', '올바른 시간 형식을 입력해주세요 (HH:MM)');
+      return;
+    }
+
+    const newStart = new Date(selectedDate);
+    newStart.setHours(startH, startM, 0, 0);
+    const newEnd = new Date(selectedDate);
+    newEnd.setHours(endH, endM, 0, 0);
+
+    if (newEnd <= newStart) {
+      Alert.alert('오류', '종료 시간은 시작 시간보다 늦어야 합니다');
+      return;
+    }
+
+    const newDuration = Math.floor((newEnd.getTime() - newStart.getTime()) / 1000);
+
+    const { error } = await supabase
+      .from('work_sessions')
+      .update({
+        start_time: newStart.toISOString(),
+        end_time: newEnd.toISOString(),
+        duration: newDuration,
+      })
+      .eq('id', editingSession.id);
+
+    if (error) {
+      Alert.alert('오류', '저장에 실패했습니다');
+      return;
+    }
+
+    setEditingSession(null);
+    loadDaySessions(selectedDate);
+    loadMonthData();
+  };
+
+  const handleDeleteSession = async () => {
+    if (!editingSession || !selectedDate) return;
+
+    Alert.alert('삭제 확인', '이 기록을 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: async () => {
+          const { error } = await supabase
+            .from('work_sessions')
+            .delete()
+            .eq('id', editingSession.id);
+
+          if (error) {
+            Alert.alert('오류', '삭제에 실패했습니다');
+            return;
+          }
+
+          setEditingSession(null);
+          loadDaySessions(selectedDate);
+          loadMonthData();
+        },
+      },
+    ]);
   };
 
   useFocusEffect(
@@ -267,7 +353,7 @@ export default function CalendarView() {
                     const blockWidth = blockEnd - blockStart;
 
                     return (
-                      <View
+                      <TouchableOpacity
                         key={session.id + '-' + hour}
                         style={[
                           styles.timelineBlock,
@@ -276,6 +362,8 @@ export default function CalendarView() {
                             width: `${blockWidth}%`,
                           },
                         ]}
+                        onPress={() => openEditModal(session)}
+                        activeOpacity={0.7}
                       />
                     );
                   })}
@@ -286,15 +374,86 @@ export default function CalendarView() {
           {sessions.length > 0 && (
             <View style={styles.sessionSummary}>
               {sessions.map((session) => (
-                <Text key={session.id} style={styles.sessionSummaryText}>
-                  {formatTime(session.start_time)} - {formatTime(session.end_time!)} ({formatDuration(session.duration)})
-                </Text>
+                <TouchableOpacity
+                  key={session.id}
+                  style={styles.sessionSummaryItem}
+                  onPress={() => openEditModal(session)}
+                >
+                  <Text style={styles.sessionSummaryText}>
+                    {formatTime(session.start_time)} - {formatTime(session.end_time!)} ({formatDuration(session.duration)})
+                  </Text>
+                  <Ionicons name="pencil" size={14} color="#007AFF" />
+                </TouchableOpacity>
               ))}
             </View>
           )}
         </View>
       )}
       </ScrollView>
+
+      {/* 세션 수정 모달 */}
+      <Modal
+        visible={editingSession !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditingSession(null)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setEditingSession(null)}
+        >
+          <View style={styles.editModal} onStartShouldSetResponder={() => true}>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setEditingSession(null)}
+            >
+              <Ionicons name="close" size={24} color="#666" />
+            </TouchableOpacity>
+            <Text style={styles.editModalTitle}>업무 시간 수정</Text>
+
+            <View style={styles.editTimeRow}>
+              <Text style={styles.editTimeLabel}>시작</Text>
+              <TextInput
+                style={styles.editTimeInput}
+                value={editStartTime}
+                onChangeText={setEditStartTime}
+                placeholder="09:00"
+                keyboardType="numbers-and-punctuation"
+                maxLength={5}
+              />
+            </View>
+
+            <View style={styles.editTimeRow}>
+              <Text style={styles.editTimeLabel}>종료</Text>
+              <TextInput
+                style={styles.editTimeInput}
+                value={editEndTime}
+                onChangeText={setEditEndTime}
+                placeholder="18:00"
+                keyboardType="numbers-and-punctuation"
+                maxLength={5}
+              />
+            </View>
+
+            <View style={styles.editButtonRow}>
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={handleDeleteSession}
+              >
+                <Ionicons name="trash-outline" size={18} color="#FF3B30" />
+                <Text style={styles.deleteButtonText}>삭제</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleSaveSession}
+              >
+                <Text style={styles.saveButtonText}>저장</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -426,14 +585,91 @@ const styles = StyleSheet.create({
   },
   sessionSummary: {
     marginTop: 12,
-    padding: 12,
     backgroundColor: '#F8F8F8',
     borderRadius: 8,
+  },
+  sessionSummaryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E8E8',
   },
   sessionSummaryText: {
     fontSize: 13,
     color: '#333',
-    marginBottom: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editModal: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    width: '80%',
+    position: 'relative',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 1,
+    padding: 4,
+  },
+  editModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  editTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  editTimeLabel: {
+    width: 50,
+    fontSize: 15,
+    color: '#333',
+  },
+  editTimeInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  editButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+  },
+  deleteButtonText: {
+    color: '#FF3B30',
+    fontSize: 15,
+    marginLeft: 4,
+  },
+  saveButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
   },
   optionRow: {
     flexDirection: 'row',
