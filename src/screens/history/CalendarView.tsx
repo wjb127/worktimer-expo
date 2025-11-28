@@ -227,9 +227,10 @@ export default function CalendarView() {
   };
 
   const getDayColor = (duration: number): string => {
-    if (duration >= 8 * 3600) return '#007AFF';
-    if (duration >= 4 * 3600) return '#5AC8FA';
-    if (duration > 0) return '#D6EEFF';
+    if (duration >= 6 * 3600) return '#40C463';
+    if (duration >= 4 * 3600) return '#6DD47E';
+    if (duration >= 2 * 3600) return '#9BE9A8';
+    if (duration > 0) return '#C6F6D5';
     return 'transparent';
   };
 
@@ -536,7 +537,7 @@ const styles = StyleSheet.create({
   },
   durationText: {
     fontSize: 10,
-    color: '#34C759',
+    color: '#FF3B30',
     fontWeight: '600',
     marginTop: 2,
   },

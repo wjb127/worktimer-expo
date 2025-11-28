@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import Svg, { Circle } from 'react-native-svg';
 import {
   getTodayTotal,
   getOngoingSession,
@@ -22,6 +23,16 @@ const formatTime = (seconds: number): string => {
   return `${hrs.toString().padStart(2, '0')}:${mins
     .toString()
     .padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
+const formatDate = (): string => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth() + 1;
+  const date = today.getDate();
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+  const day = dayNames[today.getDay()];
+  return `${year}년 ${month}월 ${date}일 (${day})`;
 };
 
 export default function TimerScreen() {
@@ -120,6 +131,7 @@ export default function TimerScreen() {
 
   return (
     <View style={styles.container}>
+      <Text style={styles.dateText}>{formatDate()}</Text>
       <View style={styles.timerSection}>
         <Text style={styles.timerLabel}>
           {isRunning ? '업무 중' : '대기 중'}
@@ -127,13 +139,43 @@ export default function TimerScreen() {
         <Text style={styles.timer}>{formatTime(elapsedSeconds)}</Text>
       </View>
 
-      <TouchableOpacity
-        style={[styles.button, isRunning ? styles.stopButton : styles.startButton]}
-        onPress={handleStartStop}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.buttonText}>{isRunning ? '종료' : '시작'}</Text>
-      </TouchableOpacity>
+      <View style={styles.buttonContainer}>
+        {/* 프로그레스 링 */}
+        <Svg width={180} height={180} style={styles.progressRing}>
+          {/* 배경 원 */}
+          <Circle
+            cx={90}
+            cy={90}
+            r={85}
+            stroke="#E5E5E5"
+            strokeWidth={6}
+            fill="transparent"
+          />
+          {/* 프로그레스 원 */}
+          {isRunning && (
+            <Circle
+              cx={90}
+              cy={90}
+              r={85}
+              stroke="#007AFF"
+              strokeWidth={6}
+              fill="transparent"
+              strokeDasharray={2 * Math.PI * 85}
+              strokeDashoffset={2 * Math.PI * 85 * (1 - (elapsedSeconds % 60) / 60)}
+              strokeLinecap="round"
+              rotation={-90}
+              origin="90, 90"
+            />
+          )}
+        </Svg>
+        <TouchableOpacity
+          style={[styles.button, isRunning ? styles.stopButton : styles.startButton]}
+          onPress={handleStartStop}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.buttonText}>{isRunning ? '종료' : '시작'}</Text>
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.totalSection}>
         <Text style={styles.totalLabel}>오늘 총 업무 시간</Text>
@@ -153,9 +195,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
+  dateText: {
+    fontSize: 18,
+    color: '#333',
+    fontWeight: '500',
+    marginBottom: 40,
+  },
   timerSection: {
     alignItems: 'center',
-    marginBottom: 60,
+    marginBottom: 40,
+  },
+  buttonContainer: {
+    width: 180,
+    height: 180,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 40,
+  },
+  progressRing: {
+    position: 'absolute',
   },
   timerLabel: {
     fontSize: 18,
@@ -169,12 +227,11 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   button: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 60,
   },
   startButton: {
     backgroundColor: '#34C759',

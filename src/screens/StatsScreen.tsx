@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
     minHeight: 280,
   },
   yAxisLabels: {
-    width: 30,
+    width: 40,
     height: 200,
     justifyContent: 'space-between',
     alignItems: 'flex-end',
