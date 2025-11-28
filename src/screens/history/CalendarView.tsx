@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   FlatList,
+  Switch,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +24,18 @@ const formatDuration = (seconds: number): string => {
   return `${mins}분`;
 };
 
+const formatShortDuration = (seconds: number): string => {
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  if (hrs > 0 && mins > 0) {
+    return `${hrs}h${mins}m`;
+  }
+  if (hrs > 0) {
+    return `${hrs}h`;
+  }
+  return `${mins}m`;
+};
+
 const formatTime = (isoString: string): string => {
   const date = new Date(isoString);
   return date.toLocaleTimeString('ko-KR', {
@@ -36,6 +49,7 @@ export default function CalendarView() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [sessions, setSessions] = useState<WorkSession[]>([]);
   const [monthData, setMonthData] = useState<Record<string, number>>({});
+  const [showColors, setShowColors] = useState(true);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -127,9 +141,9 @@ export default function CalendarView() {
   };
 
   const getDayColor = (duration: number): string => {
-    if (duration >= 8 * 3600) return '#34C759';
-    if (duration >= 4 * 3600) return '#A8E6CF';
-    if (duration > 0) return '#D4EDDA';
+    if (duration >= 8 * 3600) return '#007AFF';
+    if (duration >= 4 * 3600) return '#5AC8FA';
+    if (duration > 0) return '#D6EEFF';
     return 'transparent';
   };
 
@@ -145,6 +159,16 @@ export default function CalendarView() {
         <TouchableOpacity onPress={goToNextMonth} style={styles.navButton}>
           <Ionicons name="chevron-forward" size={24} color="#007AFF" />
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.optionRow}>
+        <Text style={styles.optionLabel}>색상 표시</Text>
+        <Switch
+          value={showColors}
+          onValueChange={setShowColors}
+          trackColor={{ false: '#D1D1D6', true: '#007AFF' }}
+          thumbColor="#fff"
+        />
       </View>
 
       <View style={styles.weekdayRow}>
@@ -178,7 +202,7 @@ export default function CalendarView() {
               key={dateString}
               style={[
                 styles.dayCell,
-                { backgroundColor: getDayColor(duration) },
+                showColors && { backgroundColor: getDayColor(duration) },
                 isSelected && styles.selectedDay,
                 isToday && styles.today,
               ]}
@@ -196,7 +220,7 @@ export default function CalendarView() {
               </Text>
               {duration > 0 && (
                 <Text style={styles.durationText}>
-                  {Math.floor(duration / 3600)}h
+                  {formatShortDuration(duration)}
                 </Text>
               )}
             </TouchableOpacity>
@@ -293,7 +317,7 @@ const styles = StyleSheet.create({
     borderColor: '#333',
   },
   dayText: {
-    fontSize: 16,
+    fontSize: 13,
   },
   sundayText: {
     color: '#FF3B30',
@@ -306,7 +330,8 @@ const styles = StyleSheet.create({
   },
   durationText: {
     fontSize: 10,
-    color: '#333',
+    color: '#34C759',
+    fontWeight: '600',
     marginTop: 2,
   },
   sessionList: {
@@ -344,5 +369,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     color: '#007AFF',
+  },
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+  },
+  optionLabel: {
+    fontSize: 15,
+    color: '#333',
   },
 });
