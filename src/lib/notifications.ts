@@ -141,3 +141,64 @@ export async function sendTestNotification(): Promise<void> {
     },
   });
 }
+
+// 업무 진행 중 시간별 알림 ID prefix
+const HOURLY_NOTIFICATION_PREFIX = 'hourly-work-';
+
+// 업무 진행 중 시간별 알림 스케줄링 (1시간, 2시간, ... 최대 12시간)
+// elapsedSeconds: 이미 경과한 시간 (초). 앱 재시작 시 사용
+export async function scheduleHourlyWorkNotifications(elapsedSeconds: number = 0): Promise<void> {
+  // 기존 시간별 알림 취소
+  await cancelHourlyWorkNotifications();
+
+  const messages = [
+    '1시간 업무 중! 💪 잘 하고 있어요!',
+    '2시간 업무 중! ☕ 잠깐 스트레칭 어때요?',
+    '3시간 업무 중! 🎯 집중력 최고!',
+    '4시간 업무 중! 🍽️ 휴식이 필요할 수도?',
+    '5시간 업무 중! ⏰ 타이머 끄는 거 잊지 않으셨죠?',
+    '6시간 업무 중! 🌟 오늘 정말 열심히 하시네요!',
+    '7시간 업무 중! 😅 혹시 타이머 끄는 거 깜빡하셨나요?',
+    '8시간 업무 중! 🏆 풀타임 근무 완료!',
+    '9시간 업무 중! 🌙 야근 모드?',
+    '10시간 업무 중! 😴 이제 좀 쉬세요!',
+    '11시간 업무 중! ⚠️ 타이머 확인해주세요!',
+    '12시간 업무 중! 🚨 타이머가 계속 돌아가고 있어요!',
+  ];
+
+  const elapsedHours = Math.floor(elapsedSeconds / 3600);
+
+  for (let hour = 1; hour <= 12; hour++) {
+    // 이미 경과한 시간은 스킵
+    if (hour <= elapsedHours) continue;
+
+    const secondsUntilNotification = (hour * 3600) - elapsedSeconds;
+    if (secondsUntilNotification <= 0) continue;
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `${hour}시간 경과`,
+        body: messages[hour - 1],
+        sound: true,
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds: secondsUntilNotification,
+      },
+      identifier: `${HOURLY_NOTIFICATION_PREFIX}${hour}`,
+    });
+  }
+}
+
+// 업무 진행 중 시간별 알림 취소
+export async function cancelHourlyWorkNotifications(): Promise<void> {
+  for (let hour = 1; hour <= 12; hour++) {
+    try {
+      await Notifications.cancelScheduledNotificationAsync(
+        `${HOURLY_NOTIFICATION_PREFIX}${hour}`
+      );
+    } catch {
+      // 알림이 없을 수 있음
+    }
+  }
+}

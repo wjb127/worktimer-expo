@@ -15,6 +15,11 @@ import {
   endSession,
 } from '../lib/session';
 import { WorkSession } from '../types/session';
+import {
+  scheduleHourlyWorkNotifications,
+  cancelHourlyWorkNotifications,
+  requestNotificationPermissions,
+} from '../lib/notifications';
 
 const formatTime = (seconds: number): string => {
   const hrs = Math.floor(seconds / 3600);
@@ -63,10 +68,16 @@ export default function TimerScreen() {
         const now = Date.now();
         const elapsed = Math.floor((now - startTime) / 1000);
         setElapsedSeconds(elapsed);
+
+        // 진행 중인 세션이 있으면 시간별 알림 다시 스케줄
+        await requestNotificationPermissions();
+        await scheduleHourlyWorkNotifications(elapsed);
       } else {
         setCurrentSession(null);
         setIsRunning(false);
         setElapsedSeconds(0);
+        // 진행 중인 세션이 없으면 시간별 알림 취소
+        await cancelHourlyWorkNotifications();
       }
     } catch (error) {
       console.error('loadData error:', error);
@@ -109,6 +120,8 @@ export default function TimerScreen() {
         setTodayTotal((prev) => prev + elapsedSeconds);
         setElapsedSeconds(0);
         setCurrentSession(null);
+        // 시간별 알림 취소
+        await cancelHourlyWorkNotifications();
       }
     } else {
       // 시작
@@ -117,6 +130,9 @@ export default function TimerScreen() {
         setCurrentSession(session);
         setIsRunning(true);
         setElapsedSeconds(0);
+        // 알림 권한 요청 및 시간별 알림 스케줄
+        await requestNotificationPermissions();
+        await scheduleHourlyWorkNotifications();
       }
     }
   };
