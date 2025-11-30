@@ -1,10 +1,8 @@
 import { supabase } from '../../lib/supabase';
 import { WorkSession, SessionInsert } from '../types/session';
+import { getLocalToday } from './dateUtils';
 
-const getToday = (): string => {
-  const now = new Date();
-  return now.toISOString().split('T')[0];
-};
+const getToday = (): string => getLocalToday();
 
 export const getTodayTotal = async (): Promise<number> => {
   const today = getToday();

@@ -14,6 +14,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
 import { WorkSession } from '../../types/session';
+import { getLocalToday, getMonthStart, getMonthEnd } from '../../lib/dateUtils';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -55,13 +56,14 @@ export default function CalendarView() {
   const [editingSession, setEditingSession] = useState<WorkSession | null>(null);
   const [editStartTime, setEditStartTime] = useState('');
   const [editEndTime, setEditEndTime] = useState('');
+  const [todayTotal, setTodayTotal] = useState(0);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
   const loadMonthData = async () => {
-    const startOfMonth = new Date(year, month, 1).toISOString().split('T')[0];
-    const endOfMonth = new Date(year, month + 1, 0).toISOString().split('T')[0];
+    const startOfMonth = getMonthStart(year, month);
+    const endOfMonth = getMonthEnd(year, month);
 
     const { data, error } = await supabase
       .from('work_sessions')
@@ -84,6 +86,41 @@ export default function CalendarView() {
     });
 
     setMonthData(grouped);
+  };
+
+  const loadTodayTotal = async () => {
+    const today = getLocalToday();
+
+    // 완료된 세션의 총 시간
+    const { data: completedSessions, error: completedError } = await supabase
+      .from('work_sessions')
+      .select('duration')
+      .eq('date', today)
+      .not('end_time', 'is', null);
+
+    if (completedError) {
+      console.error('loadTodayTotal completedError:', completedError);
+      return;
+    }
+
+    let total = completedSessions?.reduce((sum, s) => sum + (s.duration || 0), 0) || 0;
+
+    // 진행 중인 세션이 있으면 경과 시간 추가
+    const { data: ongoingSessions, error: ongoingError } = await supabase
+      .from('work_sessions')
+      .select('start_time')
+      .eq('date', today)
+      .is('end_time', null);
+
+    if (!ongoingError && ongoingSessions && ongoingSessions.length > 0) {
+      const now = Date.now();
+      ongoingSessions.forEach((s) => {
+        const startTime = new Date(s.start_time).getTime();
+        total += Math.floor((now - startTime) / 1000);
+      });
+    }
+
+    setTodayTotal(total);
   };
 
   const loadDaySessions = async (date: string) => {
@@ -186,6 +223,7 @@ export default function CalendarView() {
   useFocusEffect(
     useCallback(() => {
       loadMonthData();
+      loadTodayTotal();
     }, [year, month])
   );
 
@@ -236,6 +274,12 @@ export default function CalendarView() {
 
   return (
     <View style={styles.container}>
+      {/* 오늘의 총 업무시간 */}
+      <View style={styles.todayTotalContainer}>
+        <Text style={styles.todayTotalLabel}>오늘의 총 업무시간</Text>
+        <Text style={styles.todayTotalValue}>{formatDuration(todayTotal)}</Text>
+      </View>
+
       <View style={styles.header}>
         <TouchableOpacity onPress={goToPrevMonth} style={styles.navButton}>
           <Ionicons name="chevron-back" size={24} color="#007AFF" />
@@ -287,7 +331,7 @@ export default function CalendarView() {
           const dateString = getDateString(day);
           const duration = monthData[dateString] || 0;
           const isSelected = selectedDate === dateString;
-          const isToday = dateString === new Date().toISOString().split('T')[0];
+          const isToday = dateString === getLocalToday();
 
           return (
             <TouchableOpacity
@@ -310,11 +354,9 @@ export default function CalendarView() {
               >
                 {day}
               </Text>
-              {duration > 0 && (
-                <Text style={styles.durationText}>
-                  {formatShortDuration(duration)}
-                </Text>
-              )}
+              <Text style={[styles.durationText, duration === 0 && styles.durationTextHidden]}>
+                {duration > 0 ? formatShortDuration(duration) : ' '}
+              </Text>
             </TouchableOpacity>
           );
         })}
@@ -464,6 +506,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  todayTotalContainer: {
+    backgroundColor: '#F0F8FF',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E8F0',
+  },
+  todayTotalLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  todayTotalValue: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
   scrollView: {
     flex: 1,
   },
@@ -514,14 +574,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 8,
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   selectedDay: {
-    borderWidth: 2,
     borderColor: '#007AFF',
   },
   today: {
-    borderWidth: 1,
-    borderColor: '#333',
+    borderColor: '#CCCCCC',
   },
   dayText: {
     fontSize: 13,
@@ -540,6 +600,10 @@ const styles = StyleSheet.create({
     color: '#FF3B30',
     fontWeight: '600',
     marginTop: 2,
+    minHeight: 14,
+  },
+  durationTextHidden: {
+    opacity: 0,
   },
   timelineContainer: {
     padding: 16,

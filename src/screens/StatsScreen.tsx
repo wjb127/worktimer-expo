@@ -10,6 +10,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
+import { formatDateString, getMonthStart, getMonthEnd } from '../lib/dateUtils';
 
 type ViewMode = 'daily' | 'weekly' | 'monthly';
 
@@ -56,7 +57,7 @@ export default function StatsScreen() {
     for (let i = 6; i >= 0; i--) {
       const date = new Date(baseDate);
       date.setDate(date.getDate() - i);
-      const dateString = date.toISOString().split('T')[0];
+      const dateString = formatDateString(date);
 
       const { data: sessions } = await supabase
         .from('work_sessions')
@@ -87,8 +88,8 @@ export default function StatsScreen() {
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekEnd.getDate() + 6);
 
-      const startString = weekStart.toISOString().split('T')[0];
-      const endString = weekEnd.toISOString().split('T')[0];
+      const startString = formatDateString(weekStart);
+      const endString = formatDateString(weekEnd);
 
       const { data: sessions } = await supabase
         .from('work_sessions')
@@ -117,8 +118,8 @@ export default function StatsScreen() {
       const monthDate = new Date(baseDate.getFullYear(), baseDate.getMonth() - i, 1);
       const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
 
-      const startString = monthDate.toISOString().split('T')[0];
-      const endString = monthEnd.toISOString().split('T')[0];
+      const startString = getMonthStart(monthDate.getFullYear(), monthDate.getMonth());
+      const endString = getMonthEnd(monthDate.getFullYear(), monthDate.getMonth());
 
       const { data: sessions } = await supabase
         .from('work_sessions')

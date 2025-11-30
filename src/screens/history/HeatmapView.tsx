@@ -11,6 +11,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
+import { formatDateString } from '../../lib/dateUtils';
 
 const MONTHS = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -94,7 +95,7 @@ export default function HeatmapView() {
     const endDate = new Date(selectedYear, 11, 31);
 
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-      const dateString = d.toISOString().split('T')[0];
+      const dateString = formatDateString(d);
       const duration = yearData[dateString] || 0;
 
       currentWeek.push({ date: dateString, duration });

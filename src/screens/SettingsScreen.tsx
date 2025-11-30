@@ -13,9 +13,14 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   WorkReminderSettings,
+  WorkIntervalSettings,
   DEFAULT_WORK_REMINDER,
+  DEFAULT_WORK_INTERVAL,
+  INTERVAL_OPTIONS,
   getWorkReminderSettings,
   saveWorkReminderSettings,
+  getWorkIntervalSettings,
+  saveWorkIntervalSettings,
   scheduleWorkReminder,
   requestNotificationPermissions,
   sendTestNotification,
@@ -26,8 +31,10 @@ const WEEKDAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
 export default function SettingsScreen() {
   const [reminderSettings, setReminderSettings] = useState<WorkReminderSettings>(DEFAULT_WORK_REMINDER);
+  const [intervalSettings, setIntervalSettings] = useState<WorkIntervalSettings>(DEFAULT_WORK_INTERVAL);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showDayPicker, setShowDayPicker] = useState(false);
+  const [showIntervalPicker, setShowIntervalPicker] = useState(false);
   const [tempHour, setTempHour] = useState(9);
   const [tempMinute, setTempMinute] = useState(0);
 
@@ -38,8 +45,12 @@ export default function SettingsScreen() {
   );
 
   const loadSettings = async () => {
-    const settings = await getWorkReminderSettings();
+    const [settings, interval] = await Promise.all([
+      getWorkReminderSettings(),
+      getWorkIntervalSettings(),
+    ]);
     setReminderSettings(settings);
+    setIntervalSettings(interval);
     setTempHour(settings.hour);
     setTempMinute(settings.minute);
   };
@@ -119,6 +130,31 @@ export default function SettingsScreen() {
     return reminderSettings.days.map((d) => WEEKDAY_NAMES[d]).join(', ');
   };
 
+  const handleToggleIntervalNotification = async (enabled: boolean) => {
+    if (enabled) {
+      const hasPermission = await requestNotificationPermissions();
+      if (!hasPermission) {
+        Alert.alert('권한 필요', '알림을 받으려면 알림 권한이 필요합니다.');
+        return;
+      }
+    }
+    const newSettings = { ...intervalSettings, enabled };
+    setIntervalSettings(newSettings);
+    await saveWorkIntervalSettings(newSettings);
+  };
+
+  const handleSelectInterval = async (minutes: number) => {
+    const newSettings = { ...intervalSettings, intervalMinutes: minutes };
+    setIntervalSettings(newSettings);
+    await saveWorkIntervalSettings(newSettings);
+    setShowIntervalPicker(false);
+  };
+
+  const getIntervalText = (minutes: number): string => {
+    const option = INTERVAL_OPTIONS.find((o) => o.value === minutes);
+    return option ? option.label : `${minutes}분`;
+  };
+
   return (
     <ScrollView style={styles.container}>
       {/* 알림 섹션 */}
@@ -170,6 +206,41 @@ export default function SettingsScreen() {
           </View>
           <Ionicons name="notifications-outline" size={20} color="#007AFF" />
         </TouchableOpacity>
+      </View>
+
+      {/* 업무 중 반복 알림 섹션 */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>업무 중 알림</Text>
+
+        <View style={styles.settingItem}>
+          <View style={styles.settingInfo}>
+            <Text style={styles.settingLabel}>반복 알림</Text>
+            <Text style={styles.settingDescription}>업무 중 정기적으로 알림을 받습니다</Text>
+          </View>
+          <Switch
+            value={intervalSettings.enabled}
+            onValueChange={handleToggleIntervalNotification}
+            trackColor={{ false: '#D1D1D6', true: '#34C759' }}
+            thumbColor="#fff"
+          />
+        </View>
+
+        {intervalSettings.enabled && (
+          <TouchableOpacity
+            style={styles.settingItem}
+            onPress={() => setShowIntervalPicker(true)}
+          >
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingLabel}>알림 주기</Text>
+            </View>
+            <View style={styles.settingValue}>
+              <Text style={styles.settingValueText}>
+                {getIntervalText(intervalSettings.intervalMinutes)}
+              </Text>
+              <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+            </View>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* 정보 섹션 */}
@@ -268,6 +339,49 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
             <TouchableOpacity style={styles.saveButton} onPress={() => setShowDayPicker(false)}>
+              <Text style={styles.saveButtonText}>완료</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* 알림 주기 선택 모달 */}
+      <Modal visible={showIntervalPicker} transparent animationType="fade">
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowIntervalPicker(false)}
+        >
+          <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+            <Text style={styles.modalTitle}>알림 주기 선택</Text>
+            <ScrollView style={styles.intervalList}>
+              {INTERVAL_OPTIONS.map((option) => {
+                const isSelected = intervalSettings.intervalMinutes === option.value;
+                return (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[styles.intervalOption, isSelected && styles.intervalOptionSelected]}
+                    onPress={() => handleSelectInterval(option.value)}
+                  >
+                    <Text
+                      style={[
+                        styles.intervalOptionText,
+                        isSelected && styles.intervalOptionTextSelected,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                    {isSelected && (
+                      <Ionicons name="checkmark" size={20} color="#007AFF" />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.saveButton}
+              onPress={() => setShowIntervalPicker(false)}
+            >
               <Text style={styles.saveButtonText}>완료</Text>
             </TouchableOpacity>
           </View>
@@ -421,6 +535,30 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  intervalList: {
+    maxHeight: 300,
+    marginBottom: 16,
+  },
+  intervalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  intervalOptionSelected: {
+    backgroundColor: '#F0F8FF',
+  },
+  intervalOptionText: {
+    fontSize: 16,
+    color: '#000',
+  },
+  intervalOptionTextSelected: {
+    color: '#007AFF',
     fontWeight: '600',
   },
 });
