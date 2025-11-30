@@ -573,7 +573,6 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 8,
     borderWidth: 2,
     borderColor: 'transparent',
   },
