@@ -56,7 +56,7 @@ export default function CalendarView() {
   const [editingSession, setEditingSession] = useState<WorkSession | null>(null);
   const [editStartTime, setEditStartTime] = useState('');
   const [editEndTime, setEditEndTime] = useState('');
-  const [todayTotal, setTodayTotal] = useState(0);
+  const [monthTotal, setMonthTotal] = useState(0);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -78,49 +78,17 @@ export default function CalendarView() {
     }
 
     const grouped: Record<string, number> = {};
+    let total = 0;
     data?.forEach((session) => {
       if (!grouped[session.date]) {
         grouped[session.date] = 0;
       }
       grouped[session.date] += session.duration || 0;
+      total += session.duration || 0;
     });
 
     setMonthData(grouped);
-  };
-
-  const loadTodayTotal = async () => {
-    const today = getLocalToday();
-
-    // 완료된 세션의 총 시간
-    const { data: completedSessions, error: completedError } = await supabase
-      .from('work_sessions')
-      .select('duration')
-      .eq('date', today)
-      .not('end_time', 'is', null);
-
-    if (completedError) {
-      console.error('loadTodayTotal completedError:', completedError);
-      return;
-    }
-
-    let total = completedSessions?.reduce((sum, s) => sum + (s.duration || 0), 0) || 0;
-
-    // 진행 중인 세션이 있으면 경과 시간 추가
-    const { data: ongoingSessions, error: ongoingError } = await supabase
-      .from('work_sessions')
-      .select('start_time')
-      .eq('date', today)
-      .is('end_time', null);
-
-    if (!ongoingError && ongoingSessions && ongoingSessions.length > 0) {
-      const now = Date.now();
-      ongoingSessions.forEach((s) => {
-        const startTime = new Date(s.start_time).getTime();
-        total += Math.floor((now - startTime) / 1000);
-      });
-    }
-
-    setTodayTotal(total);
+    setMonthTotal(total);
   };
 
   const loadDaySessions = async (date: string) => {
@@ -223,7 +191,6 @@ export default function CalendarView() {
   useFocusEffect(
     useCallback(() => {
       loadMonthData();
-      loadTodayTotal();
     }, [year, month])
   );
 
@@ -274,10 +241,10 @@ export default function CalendarView() {
 
   return (
     <View style={styles.container}>
-      {/* 오늘의 총 업무시간 */}
-      <View style={styles.todayTotalContainer}>
-        <Text style={styles.todayTotalLabel}>오늘의 총 업무시간</Text>
-        <Text style={styles.todayTotalValue}>{formatDuration(todayTotal)}</Text>
+      {/* 이번달 총 업무시간 */}
+      <View style={styles.monthTotalContainer}>
+        <Text style={styles.monthTotalLabel}>{month + 1}월 총 업무시간</Text>
+        <Text style={styles.monthTotalValue}>{formatDuration(monthTotal)}</Text>
       </View>
 
       <View style={styles.header}>
@@ -506,7 +473,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  todayTotalContainer: {
+  monthTotalContainer: {
     backgroundColor: '#F0F8FF',
     paddingVertical: 16,
     paddingHorizontal: 20,
@@ -514,12 +481,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E0E8F0',
   },
-  todayTotalLabel: {
+  monthTotalLabel: {
     fontSize: 14,
     color: '#666',
     marginBottom: 4,
   },
-  todayTotalValue: {
+  monthTotalValue: {
     fontSize: 24,
     fontWeight: '600',
     color: '#007AFF',
