@@ -147,10 +147,11 @@ export default function HeatmapView() {
 
   const getColor = (duration: number): string => {
     if (duration === 0) return '#EBEDF0';
-    if (duration < 2 * 3600) return '#9BE9A8';
-    if (duration < 4 * 3600) return '#40C463';
-    if (duration < 6 * 3600) return '#30A14E';
-    return '#216E39';
+    if (duration < 3 * 3600) return '#9BE9A8';
+    if (duration < 6 * 3600) return '#40C463';
+    if (duration < 9 * 3600) return '#30A14E';
+    if (duration < 12 * 3600) return '#216E39';
+    return '#0E4420';
   };
 
   const handleYearSelect = (year: number) => {
@@ -261,7 +262,7 @@ export default function HeatmapView() {
 
           <View style={styles.legend}>
             <Text style={styles.legendText}>적음</Text>
-            {[0, 2, 4, 6, 8].map((hours) => (
+            {[0, 3, 6, 9, 12, 15].map((hours) => (
               <View
                 key={hours}
                 style={[

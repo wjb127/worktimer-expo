@@ -232,9 +232,10 @@ export default function CalendarView() {
   };
 
   const getDayColor = (duration: number): string => {
-    if (duration >= 6 * 3600) return '#40C463';
-    if (duration >= 4 * 3600) return '#6DD47E';
-    if (duration >= 2 * 3600) return '#9BE9A8';
+    if (duration >= 12 * 3600) return '#30A14E';
+    if (duration >= 9 * 3600) return '#40C463';
+    if (duration >= 6 * 3600) return '#6DD47E';
+    if (duration >= 3 * 3600) return '#9BE9A8';
     if (duration > 0) return '#C6F6D5';
     return 'transparent';
   };
