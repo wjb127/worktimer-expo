@@ -20,6 +20,12 @@ import {
   cancelHourlyWorkNotifications,
   requestNotificationPermissions,
 } from '../lib/notifications';
+import {
+  startLiveActivity,
+  updateLiveActivity,
+  endLiveActivity,
+  isLiveActivityRunning,
+} from '../lib/liveActivity';
 
 const formatTime = (seconds: number): string => {
   const hrs = Math.floor(seconds / 3600);
@@ -72,12 +78,22 @@ export default function TimerScreen() {
         // 진행 중인 세션이 있으면 시간별 알림 다시 스케줄
         await requestNotificationPermissions();
         await scheduleHourlyWorkNotifications(elapsed);
+
+        // Live Activity 시작 (이미 실행 중이 아니면)
+        const isRunningActivity = await isLiveActivityRunning();
+        if (!isRunningActivity) {
+          await startLiveActivity(new Date(ongoing.start_time), total);
+        }
+        // Live Activity 업데이트
+        await updateLiveActivity(elapsed, total);
       } else {
         setCurrentSession(null);
         setIsRunning(false);
         setElapsedSeconds(0);
         // 진행 중인 세션이 없으면 시간별 알림 취소
         await cancelHourlyWorkNotifications();
+        // Live Activity 종료
+        await endLiveActivity();
       }
     } catch (error) {
       console.error('loadData error:', error);
@@ -111,6 +127,13 @@ export default function TimerScreen() {
     };
   }, [isRunning]);
 
+  // Live Activity 업데이트 (10초마다)
+  useEffect(() => {
+    if (isRunning && elapsedSeconds % 10 === 0) {
+      updateLiveActivity(elapsedSeconds, todayTotal);
+    }
+  }, [isRunning, elapsedSeconds, todayTotal]);
+
   const handleStartStop = async () => {
     if (isRunning && currentSession) {
       // 종료
@@ -122,6 +145,8 @@ export default function TimerScreen() {
         setCurrentSession(null);
         // 시간별 알림 취소
         await cancelHourlyWorkNotifications();
+        // Live Activity 종료
+        await endLiveActivity();
       }
     } else {
       // 시작
@@ -133,6 +158,8 @@ export default function TimerScreen() {
         // 알림 권한 요청 및 시간별 알림 스케줄
         await requestNotificationPermissions();
         await scheduleHourlyWorkNotifications();
+        // Live Activity 시작
+        await startLiveActivity(new Date(session.start_time), todayTotal);
       }
     }
   };
