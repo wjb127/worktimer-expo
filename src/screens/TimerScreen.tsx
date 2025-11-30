@@ -54,9 +54,35 @@ export default function TimerScreen() {
   const [loading, setLoading] = useState(true);
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialLoad = useRef(true);
 
-  const loadData = async () => {
-    setLoading(true);
+  // 백그라운드 작업 (알림, Live Activity) - fire and forget
+  const runBackgroundTasks = (ongoing: WorkSession | null, total: number, elapsed: number) => {
+    if (ongoing) {
+      // 알림 스케줄 (await 없이 실행)
+      requestNotificationPermissions().then(() => {
+        scheduleHourlyWorkNotifications(elapsed);
+      });
+      // Live Activity 업데이트
+      isLiveActivityRunning().then((running) => {
+        if (!running) {
+          startLiveActivity(new Date(ongoing.start_time), total);
+        }
+        updateLiveActivity(elapsed, total);
+      });
+    } else {
+      // 알림 취소 및 Live Activity 종료
+      cancelHourlyWorkNotifications();
+      endLiveActivity();
+    }
+  };
+
+  const loadData = async (isRefresh = false) => {
+    // 첫 로드일 때만 로딩 표시
+    if (!isRefresh) {
+      setLoading(true);
+    }
+
     try {
       const [total, ongoing] = await Promise.all([
         getTodayTotal(),
@@ -65,6 +91,7 @@ export default function TimerScreen() {
 
       setTodayTotal(total);
 
+      let elapsed = 0;
       if (ongoing) {
         setCurrentSession(ongoing);
         setIsRunning(true);
@@ -72,39 +99,39 @@ export default function TimerScreen() {
         // 경과 시간 계산
         const startTime = new Date(ongoing.start_time).getTime();
         const now = Date.now();
-        const elapsed = Math.floor((now - startTime) / 1000);
+        elapsed = Math.floor((now - startTime) / 1000);
         setElapsedSeconds(elapsed);
-
-        // 진행 중인 세션이 있으면 시간별 알림 다시 스케줄
-        await requestNotificationPermissions();
-        await scheduleHourlyWorkNotifications(elapsed);
-
-        // Live Activity 시작 (이미 실행 중이 아니면)
-        const isRunningActivity = await isLiveActivityRunning();
-        if (!isRunningActivity) {
-          await startLiveActivity(new Date(ongoing.start_time), total);
-        }
-        // Live Activity 업데이트
-        await updateLiveActivity(elapsed, total);
       } else {
         setCurrentSession(null);
         setIsRunning(false);
         setElapsedSeconds(0);
-        // 진행 중인 세션이 없으면 시간별 알림 취소
-        await cancelHourlyWorkNotifications();
-        // Live Activity 종료
-        await endLiveActivity();
       }
+
+      // UI 로딩 즉시 해제 (첫 로드인 경우)
+      if (!isRefresh) {
+        setLoading(false);
+      }
+
+      // 백그라운드 작업 실행 (await 없이)
+      runBackgroundTasks(ongoing, total, elapsed);
     } catch (error) {
       console.error('loadData error:', error);
-    } finally {
-      setLoading(false);
+      if (!isRefresh) {
+        setLoading(false);
+      }
     }
   };
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
+      if (isInitialLoad.current) {
+        // 첫 로드: 로딩 스피너 표시
+        isInitialLoad.current = false;
+        loadData(false);
+      } else {
+        // 탭 재방문: 기존 UI 유지하며 백그라운드 갱신
+        loadData(true);
+      }
     }, [])
   );
 

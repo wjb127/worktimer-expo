@@ -22,10 +22,13 @@ import {
   getWorkIntervalSettings,
   saveWorkIntervalSettings,
   scheduleWorkReminder,
+  scheduleIntervalWorkNotifications,
+  cancelIntervalWorkNotifications,
   requestNotificationPermissions,
   sendTestNotification,
   WeekDay,
 } from '../lib/notifications';
+import { getOngoingSession } from '../lib/session';
 
 const WEEKDAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -141,6 +144,18 @@ export default function SettingsScreen() {
     const newSettings = { ...intervalSettings, enabled };
     setIntervalSettings(newSettings);
     await saveWorkIntervalSettings(newSettings);
+
+    // 진행 중인 세션이 있으면 알림 스케줄 업데이트
+    const ongoingSession = await getOngoingSession();
+    if (ongoingSession) {
+      if (enabled) {
+        const startTime = new Date(ongoingSession.start_time).getTime();
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        await scheduleIntervalWorkNotifications(elapsed, newSettings);
+      } else {
+        await cancelIntervalWorkNotifications();
+      }
+    }
   };
 
   const handleSelectInterval = async (minutes: number) => {
@@ -148,6 +163,14 @@ export default function SettingsScreen() {
     setIntervalSettings(newSettings);
     await saveWorkIntervalSettings(newSettings);
     setShowIntervalPicker(false);
+
+    // 진행 중인 세션이 있으면 알림 스케줄 업데이트
+    const ongoingSession = await getOngoingSession();
+    if (ongoingSession && newSettings.enabled) {
+      const startTime = new Date(ongoingSession.start_time).getTime();
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      await scheduleIntervalWorkNotifications(elapsed, newSettings);
+    }
   };
 
   const getIntervalText = (minutes: number): string => {
