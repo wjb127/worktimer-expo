@@ -29,7 +29,6 @@ export async function startLiveActivity(
       title: '업무 중',
       subtitle: `오늘 총: ${formatTime(todayTotal)}`,
       progressBar: {
-        // 타이머 시작 시간 (카운트업으로 표시)
         date: startTime.getTime(),
       },
     };
@@ -38,14 +37,14 @@ export async function startLiveActivity(
       backgroundColor: '#1C1C1E',
       titleColor: '#FFFFFF',
       subtitleColor: '#8E8E93',
-      progressBarColor: '#34C759',
-      timerType: 'countUp' as const,
+      progressViewTint: '#34C759',
+      timerType: 'digital' as const,
     };
 
     const activityId = LiveActivity.startActivity(state, config);
-    currentActivityId = activityId;
+    currentActivityId = activityId ?? null;
     console.log('Live Activity started:', activityId);
-    return activityId;
+    return activityId ?? null;
   } catch (error) {
     console.error('Failed to start Live Activity:', error);
     return null;
@@ -68,7 +67,7 @@ export async function updateLiveActivity(
       title: '업무 중',
       subtitle: `오늘 총: ${formatTime(todayTotal + elapsedSeconds)}`,
       progressBar: {
-        progress: (elapsedSeconds % 3600) / 3600, // 1시간 기준 진행률
+        progress: (elapsedSeconds % 3600) / 3600,
       },
     };
 
@@ -87,7 +86,11 @@ export async function endLiveActivity(): Promise<boolean> {
   if (Platform.OS !== 'ios' || !currentActivityId) return false;
 
   try {
-    LiveActivity.stopActivity(currentActivityId);
+    const finalState = {
+      title: '업무 종료',
+      subtitle: '수고하셨습니다',
+    };
+    LiveActivity.stopActivity(currentActivityId, finalState);
     console.log('Live Activity ended:', currentActivityId);
     currentActivityId = null;
     return true;
