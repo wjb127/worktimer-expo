@@ -13,6 +13,7 @@ import {
   getOngoingSession,
   startSession,
   endSession,
+  cleanupOrphanedSessions,
 } from '../lib/session';
 import { WorkSession } from '../types/session';
 import {
@@ -89,6 +90,9 @@ export default function TimerScreen() {
         getOngoingSession(),
       ]);
 
+      // 이전 날짜의 고아 세션 정리 (현재 진행 중인 세션은 제외)
+      cleanupOrphanedSessions(ongoing?.id);
+
       setTodayTotal(total);
 
       let elapsed = 0;
@@ -96,7 +100,7 @@ export default function TimerScreen() {
         setCurrentSession(ongoing);
         setIsRunning(true);
 
-        // 경과 시간 계산
+        // 경과 시간 계산 (타임스탬프 기반으로 정확하게)
         const startTime = new Date(ongoing.start_time).getTime();
         const now = Date.now();
         elapsed = Math.floor((now - startTime) / 1000);
@@ -163,13 +167,15 @@ export default function TimerScreen() {
 
   const handleStartStop = async () => {
     if (isRunning && currentSession) {
-      // 종료
-      const result = await endSession(currentSession.id, elapsedSeconds);
+      // 종료 (타임스탬프 기반 duration 계산)
+      const result = await endSession(currentSession.id, currentSession.start_time);
       if (result) {
         setIsRunning(false);
-        setTodayTotal((prev) => prev + elapsedSeconds);
         setElapsedSeconds(0);
         setCurrentSession(null);
+        // 오늘 총계 다시 로드 (자정 넘김 세션의 정확한 처리)
+        const total = await getTodayTotal();
+        setTodayTotal(total);
         // 시간별 알림 취소
         await cancelHourlyWorkNotifications();
         // Live Activity 종료
