@@ -11,7 +11,15 @@
       "bridgeless": false
     },
     "plugins": [
-      "expo-live-activity"
+      "expo-live-activity",
+      "expo-secure-store",
+      "expo-apple-authentication",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.1052634480432-1gbe1hcid97kssalcensbb5ciorok5nc"
+        }
+      ]
     ],
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -20,12 +28,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.gawall.worktimer",
+      "bundleIdentifier": "kr.codeatlas.worktimer",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
+      "package": "kr.codeatlas.worktimer",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
