@@ -316,23 +316,15 @@ Expected: `prisma/migrations/` 생성
 
 **Files:** (DB 작업, 코드 변경 없음)
 
-- [ ] **Step 1: 기존 work_sessions 데이터 삭제 + 신규 스키마 적용**
+> ★ 정정(실제 수행): 공유 Supabase에 `public.work_sessions`(라이브 1453행)·`public.users`(타 서비스)가 이미 존재 → DROP 금지. **codeatlas 스키마로 격리 생성**으로 변경. **완료됨.**
 
-> 스펙 결정: 기존 dev 데이터 삭제. Supabase에는 기존 `work_sessions`(UUID id, user_id 없음)이 있으므로, Prisma 마이그레이션 전 정리 필요.
-> Supabase SQL Editor에서 **사용자가 직접 실행**(DROP/TRUNCATE는 글로벌 룰상 Claude 직접 실행 금지):
-```sql
--- 기존 worktimer 단일사용자 테이블 제거 (dev 데이터 폐기)
-DROP TABLE IF EXISTS work_sessions CASCADE;
-```
+- [x] **Step 1: Prisma multiSchema 전환** — `schemas=["codeatlas"]` + 각 모델 `@@schema("codeatlas")`. 마이그레이션 SQL이 `CREATE SCHEMA codeatlas` + codeatlas 한정 테이블 생성.
 
-- [ ] **Step 2: Prisma 마이그레이션을 운영 DB에 적용**
-```bash
-DATABASE_URL="$(op read 'op://2mm2bwf2dqm47mpuerncpebpea/.../database-url')" \
-  pnpm prisma migrate deploy
-```
-Expected: users/refresh_tokens/user_settings/work_sessions 생성
+- [x] **Step 2: Supabase MCP로 codeatlas 스키마 적용** — `apply_migration(project_id=bzzjkcrbwwrqlumxigag, codeatlas_platform_init)`. public 무영향. DATABASE_URL 연결문자열 불필요(MCP가 적용).
 
-- [ ] **Step 3: 적용 확인** — Supabase Table Editor에서 4개 테이블 존재 확인
+- [x] **Step 3: 검증** — `list_tables(schemas=["codeatlas"])`로 4테이블·PK·FK·인덱스 확인. public 200+ 테이블 그대로.
+
+> 운영 런타임 연결: 배포 시 DATABASE_URL(Supabase pooler URI)만 있으면 됨. Prisma가 codeatlas 스키마로 쿼리(`schemas` 설정). `prisma migrate deploy`는 공유 DB라 사용 안 함 — 스키마 변경은 MCP/SQL로 codeatlas에만.
 
 ---
 

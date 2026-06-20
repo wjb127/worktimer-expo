@@ -139,8 +139,8 @@ work_sessions
 
 마이그레이션은 안전 패턴(ADD COLUMN IF NOT EXISTS). 기존 work_sessions는 dev 데이터뿐.
 
-### 5.3 기존 데이터 처리 — **확정: 전부 삭제**
-현재 work_sessions는 dev 데이터뿐 → 마이그레이션 시 `TRUNCATE`(또는 DELETE) 후 user_id NOT NULL 적용. 빈 상태로 시작.
+### 5.3 기존 데이터 처리 — **정정: 삭제 안 함, codeatlas 스키마로 격리**
+공유 Supabase에 `public.work_sessions`(라이브 work-timer 웹, 1453행)와 `public.users`(타 서비스)가 **이미 존재** → DROP/충돌 위험. 따라서 신규 멀티테넌트 테이블은 **`codeatlas` 스키마**에 격리 생성(public 무영향). Prisma `schemas=["codeatlas"]` + `@@schema`. 기존 public 데이터는 그대로 둠. (구 worktimer-expo 앱은 당분간 public.work_sessions 계속 사용, M1 전환 시 codeatlas로 이동)
 
 ---
 
@@ -259,7 +259,7 @@ M1 앱 전환
 
 | # | 항목 | 상태 |
 |---|---|---|
-| 1 | 기존 work_sessions dev 데이터 | **삭제** |
+| 1 | 기존 work_sessions 데이터 | **삭제 안 함** — 공유 Supabase 라이브(1453행)라 codeatlas 스키마로 격리 |
 | 2 | DNS | **가비아** 연결됨. `api` A레코드 → 45.77.135.225 |
 | 3 | Google OAuth | **신규 GCP 프로젝트 `codeatlas`**. 사용자 콘솔 발급(가이드) → 코드/연동 Claude |
 | 4 | Apple Sign In | **Seung Been Wee 계정**(wjb127@nate.com), **Team ID `9Q26686S8R`**. 사용자 포털 발급(가이드) → 코드/연동 Claude |
