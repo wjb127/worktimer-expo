@@ -255,17 +255,32 @@ M1 앱 전환
 
 ---
 
-## 11. 결정 완료 / 남은 확인
+## 11. 결정 완료 (전부 확정)
 
 | # | 항목 | 상태 |
 |---|---|---|
-| 1 | 기존 work_sessions dev 데이터 | **확정: 삭제** |
-| 2 | DNS 등록처 | **가비아**. `api` A레코드 → 45.77.135.225 (사용자 수동 추가) |
-| 3 | Google OAuth | 사용자가 GCP 콘솔서 클라이언트 발급(가이드 제공) → 코드/연동은 Claude. **신규 vs 기존 GCP 프로젝트 확인 대기** |
-| 4 | Apple Sign In | 사용자가 Apple Developer 포털서 App ID cap + Service ID + Key(.p8) 발급(가이드 제공) → 코드/연동은 Claude. **`gawall` 계정 멤버십 활성 확인 대기**. ※리싯 ASC키(team 9623L743KR)는 다른 계정이라 미적용 |
-| 5 | 번들ID | **확정: `com.gawall.worktimer` 유지** |
+| 1 | 기존 work_sessions dev 데이터 | **삭제** |
+| 2 | DNS | **가비아** 연결됨. `api` A레코드 → 45.77.135.225 |
+| 3 | Google OAuth | **신규 GCP 프로젝트 `codeatlas`**. 사용자 콘솔 발급(가이드) → 코드/연동 Claude |
+| 4 | Apple Sign In | **Seung Been Wee 계정**(wjb127@nate.com), **Team ID `9Q26686S8R`**. 사용자 포털 발급(가이드) → 코드/연동 Claude |
+| 5 | 번들ID | **`kr.codeatlas.worktimer`로 변경** (app.json ios.bundleIdentifier + android.package). 미출시라 무비용 |
 
 > 시크릿(.p8, client secret)은 사용자가 op에 직접 입력 → Claude는 `op://` 참조만 사용.
+
+## 12. 식별자 / 계정 (확정값)
+
+| 항목 | 값 |
+|---|---|
+| 번들ID (iOS) / 패키지(Android) | `kr.codeatlas.worktimer` |
+| Apple 개발자 계정 | Seung Been Wee (wjb127@nate.com) |
+| Apple Team ID | `9Q26686S8R` |
+| Expo(EAS) owner | `@gawall` (사용자 본인 Expo 계정, Free 플랜 — 유지) |
+| API 도메인 | `api.codeatlas.kr` |
+| API VPS | `45.77.135.225` (codeatlas-api, Tokyo, Ubuntu 24.04, 2c/8GB) |
+| Google Cloud 프로젝트 | `codeatlas` (신규) |
+| DB | worktimer Supabase (기존 프로젝트) |
+
+> 빌드는 @gawall Expo 계정, 스토어 제출은 Apple Team `9Q26686S8R`. 분리 정상.
 
 ---
 
