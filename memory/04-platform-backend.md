@@ -23,13 +23,15 @@ prisma/schema.prisma   schemas=["codeatlas"] + 각 모델 @@schema("codeatlas")
 deploy/    codeatlas-api.service(systemd), nginx conf, deploy.sh
 ```
 
-## 인증 (C-2: 자체 OAuth, 단 OAuth 입구는 미구현)
+## 인증 (C-2: 자체 OAuth — D/E 라이브)
 
 - 자체 JWT: access 15분 + refresh 30일(회전 + sha256 해시저장).
 - 구현됨: `issueForProvider`(user upsert+토큰), `rotateRefresh`, `logout`, JwtStrategy, JwtAuthGuard.
-- 엔드포인트: `POST /auth/refresh`, `/auth/logout`, `GET /me`.
-- **미구현 = 로그인 입구**: `/auth/google`(D), `/auth/apple`+계정삭제(E) → 현재 404. 콘솔 발급 후 작업.
-- 즉 인증 인프라는 완성·동작하나, 외부에서 토큰 받을 소셜로그인 입구가 없음.
+- **OAuth 입구 라이브**: `/auth/google`(D), `/auth/apple`(E) — id_token을 JWKS로 검증(jose v5) → 우리 JWT. `oidc-verifier.ts` 공통.
+- `/auth/account`(DELETE, JWT보호) 계정삭제 cascade.
+- 엔드포인트: `POST /auth/google /auth/apple /auth/refresh /auth/logout`, `GET /me`, `DELETE /auth/account`.
+- 콘솔: Google Web+iOS client ID 설정됨(env). Apple App ID(Sign in with Apple)+bundle/service ID env.
+- ⬜ 남은 것: Google Android client(SHA-1), Apple Service ID/.p8 키(Android·계정삭제 revoke), 실제 로그인 e2e는 M1(앱 버튼).
 
 ## API 엔드포인트 (현재)
 
@@ -38,7 +40,8 @@ deploy/    codeatlas-api.service(systemd), nginx conf, deploy.sh
 | GET | /health | 200 |
 | GET | /me | JWT 필요(401 if없음) |
 | POST | /auth/refresh, /auth/logout | 동작 |
-| POST | /auth/google, /auth/apple | **404 미구현(D/E)** |
+| POST | /auth/google, /auth/apple | **라이브 (id_token 검증→JWT)** |
+| DELETE | /auth/account | JWT 보호, cascade 삭제 |
 | POST/GET | /worktimer/sessions (start/ongoing/today-total/list) | JWT 보호 |
 | PATCH/DELETE | /worktimer/sessions/:id (end/삭제) | JWT 보호 |
 | POST | /worktimer/sessions/cleanup-orphaned | JWT 보호 |
@@ -61,10 +64,11 @@ deploy/    codeatlas-api.service(systemd), nginx conf, deploy.sh
 - 배포: 로컬 `pnpm build` → `deploy/deploy.sh`(rsync dist + pnpm install --prod + `pnpm dlx prisma generate` + systemctl restart). **VPS에서 tsc 안 돌림.**
 - ★ 함정: prisma는 devDep이라 `--prod`에 빠짐 → `pnpm dlx prisma generate` 필수. pnpm11은 package.json `onlyBuiltDependencies` 무시.
 
-## 현재 상태 (M0 완료)
+## 현재 상태 (M0 + D/E 완료)
 
-- ✅ /health, 인증코어, 세션/설정 API, 테넌트 격리, codeatlas 격리, VPS 배포·TLS. 테스트 16+ PASS.
-- ⬜ D(Google)·E(Apple+계정삭제) OAuth, M1(앱 전환).
+- ✅ /health, 인증코어, 세션/설정 API, 테넌트 격리, codeatlas 격리, VPS 배포·TLS.
+- ✅ D(Google /auth/google) · E(Apple /auth/apple + 계정삭제) 라이브. 테스트 27 PASS.
+- ⬜ M1(앱 전환) — Expo에 로그인 버튼+API연동, 실제 로그인 e2e. Android client/Apple .p8은 나중.
 
 ## 멀티앱 확장
 

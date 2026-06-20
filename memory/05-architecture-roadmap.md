@@ -46,9 +46,9 @@ WorkTimer를 멀티테넌트 모바일 앱으로 출시하기 위한 시스템 �
 
 ```
 M0 백엔드 토대          ✅ 완료·배포 (인증코어+세션/설정 API, codeatlas 격리, api.codeatlas.kr 라이브)
-M1 멀티테넌시 전환       ⬜ Expo→API 전환, 로그인화면, 토큰저장, 세션CRUD API화
-   D Google OAuth        ⬜ /auth/google (콘솔 발급 후)
-   E Apple Sign In+삭제   ⬜ /auth/apple + 계정삭제(애플 필수)
+   D Google OAuth        ✅ /auth/google 라이브 (Web+iOS client ID 설정)
+   E Apple Sign In+삭제   ✅ /auth/apple + DELETE /auth/account 라이브 (App ID 생성됨)
+M1 멀티테넌시 전환       ⬜ Expo→API 전환, 로그인화면(구글/애플 버튼), 토큰저장, 세션CRUD API화, 실제 로그인 e2e
 M2 기능이식+UIUX         ⬜ 카테고리·일일목표·스트릭·포모도로·세션메모·다크모드·CSV
 M3 AI 코칭              ⬜ NestJS Claude 프록시, 리포트 캐싱, 엔타이틀먼트
 M4 구독(RevenueCat)      ⬜ IAP, 영수증검증/웹훅, 프리미엄 게이팅
