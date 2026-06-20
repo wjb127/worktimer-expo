@@ -139,9 +139,8 @@ work_sessions
 
 마이그레이션은 안전 패턴(ADD COLUMN IF NOT EXISTS). 기존 work_sessions는 dev 데이터뿐.
 
-### 5.3 기존 데이터 처리 (미결 — 4장 미결질문 참고)
-- 옵션 A: 전부 삭제하고 빈 상태로 시작 (가장 깔끔)
-- 옵션 B: 첫 로그인 계정에 귀속 (`UPDATE work_sessions SET user_id = <첫계정>`)
+### 5.3 기존 데이터 처리 — **확정: 전부 삭제**
+현재 work_sessions는 dev 데이터뿐 → 마이그레이션 시 `TRUNCATE`(또는 DELETE) 후 user_id NOT NULL 적용. 빈 상태로 시작.
 
 ---
 
@@ -256,13 +255,17 @@ M1 앱 전환
 
 ---
 
-## 11. 미결 질문 (사용자 확인 필요)
+## 11. 결정 완료 / 남은 확인
 
-1. **기존 work_sessions dev 데이터** — 삭제(A) vs 첫 계정 귀속(B)? (기본값 A 권장)
-2. **api.codeatlas.kr DNS** — codeatlas.kr 등록/네임서버가 어디야? (가비아/CF 등) A레코드 직접 넣을지 내가 안내할지.
-3. **Google OAuth** — Google Cloud 프로젝트 OAuth 클라이언트(iOS/Android/web) 발급 필요. 기존 GCP 프로젝트 쓸지 신규.
-4. **Apple** — Apple Developer에서 Sign in with Apple용 Service ID + Key 발급 필요(기존 `com.gawall.worktimer` 번들과 연결). 진행 시 함께.
-5. **앱 번들ID 유지** — 현재 `com.gawall.worktimer` 그대로 출시? (Apple 로그인·푸시 설정이 여기 묶임)
+| # | 항목 | 상태 |
+|---|---|---|
+| 1 | 기존 work_sessions dev 데이터 | **확정: 삭제** |
+| 2 | DNS 등록처 | **가비아**. `api` A레코드 → 45.77.135.225 (사용자 수동 추가) |
+| 3 | Google OAuth | 사용자가 GCP 콘솔서 클라이언트 발급(가이드 제공) → 코드/연동은 Claude. **신규 vs 기존 GCP 프로젝트 확인 대기** |
+| 4 | Apple Sign In | 사용자가 Apple Developer 포털서 App ID cap + Service ID + Key(.p8) 발급(가이드 제공) → 코드/연동은 Claude. **`gawall` 계정 멤버십 활성 확인 대기**. ※리싯 ASC키(team 9623L743KR)는 다른 계정이라 미적용 |
+| 5 | 번들ID | **확정: `com.gawall.worktimer` 유지** |
+
+> 시크릿(.p8, client secret)은 사용자가 op에 직접 입력 → Claude는 `op://` 참조만 사용.
 
 ---
 
