@@ -12,7 +12,11 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '../../../lib/supabase';
+import {
+  apiListSessions,
+  apiEditTimes,
+  apiDelete,
+} from '../../lib/api/sessions';
 import { WorkSession } from '../../types/session';
 import { getLocalToday, getMonthStart, getMonthEnd } from '../../lib/dateUtils';
 
@@ -65,21 +69,19 @@ export default function CalendarView() {
     const startOfMonth = getMonthStart(year, month);
     const endOfMonth = getMonthEnd(year, month);
 
-    const { data, error } = await supabase
-      .from('work_sessions')
-      .select('date, duration')
-      .gte('date', startOfMonth)
-      .lte('date', endOfMonth)
-      .not('end_time', 'is', null);
-
-    if (error) {
+    let data;
+    try {
+      data = (await apiListSessions(startOfMonth, endOfMonth)).filter(
+        (s) => s.end_time !== null,
+      );
+    } catch (error) {
       console.error('loadMonthData error:', error);
       return;
     }
 
     const grouped: Record<string, number> = {};
     let total = 0;
-    data?.forEach((session) => {
+    data.forEach((session) => {
       if (!grouped[session.date]) {
         grouped[session.date] = 0;
       }
@@ -92,19 +94,14 @@ export default function CalendarView() {
   };
 
   const loadDaySessions = async (date: string) => {
-    const { data, error } = await supabase
-      .from('work_sessions')
-      .select('*')
-      .eq('date', date)
-      .not('end_time', 'is', null)
-      .order('start_time', { ascending: true });
-
-    if (error) {
+    try {
+      const data = (await apiListSessions(date, date)).filter(
+        (s) => s.end_time !== null,
+      );
+      setSessions(data);
+    } catch (error) {
       console.error('loadDaySessions error:', error);
-      return;
     }
-
-    setSessions(data || []);
   };
 
   const openEditModal = (session: WorkSession) => {
@@ -140,18 +137,13 @@ export default function CalendarView() {
       return;
     }
 
-    const newDuration = Math.floor((newEnd.getTime() - newStart.getTime()) / 1000);
-
-    const { error } = await supabase
-      .from('work_sessions')
-      .update({
-        start_time: newStart.toISOString(),
-        end_time: newEnd.toISOString(),
-        duration: newDuration,
-      })
-      .eq('id', editingSession.id);
-
-    if (error) {
+    try {
+      await apiEditTimes(
+        editingSession.id,
+        newStart.toISOString(),
+        newEnd.toISOString(),
+      );
+    } catch {
       Alert.alert('오류', '저장에 실패했습니다');
       return;
     }
@@ -170,12 +162,9 @@ export default function CalendarView() {
         text: '삭제',
         style: 'destructive',
         onPress: async () => {
-          const { error } = await supabase
-            .from('work_sessions')
-            .delete()
-            .eq('id', editingSession.id);
-
-          if (error) {
+          try {
+            await apiDelete(editingSession.id);
+          } catch {
             Alert.alert('오류', '삭제에 실패했습니다');
             return;
           }

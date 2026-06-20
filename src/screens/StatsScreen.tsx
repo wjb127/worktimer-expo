@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '../../lib/supabase';
+import { apiListSessions } from '../lib/api/sessions';
 import { formatDateString, getMonthStart, getMonthEnd } from '../lib/dateUtils';
 
 type ViewMode = 'daily' | 'weekly' | 'monthly';
@@ -59,13 +59,11 @@ export default function StatsScreen() {
       date.setDate(date.getDate() - i);
       const dateString = formatDateString(date);
 
-      const { data: sessions } = await supabase
-        .from('work_sessions')
-        .select('duration')
-        .eq('date', dateString)
-        .not('end_time', 'is', null);
+      const sessions = (await apiListSessions(dateString, dateString)).filter(
+        (s) => s.end_time !== null,
+      );
 
-      const totalSeconds = sessions?.reduce((sum, s) => sum + (s.duration || 0), 0) || 0;
+      const totalSeconds = sessions.reduce((sum, s) => sum + (s.duration || 0), 0);
 
       const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
       data.push({
@@ -91,14 +89,11 @@ export default function StatsScreen() {
       const startString = formatDateString(weekStart);
       const endString = formatDateString(weekEnd);
 
-      const { data: sessions } = await supabase
-        .from('work_sessions')
-        .select('duration')
-        .gte('date', startString)
-        .lte('date', endString)
-        .not('end_time', 'is', null);
+      const sessions = (await apiListSessions(startString, endString)).filter(
+        (s) => s.end_time !== null,
+      );
 
-      const totalSeconds = sessions?.reduce((sum, s) => sum + (s.duration || 0), 0) || 0;
+      const totalSeconds = sessions.reduce((sum, s) => sum + (s.duration || 0), 0);
 
       data.push({
         label: `${weekStart.getMonth() + 1}/${weekStart.getDate()}`,
@@ -121,14 +116,11 @@ export default function StatsScreen() {
       const startString = getMonthStart(monthDate.getFullYear(), monthDate.getMonth());
       const endString = getMonthEnd(monthDate.getFullYear(), monthDate.getMonth());
 
-      const { data: sessions } = await supabase
-        .from('work_sessions')
-        .select('duration')
-        .gte('date', startString)
-        .lte('date', endString)
-        .not('end_time', 'is', null);
+      const sessions = (await apiListSessions(startString, endString)).filter(
+        (s) => s.end_time !== null,
+      );
 
-      const totalSeconds = sessions?.reduce((sum, s) => sum + (s.duration || 0), 0) || 0;
+      const totalSeconds = sessions.reduce((sum, s) => sum + (s.duration || 0), 0);
 
       data.push({
         label: `${monthDate.getMonth() + 1}월`,

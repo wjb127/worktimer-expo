@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '../../../lib/supabase';
+import { apiListSessions } from '../../lib/api/sessions';
 import { formatDateString } from '../../lib/dateUtils';
 
 const MONTHS = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
@@ -48,14 +48,12 @@ export default function HeatmapView() {
     const startDate = `${year}-01-01`;
     const endDate = `${year}-12-31`;
 
-    const { data, error } = await supabase
-      .from('work_sessions')
-      .select('date, duration')
-      .gte('date', startDate)
-      .lte('date', endDate)
-      .not('end_time', 'is', null);
-
-    if (error) {
+    let data;
+    try {
+      data = (await apiListSessions(startDate, endDate)).filter(
+        (s) => s.end_time !== null,
+      );
+    } catch (error) {
       console.error('loadYearData error:', error);
       return;
     }
@@ -63,7 +61,7 @@ export default function HeatmapView() {
     const grouped: Record<string, number> = {};
     let total = 0;
 
-    data?.forEach((session) => {
+    data.forEach((session) => {
       if (!grouped[session.date]) {
         grouped[session.date] = 0;
       }

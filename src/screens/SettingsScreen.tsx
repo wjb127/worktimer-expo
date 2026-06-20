@@ -28,11 +28,39 @@ import {
   sendTestNotification,
   WeekDay,
 } from '../lib/notifications';
+import { useAuth } from '../lib/auth/AuthContext';
+import { apiFetch } from '../lib/api/client';
 import { getOngoingSession } from '../lib/session';
 
 const WEEKDAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
 export default function SettingsScreen() {
+  const { signOut } = useAuth();
+
+  const handleLogout = () => {
+    Alert.alert('로그아웃', '로그아웃하시겠어요?', [
+      { text: '취소', style: 'cancel' },
+      { text: '로그아웃', style: 'destructive', onPress: () => signOut() },
+    ]);
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert('계정 삭제', '모든 기록이 영구 삭제됩니다. 계속할까요?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await apiFetch('/auth/account', { method: 'DELETE' });
+          } finally {
+            await signOut();
+          }
+        },
+      },
+    ]);
+  };
+
   const [reminderSettings, setReminderSettings] = useState<WorkReminderSettings>(DEFAULT_WORK_REMINDER);
   const [intervalSettings, setIntervalSettings] = useState<WorkIntervalSettings>(DEFAULT_WORK_INTERVAL);
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -410,11 +438,39 @@ export default function SettingsScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      <View style={styles.accountSection}>
+        <TouchableOpacity onPress={handleLogout} style={styles.accountButton}>
+          <Text style={styles.logoutText}>로그아웃</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleDeleteAccount}
+          style={styles.accountButton}
+        >
+          <Text style={styles.deleteAccountText}>계정 삭제</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  accountSection: {
+    marginTop: 24,
+    marginBottom: 40,
+    paddingHorizontal: 16,
+  },
+  accountButton: {
+    paddingVertical: 16,
+  },
+  logoutText: {
+    fontSize: 16,
+    color: '#007AFF',
+  },
+  deleteAccountText: {
+    fontSize: 16,
+    color: '#FF3B30',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F2F2F7',
