@@ -1,4 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
+import { ActivityIndicator, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,10 +9,12 @@ import {
   StatsScreen,
   SettingsScreen,
 } from './src/screens';
+import { AuthProvider, useAuth } from './src/lib/auth/AuthContext';
+import LoginScreen from './src/screens/LoginScreen';
 
 const Tab = createBottomTabNavigator();
 
-export default function App() {
+function MainTabs() {
   return (
     <NavigationContainer>
       <Tab.Navigator
@@ -50,5 +53,26 @@ export default function App() {
       </Tab.Navigator>
       <StatusBar style="auto" />
     </NavigationContainer>
+  );
+}
+
+function Root() {
+  const { loading, signedIn } = useAuth();
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+  if (!signedIn) return <LoginScreen />;
+  return <MainTabs />;
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <Root />
+    </AuthProvider>
   );
 }
