@@ -14,7 +14,7 @@
 - 번들ID: 현재 `com.gawall.worktimer` → **출시 시 `kr.codeatlas.worktimer`로 변경 예정**(M1)
 - Apple Team `9Q26686S8R` · Expo owner `@gawall` · EAS projectId `31c0b3a1-6f4a-4b05-ad00-89924a249f68`
 - DB: 공유 Supabase `bzzjkcrbwwrqlumxigag`의 **codeatlas 스키마**(백엔드) / 현재 앱은 아직 `public.work_sessions` 직접(M1서 전환)
-- 진행: M0 백엔드 + D(Google)·E(Apple) OAuth ✅ 라이브 / 다음 **M1(앱 전환)** — 실제 로그인 연동
+- 진행: M0 백엔드 + D·E OAuth ✅ 라이브 / **M1 앱 전환 코드완료**(Phase0~5) — 남은건 Phase6 EAS빌드+기기테스트
 
 ## 파일 인덱스
 
@@ -25,6 +25,7 @@
 | `03-build-deploy.md` | 현재 앱 빌드/EAS/Live Activity/알림 |
 | `04-platform-backend.md` | NestJS 백엔드 — API/인증/배포/DB스키마/멀티앱확장 |
 | `05-architecture-roadmap.md` | 전체 시스템 아키텍처·출시 로드맵(M0~M5)·결정사항 |
+| `06-app-multitenancy-m1.md` | 앱 인증/API 전환 구조·함정(npm shim/jest/jose)·Phase6 빌드 |
 | `.private/01-codeatlas-infra.md` | (private) VPS·DB·op 시크릿 참조 |
 
 ## 사용

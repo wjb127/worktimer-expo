@@ -42,6 +42,7 @@ deploy/    codeatlas-api.service(systemd), nginx conf, deploy.sh
 | POST | /auth/refresh, /auth/logout | 동작 |
 | POST | /auth/google, /auth/apple | **라이브 (id_token 검증→JWT)** |
 | DELETE | /auth/account | JWT 보호, cascade 삭제 |
+| PATCH | /worktimer/sessions/:id/edit | 수동편집(start/end→duration재계산, CalendarView) |
 | POST/GET | /worktimer/sessions (start/ongoing/today-total/list) | JWT 보호 |
 | PATCH/DELETE | /worktimer/sessions/:id (end/삭제) | JWT 보호 |
 | POST | /worktimer/sessions/cleanup-orphaned | JWT 보호 |
