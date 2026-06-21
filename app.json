@@ -19,7 +19,9 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.1052634480432-1gbe1hcid97kssalcensbb5ciorok5nc"
         }
-      ]
+      ],
+      "expo-font",
+      "./plugins/withFmtFix"
     ],
     "splash": {
       "image": "./assets/splash-icon.png",

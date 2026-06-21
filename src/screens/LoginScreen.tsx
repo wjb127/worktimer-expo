@@ -65,6 +65,22 @@ export default function LoginScreen() {
     }
   };
 
+  // 개발/E2E 전용 우회 로그인 (__DEV__ 빌드에만 노출, 운영 빌드엔 없음)
+  const devLogin = async () => {
+    try {
+      setBusy(true);
+      const pair = await apiJson<Pair>('/auth/dev-login', {
+        method: 'POST',
+        body: JSON.stringify({ email: 'e2e@codeatlas.test' }),
+      });
+      await signInWithTokens(pair.accessToken, pair.refreshToken);
+    } catch (e) {
+      Alert.alert('dev 로그인 실패', String((e as Error)?.message ?? e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>WorkTimer</Text>
@@ -91,6 +107,18 @@ export default function LoginScreen() {
       >
         <Text style={styles.googleText}>Google로 계속하기</Text>
       </TouchableOpacity>
+
+      {__DEV__ && (
+        <TouchableOpacity
+          style={styles.devBtn}
+          onPress={devLogin}
+          disabled={busy}
+          testID="dev-login-button"
+          accessibilityLabel="개발자 로그인"
+        >
+          <Text style={styles.devText}>개발자 로그인 (E2E)</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -117,4 +145,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   googleText: { fontSize: 16, fontWeight: '600', color: '#222' },
+  devBtn: {
+    marginTop: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#34C759',
+  },
+  devText: { fontSize: 14, fontWeight: '600', color: '#fff' },
 });

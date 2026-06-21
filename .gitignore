@@ -43,3 +43,4 @@ yarn-error.*
 
 # /mem 외장 기억소 — 시크릿/민감정보만 git 제외 (일반 노트는 추적)
 memory/.private/
+ios.bak/

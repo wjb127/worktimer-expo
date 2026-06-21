@@ -1,0 +1,35 @@
+# 전체 기능 E2E: (필요시 로그인) → 타이머→기록→통계→설정 → 로그아웃 (반복가능)
+appId: kr.codeatlas.worktimer
+---
+# 로그아웃 상태면 dev-login
+- runFlow:
+    when:
+      visible: "WorkTimer"
+    commands:
+      - tapOn:
+          id: "dev-login-button"
+      - extendedWaitUntil:
+          visible: "타이머.*"
+          timeout: 20000
+# 시작점 고정: 타이머 탭
+- tapOn: "타이머.*"
+# 기록
+- tapOn: "기록.*"
+- takeScreenshot: /tmp/m-history
+# 통계
+- tapOn: "통계.*"
+- takeScreenshot: /tmp/m-stats
+# 설정 → 로그아웃 (아래로 스크롤해 찾음)
+- tapOn: "설정.*"
+- scrollUntilVisible:
+    element: "로그아웃"
+    direction: DOWN
+- takeScreenshot: /tmp/m-settings
+- tapOn: "로그아웃"
+# 알림창 우측 "로그아웃"(빨강) 확인 (좌표 — 동일 텍스트 충돌 회피)
+- tapOn:
+    point: "66%,56%"
+- extendedWaitUntil:
+    visible: "WorkTimer"
+    timeout: 10000
+- takeScreenshot: /tmp/m-loggedout

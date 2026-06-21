@@ -1,0 +1,9 @@
+appId: kr.codeatlas.worktimer
+---
+# 알림창 우측 "로그아웃"(빨강) 버튼 좌표 탭
+- tapOn:
+    point: "66%,56%"
+- extendedWaitUntil:
+    visible: "WorkTimer"
+    timeout: 10000
+- takeScreenshot: /tmp/m-loggedout-ok
