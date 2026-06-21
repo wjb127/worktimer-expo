@@ -5,7 +5,37 @@
 worktimer-expo 앱을 Supabase 직접접근 → NestJS API 호출로 전환한 구조와 함정.
 펴볼 때: 앱 인증/API 흐름 손볼 때, M1 이어서(Phase 6 빌드), 비슷한 전환 작업 함정 참고.
 
-## 상태: 코드 완료(Phase 0~5), Phase 6(빌드·기기) 미완
+## 상태: 코드 + 빌드 + E2E 검증 완료 (Phase 0~6)
+
+- ✅ iOS 시뮬레이터 빌드·실행, **Maestro E2E 전부 PASS** (로그인→탭네비→로그아웃, API 화면 렌더)
+- ✅ 백엔드 curl E2E: dev-login → 세션 CRUD → 멀티테넌트 격리 라이브 확인
+- ✅ 실기기(WiPhone) 빌드·설치도 성공(서명 9Q26686S8R 자동), Metro 연결까지
+
+## E2E 테스트 방식 (Maestro + dev-login)
+
+- **Maestro** (접근성 트리 기반, 무계측) — `~/.maestro/bin`, `maestro test .maestro/<flow>.yaml`
+  - 탭 라벨은 "기록, tab, 2 of 4" 형태 → 와일드카드 `"기록.*"`. testID는 `id:`. 알림 버튼은 동일텍스트 충돌 → `point: "66%,56%"` 좌표탭.
+  - 플로우: `.maestro/login.yaml`, `full-flow.yaml`(로그인→네비→로그아웃), `confirm-logout.yaml`
+- **dev-login 우회**: OAuth(Apple/Google)는 AI가 인터랙티브 못 함 → 백엔드 `POST /auth/dev-login`(env 게이팅) + 앱 `__DEV__` 버튼(testID `dev-login-button`)으로 OAuth 없이 로그인.
+- 시뮬은 localhost Metro 연결 + 서명 불필요 → AI E2E에 최적. (Flutter 캔버스면 불가, RN 접근성트리라 가능)
+
+## ⚠️ Phase 6 함정 (다음에 또)
+
+- **Xcode 26 + fmt consteval 비호환** → `plugins/withFmtFix.js`(Podfile post_install로 FMT_USE_CONSTEVAL=0). prebuild/EAS에 자동 적용.
+- **@expo/vector-icons → expo-font 필요** (ExpoFontLoader 네이티브 모듈). 안 깔면 런타임 크래시.
+- **Metro `--clear` 금지** — NativeJSLogger 에러로 번들 깨짐. 그냥 재시작(env는 --clear 없어도 재인라인).
+- **EXPO_PUBLIC_* 는 Metro 시작 시 인라인** — .env 바꾸면 Metro 재시작 필요(핫리로드 X).
+- Metro 8081은 Docker 점유 → 8082 사용.
+
+## ★ Launch 체크리스트 (출시 전 필수)
+
+- [ ] **운영 백엔드 `DEV_LOGIN_ENABLED` OFF** (현재 테스트용 ON! /auth/dev-login 노출 중)
+- [ ] 앱 dev 버튼은 `__DEV__`라 release 빌드엔 자동 제외(확인)
+- [ ] Apple revoke(.p8), Google Android client(SHA-1)
+
+---
+## (이하 원본 — Phase 0~5 코드)
+## 구 상태: 코드 완료(Phase 0~5)
 
 - Phase 0: 백엔드 `PATCH /worktimer/sessions/:id/edit`(수동편집) 배포 ✅
 - Phase 1: 번들ID `kr.codeatlas.worktimer`, 라이브러리, plugins, env ✅
