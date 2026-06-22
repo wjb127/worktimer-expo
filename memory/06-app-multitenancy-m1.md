@@ -9,7 +9,8 @@ worktimer-expo 앱을 Supabase 직접접근 → NestJS API 호출로 전환한 �
 
 - ✅ iOS 시뮬레이터 빌드·실행, **Maestro E2E 전부 PASS** (로그인→탭네비→로그아웃, API 화면 렌더)
 - ✅ 백엔드 curl E2E: dev-login → 세션 CRUD → 멀티테넌트 격리 라이브 확인
-- ✅ 실기기(WiPhone) 빌드·설치도 성공(서명 9Q26686S8R 자동), Metro 연결까지
+- ✅ 실기기(WiPhone) 빌드·설치 성공(서명 9Q26686S8R 자동). 1차 빌드는 ExpoFontLoader 크래시 → expo-font+fmt 수정 후 **수정본 재빌드·설치 완료**. 사용자 폰에서 직접 로그인 확인 대기(내가 화면 못 봄)
+- 실기기 Metro 연결: 자동탐색 실패 → **수동 URL `http://<맥LAN IP>:8082`** 입력(같은 WiFi 필수). 시뮬은 localhost 자동
 
 ## E2E 테스트 방식 (Maestro + dev-login)
 
