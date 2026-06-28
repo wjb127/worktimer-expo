@@ -4,6 +4,6 @@ appId: kr.codeatlas.worktimer
 - tapOn:
     point: "66%,56%"
 - extendedWaitUntil:
-    visible: "Filltime"
+    visible: "필타임"
     timeout: 10000
 - takeScreenshot: /tmp/m-loggedout-ok
