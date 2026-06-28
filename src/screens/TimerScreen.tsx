@@ -28,6 +28,7 @@ import {
   isLiveActivityRunning,
 } from '../lib/liveActivity';
 import { colors } from '../theme/colors';
+import HomeBanner from '../components/HomeBanner';
 
 const formatTime = (seconds: number): string => {
   const hrs = Math.floor(seconds / 3600);
@@ -208,6 +209,10 @@ export default function TimerScreen() {
 
   return (
     <View style={styles.container}>
+      {/* 서버 구동 배너/공지 — 화면 콘텐츠 최상단(날짜 위)에 고정 */}
+      <View style={styles.bannerSlot}>
+        <HomeBanner />
+      </View>
       <Text style={styles.dateText}>{formatDate()}</Text>
       <View style={styles.timerSection}>
         <View
@@ -280,6 +285,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
+  },
+  // 배너를 화면 상단에 고정해 중앙 정렬된 타이머 레이아웃을 방해하지 않음
+  bannerSlot: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingTop: 12,
   },
   dateText: {
     fontSize: 18,
