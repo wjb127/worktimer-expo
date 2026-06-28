@@ -4,7 +4,7 @@ appId: kr.codeatlas.worktimer
 # 로그아웃 상태면 dev-login
 - runFlow:
     when:
-      visible: "WorkTimer"
+      visible: "Filltime"
     commands:
       - tapOn:
           id: "dev-login-button"
@@ -30,6 +30,6 @@ appId: kr.codeatlas.worktimer
 - tapOn:
     point: "66%,56%"
 - extendedWaitUntil:
-    visible: "WorkTimer"
+    visible: "Filltime"
     timeout: 10000
 - takeScreenshot: /tmp/m-loggedout

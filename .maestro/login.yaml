@@ -1,7 +1,7 @@
 # dev-login → 메인 진입 E2E (Maestro, 접근성 트리 기반)
 appId: kr.codeatlas.worktimer
 ---
-- assertVisible: "WorkTimer"
+- assertVisible: "Filltime"
 - tapOn:
     id: "dev-login-button"
 - extendedWaitUntil:

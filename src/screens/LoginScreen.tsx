@@ -83,7 +83,7 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>WorkTimer</Text>
+      <Text style={styles.title}>Filltime</Text>
       <Text style={styles.sub}>로그인하고 어디서든 기록을 이어가세요</Text>
 
       {Platform.OS === 'ios' && (
