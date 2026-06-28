@@ -13,6 +13,9 @@
 - **인증 검증**: 구글 가입 라이브 확인(qhv147@gmail.com → codeatlas.users → 어드민 표시). Android OAuth 클라이언트 등록됨(debug SHA `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`, pkg kr.codeatlas.worktimer, GCP codeatlas-500015).
 - **데이터**: PWA(웹) 1494세션/1614.7h가 qhv147 계정으로 마이그레이션됨. 아이콘 v2(블루 채움링) + 히트맵 블루 적용. 백엔드에 투두/세션메타 엔드포인트 라이브(모바일 UI 미연결).
 - **브랜드**: 앱 이름 **필타임**(영어 Filltime). 표시명만 변경, 번들ID `kr.codeatlas.worktimer`/슬러그 `worktimer-expo`/scheme 유지. 도메인 filltime.app 선점 권장.
+- **UI 블루테마 완료**: 헤더 필타임 블루, 타이머 블루 버튼/링, 히트맵·달력 2시간 8단계 블루(H:MM 표기, 글자색 적응), 로그인 리디자인. `src/theme/colors.ts` 팔레트.
+- **프로필 1차 라이브**: 설정 상단 카드 + 누적통계(총시간/세션/스트릭/주월) + 일일목표. 백엔드 `/me`·`/me/stats`·`/me/settings`.
+- **SDUI 배너 라이브**: `codeatlas.app_banner` + 공개 `GET /config/banners`(앱/버전/기간 필터) → 홈 배너+상세모달. 릴리즈 없이 공지 제어. (어드민 편집기는 후속)
 
 ---
 
