@@ -4,41 +4,42 @@ import {
   Text,
   View,
   TouchableOpacity,
+  Modal,
   Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { apiGetBanners, Banner } from '../lib/api/config';
 import { colors } from '../theme/colors';
 
-// 세션 동안 닫은 배너 id 를 기억한다 (모듈 레벨이라 화면 재진입에도 유지).
-// AsyncStorage 등 영속 저장은 의도적으로 쓰지 않음 (세션 한정 숨김).
+// 세션 동안 닫은 배너 id 를 기억(모듈 레벨 — 화면 재진입에도 유지). 영속 저장은 안 함.
 const dismissedIds = new Set<string>();
 
-// kind 별 아이콘 매핑
 const KIND_ICON: Record<Banner['kind'], keyof typeof Ionicons.glyphMap> = {
   notice: 'megaphone',
   event: 'sparkles',
   info: 'information-circle',
 };
 
+const KIND_LABEL: Record<Banner['kind'], string> = {
+  notice: '공지',
+  event: '이벤트',
+  info: '안내',
+};
+
 export default function HomeBanner() {
   const [banner, setBanner] = useState<Banner | null>(null);
   const [dismissed, setDismissed] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
     apiGetBanners()
       .then((list) => {
         if (!alive || list.length === 0) return;
-        // 우선순위 높은 순 정렬(백엔드가 이미 정렬해주지만 방어적으로 한 번 더).
         const top = [...list].sort((a, b) => b.priority - a.priority)[0];
-        if (top && !dismissedIds.has(top.id)) {
-          setBanner(top);
-        }
+        if (top && !dismissedIds.has(top.id)) setBanner(top);
       })
-      .catch(() => {
-        // 비핵심 기능 — 어떤 에러도 무시하고 아무것도 렌더하지 않는다.
-      });
+      .catch(() => {});
     return () => {
       alive = false;
     };
@@ -47,13 +48,16 @@ export default function HomeBanner() {
   if (!banner || dismissed) return null;
 
   const isEvent = banner.kind === 'event';
+  const accentColor = isEvent ? colors.white : colors.primary;
+  const titleColor = isEvent ? colors.white : colors.ink;
+  const bodyColor = isEvent ? colors.white : colors.inkSub;
 
   const handleDismiss = () => {
     dismissedIds.add(banner.id);
     setDismissed(true);
   };
 
-  const handlePress = async () => {
+  const openActionUrl = async () => {
     if (!banner.actionUrl) return;
     try {
       await Linking.openURL(banner.actionUrl);
@@ -62,46 +66,96 @@ export default function HomeBanner() {
     }
   };
 
-  const accentColor = isEvent ? colors.white : colors.primary;
-  const titleColor = isEvent ? colors.white : colors.ink;
-  const bodyColor = isEvent ? colors.white : colors.inkSub;
-
   return (
-    <TouchableOpacity
-      style={[
-        styles.card,
-        isEvent ? styles.cardEvent : styles.cardInfo,
-      ]}
-      activeOpacity={banner.actionUrl ? 0.85 : 1}
-      onPress={handlePress}
-      disabled={!banner.actionUrl}
-    >
-      <View style={styles.row}>
-        <Ionicons
-          name={KIND_ICON[banner.kind]}
-          size={20}
-          color={accentColor}
-          style={styles.icon}
-        />
-        <View style={styles.textCol}>
-          <Text style={[styles.title, { color: titleColor }]} numberOfLines={2}>
-            {banner.title}
-          </Text>
-          {banner.body ? (
-            <Text style={[styles.body, { color: bodyColor }]} numberOfLines={3}>
-              {banner.body}
+    <>
+      {/* 배너 카드 — 탭하면 상세 모달 */}
+      <TouchableOpacity
+        style={[styles.card, isEvent ? styles.cardEvent : styles.cardInfo]}
+        activeOpacity={0.85}
+        onPress={() => setDetailOpen(true)}
+      >
+        <View style={styles.row}>
+          <Ionicons
+            name={KIND_ICON[banner.kind]}
+            size={20}
+            color={accentColor}
+            style={styles.icon}
+          />
+          <View style={styles.textCol}>
+            <Text style={[styles.title, { color: titleColor }]} numberOfLines={1}>
+              {banner.title}
             </Text>
-          ) : null}
+            {banner.body ? (
+              <Text style={[styles.body, { color: bodyColor }]} numberOfLines={1}>
+                {banner.body}
+              </Text>
+            ) : null}
+          </View>
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color={accentColor}
+            style={styles.chevron}
+          />
+          <TouchableOpacity
+            onPress={handleDismiss}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={styles.closeBtn}
+          >
+            <Ionicons name="close" size={18} color={accentColor} />
+          </TouchableOpacity>
         </View>
+      </TouchableOpacity>
+
+      {/* 상세 모달(페이지) */}
+      <Modal
+        visible={detailOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDetailOpen(false)}
+      >
         <TouchableOpacity
-          onPress={handleDismiss}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          style={styles.closeBtn}
+          style={styles.overlay}
+          activeOpacity={1}
+          onPress={() => setDetailOpen(false)}
         >
-          <Ionicons name="close" size={18} color={accentColor} />
+          <TouchableOpacity activeOpacity={1} style={styles.sheet}>
+            <View style={styles.sheetHeader}>
+              <View style={styles.kindBadge}>
+                <Ionicons
+                  name={KIND_ICON[banner.kind]}
+                  size={14}
+                  color={colors.primary}
+                />
+                <Text style={styles.kindBadgeText}>{KIND_LABEL[banner.kind]}</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setDetailOpen(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={22} color={colors.inkSub} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.sheetTitle}>{banner.title}</Text>
+            {banner.body ? (
+              <Text style={styles.sheetBody}>{banner.body}</Text>
+            ) : null}
+            {banner.actionUrl ? (
+              <TouchableOpacity style={styles.actionBtn} onPress={openActionUrl}>
+                <Text style={styles.actionBtnText}>자세히 보기</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.closeCta}
+                onPress={() => setDetailOpen(false)}
+              >
+                <Text style={styles.closeCtaText}>확인</Text>
+              </TouchableOpacity>
+            )}
+          </TouchableOpacity>
         </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
+      </Modal>
+    </>
   );
 }
 
@@ -109,41 +163,82 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 16,
   },
-  // notice/info: 연한 블루 배경 + 좌측 강조 바
   cardInfo: {
     backgroundColor: colors.primaryFaint,
     borderLeftWidth: 4,
     borderLeftColor: colors.primary,
   },
-  // event: 진한 블루 배경 + 흰 텍스트
-  cardEvent: {
-    backgroundColor: colors.primary,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  icon: {
-    marginTop: 1,
-    marginRight: 10,
-  },
-  textCol: {
+  cardEvent: { backgroundColor: colors.primary },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  icon: { marginRight: 10 },
+  textCol: { flex: 1 },
+  title: { fontSize: 15, fontWeight: '700' },
+  body: { fontSize: 13, marginTop: 2 },
+  chevron: { marginLeft: 6, opacity: 0.7 },
+  closeBtn: { marginLeft: 6 },
+
+  // 상세 모달
+  overlay: {
     flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 28,
   },
-  title: {
-    fontSize: 15,
+  sheet: {
+    width: '100%',
+    backgroundColor: colors.card,
+    borderRadius: 18,
+    padding: 22,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  kindBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primaryFaint,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+  },
+  kindBadgeText: {
+    color: colors.primary,
+    fontSize: 12,
     fontWeight: '700',
+    marginLeft: 4,
   },
-  body: {
-    fontSize: 13,
-    marginTop: 4,
-    lineHeight: 18,
+  sheetTitle: {
+    fontSize: 19,
+    fontWeight: '800',
+    color: colors.ink,
+    marginBottom: 10,
   },
-  closeBtn: {
-    marginLeft: 10,
+  sheetBody: {
+    fontSize: 15,
+    lineHeight: 23,
+    color: colors.inkSub,
+    marginBottom: 20,
   },
+  actionBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+  actionBtnText: { color: colors.white, fontSize: 15, fontWeight: '700' },
+  closeCta: {
+    backgroundColor: colors.primaryFaint,
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+  closeCtaText: { color: colors.primary, fontSize: 15, fontWeight: '700' },
 });

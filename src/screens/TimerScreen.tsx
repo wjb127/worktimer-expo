@@ -209,10 +209,11 @@ export default function TimerScreen() {
 
   return (
     <View style={styles.container}>
-      {/* 서버 구동 배너/공지 — 화면 콘텐츠 최상단(날짜 위)에 고정 */}
+      {/* 서버 구동 배너/공지 — 전용 공간(흐름 배치, 콘텐츠를 아래로 밀어냄) */}
       <View style={styles.bannerSlot}>
         <HomeBanner />
       </View>
+      <View style={styles.content}>
       <Text style={styles.dateText}>{formatDate()}</Text>
       <View style={styles.timerSection}>
         <View
@@ -274,6 +275,7 @@ export default function TimerScreen() {
           {formatTime(todayTotal + (isRunning ? elapsedSeconds : 0))}
         </Text>
       </View>
+      </View>
     </View>
   );
 }
@@ -282,18 +284,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
   },
-  // 배너를 화면 상단에 고정해 중앙 정렬된 타이머 레이아웃을 방해하지 않음
+  // 배너 전용 공간 (흐름 배치 — 콘텐츠를 아래로 밀어내 겹침 없음)
   bannerSlot: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
     paddingHorizontal: 20,
     paddingTop: 12,
+  },
+  // 타이머 본문 — 남은 공간에서 중앙 정렬
+  content: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
   },
   dateText: {
     fontSize: 18,
