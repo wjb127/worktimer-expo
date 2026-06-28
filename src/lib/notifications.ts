@@ -22,6 +22,9 @@ const STORAGE_KEYS = {
   WORK_INTERVAL_MINUTES: '@settings/workIntervalMinutes',
 };
 
+// 업무 시작 알림 ID prefix — cancelWorkReminder가 이 prefix만 취소(interval/test 알림 침범 방지)
+const REMINDER_NOTIFICATION_PREFIX = 'work-reminder-';
+
 // 요일 타입
 export type WeekDay = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 일=0, 월=1, ..., 토=6
 
@@ -162,7 +165,7 @@ export async function scheduleWorkReminder(settings: WorkReminderSettings): Prom
     return;
   }
 
-  // 각 요일별로 알림 스케줄
+  // 각 요일별로 알림 스케줄 (요일별 고유 prefix identifier 부여 → 취소 시 정확히 매칭)
   for (const day of settings.days) {
     await Notifications.scheduleNotificationAsync({
       content: {
@@ -176,15 +179,22 @@ export async function scheduleWorkReminder(settings: WorkReminderSettings): Prom
         hour: settings.hour,
         minute: settings.minute,
       },
+      identifier: `${REMINDER_NOTIFICATION_PREFIX}${day}`,
     });
   }
 }
 
-// 업무 시작 알림 취소
+// 업무 시작 알림 취소 — 시작 알림(prefix)만 취소. interval/test 등 다른 알림은 건드리지 않음.
 export async function cancelWorkReminder(): Promise<void> {
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   for (const notification of scheduled) {
-    await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+    if (notification.identifier.startsWith(REMINDER_NOTIFICATION_PREFIX)) {
+      try {
+        await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+      } catch {
+        // 이미 없는 알림일 수 있음
+      }
+    }
   }
 }
 

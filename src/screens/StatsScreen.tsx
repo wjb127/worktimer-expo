@@ -49,87 +49,104 @@ export default function StatsScreen() {
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  const loadDailyData = async (baseDate: Date) => {
-    // 최근 7일
-    const data: ChartData[] = [];
-    const endDate = new Date(baseDate);
-    endDate.setHours(23, 59, 59, 999);
+  // 기간 내 완료 세션을 date(YYYY-MM-DD) → 합계(초)로 한 번에 집계.
+  // 기존엔 버킷마다 apiListSessions를 N번 호출했지만, 범위 한방 조회 + 클라 그룹핑으로 N→1.
+  const sumByDate = async (
+    fromStr: string,
+    toStr: string,
+  ): Promise<Record<string, number>> => {
+    const sessions = (await apiListSessions(fromStr, toStr)).filter(
+      (s) => s.end_time !== null,
+    );
+    const byDate: Record<string, number> = {};
+    for (const s of sessions) {
+      byDate[s.date] = (byDate[s.date] ?? 0) + (s.duration || 0);
+    }
+    return byDate;
+  };
 
+  // 버킷 범위 [startStr, endStr] 합산 (date는 문자열이라 사전식 비교로 범위 판정 가능)
+  const sumRange = (
+    byDate: Record<string, number>,
+    startStr: string,
+    endStr: string,
+  ): number => {
+    let total = 0;
+    for (const [d, secs] of Object.entries(byDate)) {
+      if (d >= startStr && d <= endStr) total += secs;
+    }
+    return total;
+  };
+
+  const loadDailyData = async (baseDate: Date) => {
+    // 최근 7일 — 범위 한 번 조회
+    const start = new Date(baseDate);
+    start.setDate(start.getDate() - 6);
+    const byDate = await sumByDate(formatDateString(start), formatDateString(baseDate));
+
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const data: ChartData[] = [];
     for (let i = 6; i >= 0; i--) {
       const date = new Date(baseDate);
       date.setDate(date.getDate() - i);
       const dateString = formatDateString(date);
-
-      const sessions = (await apiListSessions(dateString, dateString)).filter(
-        (s) => s.end_time !== null,
-      );
-
-      const totalSeconds = sessions.reduce((sum, s) => sum + (s.duration || 0), 0);
-
-      const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
       data.push({
         label: `${date.getDate()}(${dayNames[date.getDay()]})`,
-        value: totalSeconds,
+        value: byDate[dateString] ?? 0,
         date: dateString,
       });
     }
-
     setChartData(data);
   };
 
   const loadWeeklyData = async (baseDate: Date) => {
-    // 최근 8주
-    const data: ChartData[] = [];
+    // 최근 8주 — 가장 오래된 주 시작 ~ 기준주 끝을 한 번에 조회
+    const oldestWeekStart = new Date(baseDate);
+    oldestWeekStart.setDate(oldestWeekStart.getDate() - oldestWeekStart.getDay() - 7 * 7);
+    const newestWeekEnd = new Date(baseDate);
+    newestWeekEnd.setDate(newestWeekEnd.getDate() - newestWeekEnd.getDay() + 6);
+    const byDate = await sumByDate(
+      formatDateString(oldestWeekStart),
+      formatDateString(newestWeekEnd),
+    );
 
+    const data: ChartData[] = [];
     for (let i = 7; i >= 0; i--) {
       const weekStart = new Date(baseDate);
       weekStart.setDate(weekStart.getDate() - weekStart.getDay() - i * 7);
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekEnd.getDate() + 6);
-
       const startString = formatDateString(weekStart);
       const endString = formatDateString(weekEnd);
-
-      const sessions = (await apiListSessions(startString, endString)).filter(
-        (s) => s.end_time !== null,
-      );
-
-      const totalSeconds = sessions.reduce((sum, s) => sum + (s.duration || 0), 0);
-
       data.push({
         label: `${weekStart.getMonth() + 1}/${weekStart.getDate()}`,
-        value: totalSeconds,
+        value: sumRange(byDate, startString, endString),
         date: startString,
       });
     }
-
     setChartData(data);
   };
 
   const loadMonthlyData = async (baseDate: Date) => {
-    // 최근 6개월
-    const data: ChartData[] = [];
+    // 최근 6개월 — 6개월 전 1일 ~ 기준월 말일 한 번에 조회
+    const oldest = new Date(baseDate.getFullYear(), baseDate.getMonth() - 5, 1);
+    const newestEnd = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0);
+    const byDate = await sumByDate(
+      getMonthStart(oldest.getFullYear(), oldest.getMonth()),
+      getMonthEnd(newestEnd.getFullYear(), newestEnd.getMonth()),
+    );
 
+    const data: ChartData[] = [];
     for (let i = 5; i >= 0; i--) {
       const monthDate = new Date(baseDate.getFullYear(), baseDate.getMonth() - i, 1);
-      const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
-
       const startString = getMonthStart(monthDate.getFullYear(), monthDate.getMonth());
       const endString = getMonthEnd(monthDate.getFullYear(), monthDate.getMonth());
-
-      const sessions = (await apiListSessions(startString, endString)).filter(
-        (s) => s.end_time !== null,
-      );
-
-      const totalSeconds = sessions.reduce((sum, s) => sum + (s.duration || 0), 0);
-
       data.push({
         label: `${monthDate.getMonth() + 1}월`,
-        value: totalSeconds,
+        value: sumRange(byDate, startString, endString),
         date: startString,
       });
     }
-
     setChartData(data);
   };
 

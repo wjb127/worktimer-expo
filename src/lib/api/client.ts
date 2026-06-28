@@ -5,18 +5,38 @@ import {
   clearTokens,
 } from '../auth/tokenStore';
 
-const BASE = process.env.EXPO_PUBLIC_API_URL as string;
+// API base URL — 누락 시 조용한 `undefined${path}` 요청 대신 명확히 throw (fail-fast).
+function getBase(): string {
+  const base = process.env.EXPO_PUBLIC_API_URL;
+  if (!base) {
+    throw new Error(
+      '[config] EXPO_PUBLIC_API_URL이 설정되지 않았습니다. .env 또는 EAS 빌드 env를 확인하세요.',
+    );
+  }
+  return base;
+}
+
+// refresh 토큰까지 만료/무효일 때 호출 — AuthContext가 등록해 앱 전체 signedOut 전파.
+// (없으면 무한 401 + 빈화면 상태에 갇힘)
+let onAuthExpired: (() => void) | null = null;
+export function setAuthExpiredHandler(handler: (() => void) | null): void {
+  onAuthExpired = handler;
+}
 
 async function refresh(): Promise<boolean> {
   const rt = await getRefreshToken();
-  if (!rt) return false;
-  const res = await fetch(`${BASE}/auth/refresh`, {
+  if (!rt) {
+    onAuthExpired?.();
+    return false;
+  }
+  const res = await fetch(`${getBase()}/auth/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refreshToken: rt }),
   });
   if (res.status >= 400) {
     await clearTokens();
+    onAuthExpired?.();
     return false;
   }
   const data = await res.json();
@@ -30,7 +50,7 @@ export async function apiFetch(
   _retry = true,
 ): Promise<Response> {
   const token = await getAccessToken();
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(`${getBase()}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',

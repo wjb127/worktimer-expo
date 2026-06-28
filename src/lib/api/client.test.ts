@@ -5,7 +5,10 @@ jest.mock('../auth/tokenStore', () => ({
   clearTokens: jest.fn(),
 }));
 
-import { apiFetch } from './client';
+// client는 EXPO_PUBLIC_API_URL을 fail-fast로 요구 → 테스트 환경에 주입
+process.env.EXPO_PUBLIC_API_URL = 'http://test.local';
+
+import { apiFetch, setAuthExpiredHandler } from './client';
 import * as store from '../auth/tokenStore';
 
 const mockFetch = (responses: Array<{ status: number; body: unknown }>) => {
@@ -52,5 +55,16 @@ describe('apiFetch', () => {
     mockFetch([{ status: 401, body: {} }]);
     const res = await apiFetch('/me');
     expect(res.status).toBe(401);
+  });
+
+  it('refresh 실패 시 auth 만료 핸들러를 호출한다 (signedOut 전파)', async () => {
+    (store.getAccessToken as jest.Mock).mockResolvedValue('old');
+    (store.getRefreshToken as jest.Mock).mockResolvedValue(null);
+    mockFetch([{ status: 401, body: {} }]);
+    const onExpired = jest.fn();
+    setAuthExpiredHandler(onExpired);
+    await apiFetch('/me');
+    expect(onExpired).toHaveBeenCalled();
+    setAuthExpiredHandler(null);
   });
 });
