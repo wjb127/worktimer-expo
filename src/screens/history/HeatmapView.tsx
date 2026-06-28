@@ -12,7 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { apiListSessions } from '../../lib/api/sessions';
 import { formatDateString } from '../../lib/dateUtils';
-import { colors } from '../../theme/colors';
+import { colors, getHeatColor } from '../../theme/colors';
 
 const MONTHS = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -144,14 +144,7 @@ export default function HeatmapView() {
     return labels;
   }, [weeks, selectedYear]);
 
-  const getColor = (duration: number): string => {
-    if (duration === 0) return '#EBEDF0';
-    if (duration < 3 * 3600) return '#BFDBFE';
-    if (duration < 6 * 3600) return '#93C5FD';
-    if (duration < 9 * 3600) return '#60A5FA';
-    if (duration < 12 * 3600) return '#3B82F6';
-    return '#2563EB';
-  };
+  const getColor = (duration: number): string => getHeatColor(duration);
 
   const handleYearSelect = (year: number) => {
     setSelectedYear(year);
@@ -261,7 +254,7 @@ export default function HeatmapView() {
 
           <View style={styles.legend}>
             <Text style={styles.legendText}>적음</Text>
-            {[0, 3, 6, 9, 12, 15].map((hours) => (
+            {[0, 2, 4, 6, 8, 10, 12, 14].map((hours) => (
               <View
                 key={hours}
                 style={[

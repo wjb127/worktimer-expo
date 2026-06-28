@@ -21,3 +21,32 @@ export const colors = {
 } as const;
 
 export type AppColors = typeof colors;
+
+// ── 히트맵/달력 색상 (2시간 단위, 0~14h+ 8단계) ──
+// 밝은 블루 → 진한 블루. 14시간 초과는 최대 색상으로 고정.
+export const heatEmpty = '#EBEDF0';
+export const heatScale = [
+  '#DBEAFE', // 0–2h
+  '#BFDBFE', // 2–4h
+  '#93C5FD', // 4–6h
+  '#60A5FA', // 6–8h
+  '#3B82F6', // 8–10h
+  '#2563EB', // 10–12h
+  '#1D4ED8', // 12–14h
+  '#1E40AF', // 14h+ (최대)
+] as const;
+
+// 근무 초 → 히트 색상 (2시간 버킷). 0이면 empty.
+export function getHeatColor(seconds: number): string {
+  if (seconds <= 0) return heatEmpty;
+  const idx = Math.min(
+    Math.floor(seconds / (2 * 3600)),
+    heatScale.length - 1,
+  );
+  return heatScale[idx];
+}
+
+// 셀 위 글자색: 진한 칸(8h↑ = #3B82F6 이상)은 흰색, 그 외는 ink (대비 확보)
+export function getHeatTextColor(seconds: number): string {
+  return seconds >= 8 * 3600 ? '#FFFFFF' : colors.ink;
+}

@@ -19,7 +19,7 @@ import {
 } from '../../lib/api/sessions';
 import { WorkSession } from '../../types/session';
 import { getLocalToday, getMonthStart, getMonthEnd } from '../../lib/dateUtils';
-import { colors } from '../../theme/colors';
+import { colors, getHeatColor, getHeatTextColor } from '../../theme/colors';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -33,9 +33,7 @@ const formatHourMin = (seconds: number): string => {
 
 // 셀 배경 밝기에 따라 가독성 좋은 텍스트 색을 반환 (대비 확보)
 // 진한 셀(6시간 이상 → #60A5FA/#3B82F6/#2563EB)엔 흰색, 그 외엔 ink
-const getDayTextColor = (duration: number): string => {
-  return duration >= 6 * 3600 ? colors.white : colors.ink;
-};
+const getDayTextColor = (duration: number): string => getHeatTextColor(duration);
 
 const formatDuration = (seconds: number): string => {
   const hrs = Math.floor(seconds / 3600);
@@ -223,14 +221,8 @@ export default function CalendarView() {
     return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   };
 
-  const getDayColor = (duration: number): string => {
-    if (duration >= 12 * 3600) return '#2563EB';
-    if (duration >= 9 * 3600) return '#3B82F6';
-    if (duration >= 6 * 3600) return '#60A5FA';
-    if (duration >= 3 * 3600) return '#93C5FD';
-    if (duration > 0) return '#BFDBFE';
-    return 'transparent';
-  };
+  const getDayColor = (duration: number): string =>
+    duration > 0 ? getHeatColor(duration) : 'transparent';
 
   return (
     <View style={styles.container}>
