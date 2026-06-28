@@ -27,7 +27,11 @@ export const apiGetTodayTotal = (date: string) =>
 export const apiGetOngoing = async (): Promise<WorkSession | null> => {
   const res = await apiFetch('/worktimer/sessions/ongoing');
   if (!res.ok) return null;
-  const data = await res.json();
+  // 진행중 세션이 없으면 백엔드가 200 + 빈 본문(null 직렬화)을 반환 →
+  // 빈 문자열을 res.json()에 넣으면 SyntaxError. 본문 길이로 먼저 가드.
+  const text = await res.text();
+  if (!text) return null;
+  const data = JSON.parse(text);
   return data ? mapSession(data) : null;
 };
 

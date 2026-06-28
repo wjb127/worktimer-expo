@@ -13,6 +13,16 @@
     "preview": {
       "distribution": "internal"
     },
+    "e2e": {
+      "extends": "preview",
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_E2E": "1"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
     "production": {}
   },
   "submit": {

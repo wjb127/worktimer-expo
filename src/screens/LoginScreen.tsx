@@ -108,7 +108,7 @@ export default function LoginScreen() {
         <Text style={styles.googleText}>Google로 계속하기</Text>
       </TouchableOpacity>
 
-      {__DEV__ && (
+      {(__DEV__ || process.env.EXPO_PUBLIC_E2E === '1') && (
         <TouchableOpacity
           style={styles.devBtn}
           onPress={devLogin}
