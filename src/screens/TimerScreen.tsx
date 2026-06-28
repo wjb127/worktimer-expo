@@ -29,6 +29,7 @@ import {
 } from '../lib/liveActivity';
 import { colors } from '../theme/colors';
 import HomeBanner from '../components/HomeBanner';
+import SessionEndModal from '../components/SessionEndModal';
 
 const formatTime = (seconds: number): string => {
   const hrs = Math.floor(seconds / 3600);
@@ -55,6 +56,9 @@ export default function TimerScreen() {
   const [todayTotal, setTodayTotal] = useState(0);
   const [currentSession, setCurrentSession] = useState<WorkSession | null>(null);
   const [loading, setLoading] = useState(true);
+  // 세션 종료 후 업무 기록 모달 — 종료된 세션 id + 그 세션의 경과시간 라벨
+  const [endedSessionId, setEndedSessionId] = useState<string | null>(null);
+  const [endedLabel, setEndedLabel] = useState('');
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialLoad = useRef(true);
@@ -170,6 +174,8 @@ export default function TimerScreen() {
   const handleStartStop = async () => {
     if (isRunning && currentSession) {
       // 종료 (타임스탬프 기반 duration 계산)
+      const endedId = currentSession.id;
+      const sessionLabel = formatTime(elapsedSeconds);
       const result = await endSession(currentSession.id, currentSession.start_time);
       if (result) {
         setIsRunning(false);
@@ -182,6 +188,9 @@ export default function TimerScreen() {
         await cancelHourlyWorkNotifications();
         // Live Activity 종료
         await endLiveActivity();
+        // 업무 기록 모달 표시 (무슨 업무 했는지 + 할일 연결)
+        setEndedLabel(sessionLabel);
+        setEndedSessionId(endedId);
       }
     } else {
       // 시작
@@ -276,6 +285,13 @@ export default function TimerScreen() {
         </Text>
       </View>
       </View>
+
+      {/* 세션 종료 후 업무 기록 모달 */}
+      <SessionEndModal
+        sessionId={endedSessionId}
+        elapsedLabel={endedLabel}
+        onClose={() => setEndedSessionId(null)}
+      />
     </View>
   );
 }

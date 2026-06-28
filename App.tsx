@@ -6,7 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import {
   TimerScreen,
   HistoryScreen,
-  StatsScreen,
+  TodoScreen,
+  AnalysisScreen,
   SettingsScreen,
 } from './src/screens';
 import { AuthProvider, useAuth } from './src/lib/auth/AuthContext';
@@ -30,8 +31,11 @@ function MainTabs() {
               case '기록':
                 iconName = focused ? 'calendar' : 'calendar-outline';
                 break;
-              case '통계':
-                iconName = focused ? 'stats-chart' : 'stats-chart-outline';
+              case '할일':
+                iconName = focused ? 'checkbox' : 'checkbox-outline';
+                break;
+              case 'AI분석':
+                iconName = focused ? 'sparkles' : 'sparkles-outline';
                 break;
               case '설정':
                 iconName = focused ? 'settings' : 'settings-outline';
@@ -63,7 +67,8 @@ function MainTabs() {
       >
         <Tab.Screen name="타이머" component={TimerScreen} />
         <Tab.Screen name="기록" component={HistoryScreen} />
-        <Tab.Screen name="통계" component={StatsScreen} />
+        <Tab.Screen name="할일" component={TodoScreen} />
+        <Tab.Screen name="AI분석" component={AnalysisScreen} />
         <Tab.Screen name="설정" component={SettingsScreen} />
       </Tab.Navigator>
       <StatusBar style="auto" />
