@@ -12,6 +12,7 @@
 - **어드민 콘솔**: `https://ss-037-codeatlas-admin.vercel.app` (repo wjb127/ss-037-codeatlas-admin). 듀얼비번(admin/admin123!), postgres.js 직결, 유저관리+IP/기기+CSV. appId로 멀티앱 확장.
 - **인증 검증**: 구글 가입 라이브 확인(qhv147@gmail.com → codeatlas.users → 어드민 표시). Android OAuth 클라이언트 등록됨(debug SHA `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`, pkg kr.codeatlas.worktimer, GCP codeatlas-500015).
 - **데이터**: PWA(웹) 1494세션/1614.7h가 qhv147 계정으로 마이그레이션됨. 아이콘 v2(블루 채움링) + 히트맵 블루 적용. 백엔드에 투두/세션메타 엔드포인트 라이브(모바일 UI 미연결).
+- **브랜드**: 앱 이름 **필타임**(영어 Filltime). 표시명만 변경, 번들ID `kr.codeatlas.worktimer`/슬러그 `worktimer-expo`/scheme 유지. 도메인 filltime.app 선점 권장.
 
 ---
 
@@ -80,6 +81,8 @@
   - [ ] 개인정보처리방침/이용약관 페이지(웹)
   - [ ] OAuth 동의화면 "테스트"→"프로덕션" 전환(현재 테스트 사용자만)
   - [ ] 스토어 스크린샷/아이콘/설명
+  - [ ] **로케일별 앱 이름**(영어 출시): 기본 필타임 + en→Filltime. iOS expo.locales{en:CFBundleDisplayName}, Android values-en config plugin. 스토어 등록명 언어별(한 필타임/영 Filltime)
+  - [ ] 도메인 filltime.app 선점, 최종 스토어 exact 중복 검색
 
 ## 같이 보면 좋은 문서
 - `05-architecture-roadmap.md` — M0~M5 전체 아키텍처/로드맵
