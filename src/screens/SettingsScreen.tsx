@@ -37,6 +37,7 @@ import {
   MeResponse,
   MeStats,
 } from '../lib/api/profile';
+import ShareCardModal from '../components/ShareCardModal';
 import { getOngoingSession } from '../lib/session';
 import { colors } from '../theme/colors';
 
@@ -149,6 +150,7 @@ export default function SettingsScreen() {
   const [stats, setStats] = useState<MeStats | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const [goalSeconds, setGoalSeconds] = useState<number | null>(null);
   const [savingGoal, setSavingGoal] = useState(false);
 
@@ -355,6 +357,7 @@ export default function SettingsScreen() {
   const goalForDisplay = goalSeconds ?? me?.settings.dailyGoalSeconds ?? 0;
 
   return (
+    <>
     <ScrollView style={styles.container}>
       {/* ── 프로필 섹션 (1차) ── */}
       <View style={styles.profileWrap}>
@@ -439,6 +442,16 @@ export default function SettingsScreen() {
             프로필 정보를 불러오지 못했어요.
           </Text>
         )}
+
+        {/* 내 기록 공유 (바이럴 — 잔디/누적/스트릭 카드 생성) */}
+        <TouchableOpacity
+          style={styles.shareButton}
+          onPress={() => setShowShare(true)}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="share-social" size={18} color={colors.white} />
+          <Text style={styles.shareButtonText}>내 기록 공유하기</Text>
+        </TouchableOpacity>
 
         {/* 일일 목표 설정 */}
         <Text style={styles.profileSectionTitle}>일일 목표</Text>
@@ -748,6 +761,8 @@ export default function SettingsScreen() {
         </TouchableOpacity>
       </View>
     </ScrollView>
+    <ShareCardModal visible={showShare} onClose={() => setShowShare(false)} />
+    </>
   );
 }
 
@@ -841,6 +856,17 @@ const styles = StyleSheet.create({
     color: colors.inkSub,
     marginTop: 6,
   },
+  shareButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 14,
+    height: 50,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+  },
+  shareButtonText: { color: colors.white, fontSize: 15, fontWeight: '700' },
   profileErrorText: {
     fontSize: 13,
     color: colors.inkSub,
