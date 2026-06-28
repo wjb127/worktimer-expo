@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -30,10 +30,92 @@ import {
 } from '../lib/notifications';
 import { useAuth } from '../lib/auth/AuthContext';
 import { apiFetch } from '../lib/api/client';
+import {
+  apiGetMe,
+  apiGetStats,
+  apiUpdateSettings,
+  MeResponse,
+  MeStats,
+} from '../lib/api/profile';
 import { getOngoingSession } from '../lib/session';
 import { colors } from '../theme/colors';
 
 const WEEKDAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+
+// 일일 목표 스텝 (30분 단위, 0~24h)
+const GOAL_STEP_SECONDS = 30 * 60;
+const GOAL_MIN_SECONDS = 0;
+const GOAL_MAX_SECONDS = 24 * 3600;
+const GOAL_PRESETS = [4, 6, 8, 10]; // 시간 프리셋
+
+// 로그인 수단 → 한글 라벨
+function providerLabel(provider: string): string {
+  switch (provider) {
+    case 'apple':
+      return 'Apple';
+    case 'google':
+      return 'Google';
+    case 'dev':
+      return '개발용';
+    default:
+      return provider || '게스트';
+  }
+}
+
+// 초 → "1,614시간" 스타일 (천 단위 콤마)
+function formatHours(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  return `${hours.toLocaleString('ko-KR')}시간`;
+}
+
+// 초 → 소수 1자리 시간 ("8.5h") — 목표 표시용
+function formatGoalHours(seconds: number): string {
+  const hours = seconds / 3600;
+  // 정수면 소수점 제거
+  return Number.isInteger(hours) ? `${hours}h` : `${hours.toFixed(1)}h`;
+}
+
+// ISO 날짜 → "YYYY-MM-DD"
+function formatJoinDate(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// 가입일로부터 함께한 일수
+function daysSince(iso: string): number {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return 0;
+  const diff = Date.now() - d.getTime();
+  return Math.max(0, Math.floor(diff / (24 * 3600 * 1000)));
+}
+
+// 누적 요약 스탯 카드 (큰 파란 숫자 + 보조 라벨)
+function StatCard({
+  label,
+  value,
+  loading,
+}: {
+  label: string;
+  value: string;
+  loading: boolean;
+}) {
+  return (
+    <View style={styles.statCard}>
+      {loading ? (
+        <View style={[styles.skeletonLine, { width: '60%', height: 22 }]} />
+      ) : (
+        <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
+          {value}
+        </Text>
+      )}
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
 
 export default function SettingsScreen() {
   const { signOut } = useAuth();
@@ -60,6 +142,68 @@ export default function SettingsScreen() {
         },
       },
     ]);
+  };
+
+  // ── 프로필 섹션 상태 ──
+  const [me, setMe] = useState<MeResponse | null>(null);
+  const [stats, setStats] = useState<MeStats | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState(false);
+  const [goalSeconds, setGoalSeconds] = useState<number | null>(null);
+  const [savingGoal, setSavingGoal] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      setProfileLoading(true);
+      setProfileError(false);
+      try {
+        // /me, /me/stats 를 병렬 로드 — 하나가 실패해도 다른 하나는 표시
+        const [meRes, statsRes] = await Promise.allSettled([
+          apiGetMe(),
+          apiGetStats(),
+        ]);
+        if (!alive) return;
+        if (meRes.status === 'fulfilled') {
+          setMe(meRes.value);
+          setGoalSeconds(meRes.value.settings.dailyGoalSeconds);
+        }
+        if (statsRes.status === 'fulfilled') {
+          setStats(statsRes.value);
+        }
+        // 둘 다 실패하면 에러 상태
+        if (meRes.status === 'rejected' && statsRes.status === 'rejected') {
+          setProfileError(true);
+        }
+      } catch {
+        if (alive) setProfileError(true);
+      } finally {
+        if (alive) setProfileLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // 일일 목표 변경 → PATCH /me/settings (낙관적 업데이트)
+  const updateGoal = async (nextSeconds: number) => {
+    const clamped = Math.min(
+      GOAL_MAX_SECONDS,
+      Math.max(GOAL_MIN_SECONDS, nextSeconds),
+    );
+    const prev = goalSeconds;
+    setGoalSeconds(clamped);
+    setSavingGoal(true);
+    try {
+      const res = await apiUpdateSettings({ dailyGoalSeconds: clamped });
+      setGoalSeconds(res.dailyGoalSeconds);
+    } catch {
+      // 실패 시 이전 값으로 롤백 (조용히)
+      setGoalSeconds(prev);
+    } finally {
+      setSavingGoal(false);
+    }
   };
 
   const [reminderSettings, setReminderSettings] = useState<WorkReminderSettings>(DEFAULT_WORK_REMINDER);
@@ -207,8 +351,160 @@ export default function SettingsScreen() {
     return option ? option.label : `${minutes}분`;
   };
 
+  const avatarLetter = me?.email?.trim()?.[0]?.toUpperCase() ?? '?';
+  const goalForDisplay = goalSeconds ?? me?.settings.dailyGoalSeconds ?? 0;
+
   return (
     <ScrollView style={styles.container}>
+      {/* ── 프로필 섹션 (1차) ── */}
+      <View style={styles.profileWrap}>
+        {/* 프로필 카드 */}
+        <View style={styles.profileCard}>
+          {profileLoading ? (
+            <View style={styles.profileRow}>
+              <View style={[styles.avatar, styles.skeletonBlock]} />
+              <View style={{ flex: 1 }}>
+                <View style={[styles.skeletonLine, { width: '60%' }]} />
+                <View
+                  style={[styles.skeletonLine, { width: '40%', marginTop: 8 }]}
+                />
+              </View>
+            </View>
+          ) : (
+            <View style={styles.profileRow}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{avatarLetter}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={styles.emailRow}>
+                  <Text style={styles.emailText} numberOfLines={1}>
+                    {me?.email ?? '게스트'}
+                  </Text>
+                  {me && (
+                    <View style={styles.providerBadge}>
+                      <Text style={styles.providerBadgeText}>
+                        {providerLabel(me.provider)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.joinText}>
+                  {me
+                    ? `가입일 ${formatJoinDate(me.createdAt)} · 함께한 지 ${daysSince(
+                        me.createdAt,
+                      )}일`
+                    : '—'}
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* 누적 요약 (게이미피케이션) */}
+        <Text style={styles.profileSectionTitle}>누적 요약</Text>
+        <View style={styles.statGrid}>
+          <StatCard
+            label="총 시간"
+            value={stats ? formatHours(stats.totalSeconds) : '—'}
+            loading={profileLoading}
+          />
+          <StatCard
+            label="총 세션"
+            value={stats ? `${stats.totalSessions.toLocaleString('ko-KR')}회` : '—'}
+            loading={profileLoading}
+          />
+          <StatCard
+            label="현재 연속"
+            value={stats ? `${stats.currentStreakDays}일` : '—'}
+            loading={profileLoading}
+          />
+          <StatCard
+            label="최장 연속"
+            value={stats ? `${stats.longestStreakDays}일` : '—'}
+            loading={profileLoading}
+          />
+          <StatCard
+            label="이번주"
+            value={stats ? formatHours(stats.thisWeekSeconds) : '—'}
+            loading={profileLoading}
+          />
+          <StatCard
+            label="이번달"
+            value={stats ? formatHours(stats.thisMonthSeconds) : '—'}
+            loading={profileLoading}
+          />
+        </View>
+        {profileError && (
+          <Text style={styles.profileErrorText}>
+            프로필 정보를 불러오지 못했어요.
+          </Text>
+        )}
+
+        {/* 일일 목표 설정 */}
+        <Text style={styles.profileSectionTitle}>일일 목표</Text>
+        <View style={styles.goalCard}>
+          <View style={styles.goalStepperRow}>
+            <TouchableOpacity
+              style={[
+                styles.stepperButton,
+                (savingGoal || goalForDisplay <= GOAL_MIN_SECONDS) &&
+                  styles.stepperButtonDisabled,
+              ]}
+              disabled={savingGoal || goalForDisplay <= GOAL_MIN_SECONDS}
+              onPress={() => updateGoal(goalForDisplay - GOAL_STEP_SECONDS)}
+            >
+              <Ionicons name="remove" size={24} color={colors.primary} />
+            </TouchableOpacity>
+
+            <View style={styles.goalValueWrap}>
+              <Text style={styles.goalValue}>
+                {formatGoalHours(goalForDisplay)}
+              </Text>
+              <Text style={styles.goalValueSub}>하루 목표</Text>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.stepperButton,
+                (savingGoal || goalForDisplay >= GOAL_MAX_SECONDS) &&
+                  styles.stepperButtonDisabled,
+              ]}
+              disabled={savingGoal || goalForDisplay >= GOAL_MAX_SECONDS}
+              onPress={() => updateGoal(goalForDisplay + GOAL_STEP_SECONDS)}
+            >
+              <Ionicons name="add" size={24} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.goalPresetRow}>
+            {GOAL_PRESETS.map((h) => {
+              const presetSeconds = h * 3600;
+              const isActive = goalForDisplay === presetSeconds;
+              return (
+                <TouchableOpacity
+                  key={h}
+                  style={[
+                    styles.goalPreset,
+                    isActive && styles.goalPresetActive,
+                  ]}
+                  disabled={savingGoal}
+                  onPress={() => updateGoal(presetSeconds)}
+                >
+                  <Text
+                    style={[
+                      styles.goalPresetText,
+                      isActive && styles.goalPresetTextActive,
+                    ]}
+                  >
+                    {h}h
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      </View>
+
       {/* 알림 섹션 */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>알림</Text>
@@ -456,6 +752,170 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
+  // ── 프로필 섹션 ──
+  profileWrap: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+  },
+  profileCard: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: 16,
+  },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.white,
+  },
+  emailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  emailText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.ink,
+    flexShrink: 1,
+  },
+  providerBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: colors.primaryFaint,
+  },
+  providerBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  joinText: {
+    fontSize: 13,
+    color: colors.inkSub,
+    marginTop: 4,
+  },
+  profileSectionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.ink,
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  statGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  statCard: {
+    width: '31.5%',
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: colors.inkSub,
+    marginTop: 6,
+  },
+  profileErrorText: {
+    fontSize: 13,
+    color: colors.inkSub,
+    marginTop: 10,
+  },
+  goalCard: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: 16,
+  },
+  goalStepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  stepperButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primaryFaint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperButtonDisabled: {
+    opacity: 0.4,
+  },
+  goalValueWrap: {
+    alignItems: 'center',
+  },
+  goalValue: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  goalValueSub: {
+    fontSize: 12,
+    color: colors.inkSub,
+    marginTop: 2,
+  },
+  goalPresetRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 16,
+  },
+  goalPreset: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+  },
+  goalPresetActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  goalPresetText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.inkSub,
+  },
+  goalPresetTextActive: {
+    color: colors.white,
+  },
+  skeletonBlock: {
+    backgroundColor: colors.line,
+  },
+  skeletonLine: {
+    height: 14,
+    borderRadius: 6,
+    backgroundColor: colors.line,
+  },
   accountSection: {
     marginTop: 24,
     marginBottom: 40,
