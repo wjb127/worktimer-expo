@@ -19,8 +19,23 @@ import {
 } from '../../lib/api/sessions';
 import { WorkSession } from '../../types/session';
 import { getLocalToday, getMonthStart, getMonthEnd } from '../../lib/dateUtils';
+import { colors } from '../../theme/colors';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+// 셀 안에 표시할 "H:MM" 포맷 (예: 10:23). 0초면 빈 문자열
+const formatHourMin = (seconds: number): string => {
+  if (seconds <= 0) return '';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return `${h}:${String(m).padStart(2, '0')}`;
+};
+
+// 셀 배경 밝기에 따라 가독성 좋은 텍스트 색을 반환 (대비 확보)
+// 진한 셀(6시간 이상 → #60A5FA/#3B82F6/#2563EB)엔 흰색, 그 외엔 ink
+const getDayTextColor = (duration: number): string => {
+  return duration >= 6 * 3600 ? colors.white : colors.ink;
+};
 
 const formatDuration = (seconds: number): string => {
   const hrs = Math.floor(seconds / 3600);
@@ -29,18 +44,6 @@ const formatDuration = (seconds: number): string => {
     return `${hrs}시간 ${mins}분`;
   }
   return `${mins}분`;
-};
-
-const formatShortDuration = (seconds: number): string => {
-  const hrs = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  if (hrs > 0 && mins > 0) {
-    return `${hrs}h${mins}m`;
-  }
-  if (hrs > 0) {
-    return `${hrs}h`;
-  }
-  return `${mins}m`;
 };
 
 const formatTime = (isoString: string): string => {
@@ -239,13 +242,13 @@ export default function CalendarView() {
 
       <View style={styles.header}>
         <TouchableOpacity onPress={goToPrevMonth} style={styles.navButton}>
-          <Ionicons name="chevron-back" size={24} color="#007AFF" />
+          <Ionicons name="chevron-back" size={24} color={colors.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
           {year}년 {month + 1}월
         </Text>
         <TouchableOpacity onPress={goToNextMonth} style={styles.navButton}>
-          <Ionicons name="chevron-forward" size={24} color="#007AFF" />
+          <Ionicons name="chevron-forward" size={24} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -254,8 +257,8 @@ export default function CalendarView() {
         <Switch
           value={showColors}
           onValueChange={setShowColors}
-          trackColor={{ false: '#D1D1D6', true: '#007AFF' }}
-          thumbColor="#fff"
+          trackColor={{ false: colors.line, true: colors.primary }}
+          thumbColor={colors.white}
         />
       </View>
 
@@ -289,6 +292,8 @@ export default function CalendarView() {
           const duration = monthData[dateString] || 0;
           const isSelected = selectedDate === dateString;
           const isToday = dateString === getLocalToday();
+          // 색상 표시 ON일 때만 셀 배경에 맞춰 대비 색을 적용. OFF면 항상 ink
+          const dayTextColor = showColors ? getDayTextColor(duration) : colors.ink;
 
           return (
             <TouchableOpacity
@@ -304,15 +309,20 @@ export default function CalendarView() {
               <Text
                 style={[
                   styles.dayText,
-                  index % 7 === 0 && styles.sundayText,
-                  index % 7 === 6 && styles.saturdayText,
+                  { color: dayTextColor },
                   isSelected && styles.selectedDayText,
                 ]}
               >
                 {day}
               </Text>
-              <Text style={[styles.durationText, duration === 0 && styles.durationTextHidden]}>
-                {duration > 0 ? formatShortDuration(duration) : ' '}
+              <Text
+                style={[
+                  styles.durationText,
+                  { color: dayTextColor },
+                  duration === 0 && styles.durationTextHidden,
+                ]}
+              >
+                {duration > 0 ? formatHourMin(duration) : ' '}
               </Text>
             </TouchableOpacity>
           );
@@ -382,7 +392,7 @@ export default function CalendarView() {
                   <Text style={styles.sessionSummaryText}>
                     {formatTime(session.start_time)} - {formatTime(session.end_time!)} ({formatDuration(session.duration)})
                   </Text>
-                  <Ionicons name="pencil" size={14} color="#007AFF" />
+                  <Ionicons name="pencil" size={14} color={colors.primary} />
                 </TouchableOpacity>
               ))}
             </View>
@@ -408,7 +418,7 @@ export default function CalendarView() {
               style={styles.closeButton}
               onPress={() => setEditingSession(null)}
             >
-              <Ionicons name="close" size={24} color="#666" />
+              <Ionicons name="close" size={24} color={colors.inkSub} />
             </TouchableOpacity>
             <Text style={styles.editModalTitle}>업무 시간 수정</Text>
 
@@ -441,7 +451,7 @@ export default function CalendarView() {
                 style={styles.deleteButton}
                 onPress={handleDeleteSession}
               >
-                <Ionicons name="trash-outline" size={18} color="#FF3B30" />
+                <Ionicons name="trash-outline" size={18} color={colors.danger} />
                 <Text style={styles.deleteButtonText}>삭제</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -461,25 +471,25 @@ export default function CalendarView() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
   },
   monthTotalContainer: {
-    backgroundColor: '#F0F8FF',
+    backgroundColor: colors.primaryFaint,
     paddingVertical: 16,
     paddingHorizontal: 20,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E8F0',
+    borderBottomColor: colors.line,
   },
   monthTotalLabel: {
     fontSize: 14,
-    color: '#666',
+    color: colors.inkSub,
     marginBottom: 4,
   },
   monthTotalValue: {
     fontSize: 24,
-    fontWeight: '600',
-    color: '#007AFF',
+    fontWeight: '700',
+    color: colors.primary,
   },
   scrollView: {
     flex: 1,
@@ -501,6 +511,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
+    color: colors.ink,
   },
   weekdayRow: {
     flexDirection: 'row',
@@ -512,13 +523,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 14,
     fontWeight: '500',
-    color: '#666',
+    color: colors.inkSub,
   },
   sunday: {
-    color: '#FF3B30',
+    color: colors.danger,
   },
   saturday: {
-    color: '#007AFF',
+    color: colors.primary,
   },
   calendarGrid: {
     flexDirection: 'row',
@@ -534,26 +545,22 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   selectedDay: {
-    borderColor: '#007AFF',
+    borderColor: colors.primary,
   },
   today: {
-    borderColor: '#CCCCCC',
+    borderColor: colors.primary,
   },
   dayText: {
     fontSize: 13,
-  },
-  sundayText: {
-    color: '#FF3B30',
-  },
-  saturdayText: {
-    color: '#007AFF',
+    color: colors.ink,
+    fontWeight: '500',
   },
   selectedDayText: {
-    fontWeight: '600',
+    fontWeight: '700',
   },
   durationText: {
     fontSize: 10,
-    color: '#FF3B30',
+    color: colors.ink,
     fontWeight: '600',
     marginTop: 2,
     minHeight: 14,
@@ -564,16 +571,17 @@ const styles = StyleSheet.create({
   timelineContainer: {
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
+    borderTopColor: colors.line,
   },
   sessionListTitle: {
     fontSize: 16,
     fontWeight: '600',
+    color: colors.ink,
     marginBottom: 12,
   },
   timeline: {
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.line,
     borderRadius: 8,
     overflow: 'hidden',
   },
@@ -582,31 +590,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: colors.line,
   },
   timelineHour: {
     width: 28,
     fontSize: 10,
-    color: '#999',
+    color: colors.inkSub,
     textAlign: 'center',
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.bg,
   },
   timelineSlot: {
     flex: 1,
     height: '100%',
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     position: 'relative',
   },
   timelineBlock: {
     position: 'absolute',
     top: 2,
     bottom: 2,
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
     borderRadius: 3,
   },
   sessionSummary: {
     marginTop: 12,
-    backgroundColor: '#F8F8F8',
+    backgroundColor: colors.bg,
     borderRadius: 8,
   },
   sessionSummaryItem: {
@@ -615,11 +623,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E8E8E8',
+    borderBottomColor: colors.line,
   },
   sessionSummaryText: {
     fontSize: 13,
-    color: '#333',
+    color: colors.ink,
   },
   modalOverlay: {
     flex: 1,
@@ -644,6 +652,7 @@ const styles = StyleSheet.create({
   editModalTitle: {
     fontSize: 18,
     fontWeight: '600',
+    color: colors.ink,
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -655,15 +664,16 @@ const styles = StyleSheet.create({
   editTimeLabel: {
     width: 50,
     fontSize: 15,
-    color: '#333',
+    color: colors.ink,
   },
   editTimeInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.line,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
+    color: colors.ink,
     textAlign: 'center',
   },
   editButtonRow: {
@@ -677,18 +687,18 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   deleteButtonText: {
-    color: '#FF3B30',
+    color: colors.danger,
     fontSize: 15,
     marginLeft: 4,
   },
   saveButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   saveButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 15,
     fontWeight: '600',
   },
@@ -701,6 +711,6 @@ const styles = StyleSheet.create({
   },
   optionLabel: {
     fontSize: 15,
-    color: '#333',
+    color: colors.ink,
   },
 });

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   Alert,
   Platform,
@@ -11,6 +12,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { apiJson } from '../lib/api/client';
 import { useAuth } from '../lib/auth/AuthContext';
+import { colors } from '../theme/colors';
 
 GoogleSignin.configure({
   webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
@@ -83,8 +85,14 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>필타임</Text>
-      <Text style={styles.sub}>로그인하고 어디서든 기록을 이어가세요</Text>
+      <View style={styles.brand}>
+        <Image
+          source={require('../../assets/icon.png')}
+          style={styles.logo}
+        />
+        <Text style={styles.title}>필타임</Text>
+        <Text style={styles.sub}>로그인하고 어디서든 기록을 이어가세요</Text>
+      </View>
 
       {Platform.OS === 'ios' && (
         <AppleAuthentication.AppleAuthenticationButton
@@ -129,28 +137,48 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
   },
-  title: { fontSize: 34, fontWeight: '700', marginBottom: 8 },
-  sub: { fontSize: 15, color: '#666', marginBottom: 40 },
+  brand: {
+    alignItems: 'center',
+    marginBottom: 48,
+  },
+  logo: {
+    width: 88,
+    height: 88,
+    borderRadius: 20,
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 34,
+    fontWeight: '800',
+    color: colors.ink,
+    marginBottom: 10,
+  },
+  sub: {
+    fontSize: 15,
+    color: colors.inkSub,
+    textAlign: 'center',
+  },
   appleBtn: { width: 260, height: 48, marginBottom: 12 },
   googleBtn: {
     width: 260,
     height: 48,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.line,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
   },
-  googleText: { fontSize: 16, fontWeight: '600', color: '#222' },
+  googleText: { fontSize: 16, fontWeight: '600', color: colors.ink },
+  // 개발/E2E 전용 버튼 — 보조(secondary) 톤으로 1차 CTA가 아님을 명확히
   devBtn: {
-    marginTop: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    marginTop: 28,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
     borderRadius: 8,
-    backgroundColor: '#34C759',
+    backgroundColor: colors.primaryFaint,
   },
-  devText: { fontSize: 14, fontWeight: '600', color: '#fff' },
+  devText: { fontSize: 13, fontWeight: '600', color: colors.primary },
 });

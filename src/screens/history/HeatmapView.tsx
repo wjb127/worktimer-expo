@@ -12,6 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { apiListSessions } from '../../lib/api/sessions';
 import { formatDateString } from '../../lib/dateUtils';
+import { colors } from '../../theme/colors';
 
 const MONTHS = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -192,7 +193,7 @@ export default function HeatmapView() {
           onPress={() => setShowYearPicker(true)}
         >
           <Text style={styles.yearText}>{selectedYear}년</Text>
-          <Ionicons name="chevron-down" size={18} color="#007AFF" />
+          <Ionicons name="chevron-down" size={18} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -315,7 +316,7 @@ export default function HeatmapView() {
                     {item}년
                   </Text>
                   {item === selectedYear && (
-                    <Ionicons name="checkmark" size={20} color="#007AFF" />
+                    <Ionicons name="checkmark" size={20} color={colors.primary} />
                   )}
                 </TouchableOpacity>
               )}
@@ -330,7 +331,7 @@ export default function HeatmapView() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
   },
   yearSelectorContainer: {
     flexDirection: 'row',
@@ -343,13 +344,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: colors.primaryFaint,
     borderRadius: 8,
   },
   yearText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#007AFF',
+    color: colors.primary,
     marginRight: 4,
   },
   statsContainer: {
@@ -357,19 +358,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    borderBottomColor: colors.line,
   },
   statItem: {
     alignItems: 'center',
   },
   statValue: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: colors.primary,
   },
   statLabel: {
     fontSize: 13,
-    color: '#666',
+    color: colors.inkSub,
     marginTop: 4,
   },
   scrollView: {
@@ -392,7 +393,7 @@ const styles = StyleSheet.create({
   weekdayLabel: {
     width: 18,
     fontSize: 10,
-    color: '#666',
+    color: colors.inkSub,
     textAlign: 'center',
   },
   weekGap: {
@@ -411,7 +412,7 @@ const styles = StyleSheet.create({
   },
   monthLabel: {
     fontSize: 11,
-    color: '#666',
+    color: colors.inkSub,
   },
   weekBlock: {
     flexDirection: 'row',
@@ -438,7 +439,7 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 11,
-    color: '#666',
+    color: colors.inkSub,
     marginHorizontal: 4,
   },
   legendCell: {
@@ -454,11 +455,12 @@ const styles = StyleSheet.create({
   infoTitle: {
     fontSize: 16,
     fontWeight: '600',
+    color: colors.ink,
     marginBottom: 8,
   },
   infoText: {
     fontSize: 14,
-    color: '#666',
+    color: colors.inkSub,
     lineHeight: 20,
   },
   modalOverlay: {
@@ -477,6 +479,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
+    color: colors.ink,
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -489,14 +492,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   yearOptionSelected: {
-    backgroundColor: '#F0F8FF',
+    backgroundColor: colors.primaryFaint,
   },
   yearOptionText: {
     fontSize: 16,
-    color: '#333',
+    color: colors.ink,
   },
   yearOptionTextSelected: {
-    color: '#007AFF',
+    color: colors.primary,
     fontWeight: '600',
   },
 });

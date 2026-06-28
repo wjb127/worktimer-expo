@@ -11,6 +11,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { apiListSessions } from '../lib/api/sessions';
 import { formatDateString, getMonthStart, getMonthEnd } from '../lib/dateUtils';
+import { colors } from '../theme/colors';
 
 type ViewMode = 'daily' | 'weekly' | 'monthly';
 
@@ -243,11 +244,11 @@ export default function StatsScreen() {
       {/* 날짜 네비게이션 */}
       <View style={styles.dateNav}>
         <TouchableOpacity onPress={goToPrev} style={styles.navButton}>
-          <Ionicons name="chevron-back" size={24} color="#007AFF" />
+          <Ionicons name="chevron-back" size={24} color={colors.primary} />
         </TouchableOpacity>
         <Text style={styles.dateRangeText}>{getDateRangeText()}</Text>
         <TouchableOpacity onPress={goToNext} style={styles.navButton}>
-          <Ionicons name="chevron-forward" size={24} color="#007AFF" />
+          <Ionicons name="chevron-forward" size={24} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -316,7 +317,7 @@ export default function StatsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.bg,
   },
   modeSelector: {
     flexDirection: 'row',
@@ -327,19 +328,19 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: colors.primaryFaint,
     alignItems: 'center',
   },
   modeButtonActive: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
   },
   modeButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: colors.inkSub,
   },
   modeButtonTextActive: {
-    color: '#fff',
+    color: colors.white,
   },
   dateNav: {
     flexDirection: 'row',
@@ -353,13 +354,13 @@ const styles = StyleSheet.create({
   },
   dateRangeText: {
     fontSize: 14,
-    color: '#666',
+    color: colors.inkSub,
   },
   summaryContainer: {
     flexDirection: 'row',
     marginHorizontal: 16,
     padding: 16,
-    backgroundColor: '#F8F8F8',
+    backgroundColor: colors.primaryFaint,
     borderRadius: 12,
     marginBottom: 20,
   },
@@ -369,16 +370,16 @@ const styles = StyleSheet.create({
   },
   summaryDivider: {
     width: 1,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: colors.line,
   },
   summaryValue: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#007AFF',
+    fontWeight: '700',
+    color: colors.primary,
   },
   summaryLabel: {
     fontSize: 13,
-    color: '#666',
+    color: colors.inkSub,
     marginTop: 4,
   },
   chartScrollView: {
@@ -401,7 +402,7 @@ const styles = StyleSheet.create({
   },
   yAxisLabel: {
     fontSize: 10,
-    color: '#999',
+    color: colors.inkSub,
   },
   chartArea: {
     flex: 1,
@@ -412,7 +413,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     borderLeftWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.line,
     height: 200,
     paddingBottom: 4,
   },
@@ -428,19 +429,19 @@ const styles = StyleSheet.create({
     paddingTop: 6,
   },
   bar: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
     borderRadius: 4,
     minWidth: 20,
   },
   barValue: {
     fontSize: 9,
-    color: '#007AFF',
+    color: colors.primary,
     marginBottom: 4,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   barLabel: {
     fontSize: 10,
-    color: '#666',
+    color: colors.inkSub,
     textAlign: 'center',
   },
 });

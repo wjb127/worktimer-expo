@@ -27,6 +27,7 @@ import {
   endLiveActivity,
   isLiveActivityRunning,
 } from '../lib/liveActivity';
+import { colors } from '../theme/colors';
 
 const formatTime = (seconds: number): string => {
   const hrs = Math.floor(seconds / 3600);
@@ -200,7 +201,7 @@ export default function TimerScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -209,9 +210,18 @@ export default function TimerScreen() {
     <View style={styles.container}>
       <Text style={styles.dateText}>{formatDate()}</Text>
       <View style={styles.timerSection}>
-        <Text style={styles.timerLabel}>
-          {isRunning ? '업무 중' : '대기 중'}
-        </Text>
+        <View
+          style={[styles.statusPill, isRunning ? styles.statusPillRunning : styles.statusPillIdle]}
+        >
+          <Text
+            style={[
+              styles.statusPillText,
+              isRunning ? styles.statusPillTextRunning : styles.statusPillTextIdle,
+            ]}
+          >
+            {isRunning ? '업무 중' : '대기 중'}
+          </Text>
+        </View>
         <Text style={styles.timer}>{formatTime(elapsedSeconds)}</Text>
       </View>
 
@@ -223,7 +233,7 @@ export default function TimerScreen() {
             cx={90}
             cy={90}
             r={85}
-            stroke="#E5E5E5"
+            stroke={colors.primaryLight}
             strokeWidth={6}
             fill="transparent"
           />
@@ -233,7 +243,7 @@ export default function TimerScreen() {
               cx={90}
               cy={90}
               r={85}
-              stroke="#007AFF"
+              stroke={colors.primary}
               strokeWidth={6}
               fill="transparent"
               strokeDasharray={2 * Math.PI * 85}
@@ -266,14 +276,14 @@ export default function TimerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
   },
   dateText: {
     fontSize: 18,
-    color: '#333',
+    color: colors.inkSub,
     fontWeight: '500',
     marginBottom: 40,
   },
@@ -291,14 +301,33 @@ const styles = StyleSheet.create({
   progressRing: {
     position: 'absolute',
   },
-  timerLabel: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 12,
+  // 상태 알약(pill) — 대기 중/업무 중
+  statusPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 999,
+    marginBottom: 16,
+  },
+  statusPillIdle: {
+    backgroundColor: colors.line,
+  },
+  statusPillRunning: {
+    backgroundColor: colors.primaryFaint,
+  },
+  statusPillText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  statusPillTextIdle: {
+    color: colors.inkSub,
+  },
+  statusPillTextRunning: {
+    color: colors.primary,
   },
   timer: {
     fontSize: 64,
     fontWeight: '200',
+    color: colors.ink,
     fontVariant: ['tabular-nums'],
     letterSpacing: 2,
   },
@@ -308,29 +337,34 @@ const styles = StyleSheet.create({
     borderRadius: 75,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
   },
   startButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: colors.primary,
   },
   stopButton: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: colors.danger,
   },
   buttonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 28,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   totalSection: {
     alignItems: 'center',
   },
   totalLabel: {
     fontSize: 16,
-    color: '#666',
+    color: colors.inkSub,
     marginBottom: 8,
   },
   totalTime: {
-    fontSize: 32,
-    fontWeight: '300',
-    color: '#333',
+    fontSize: 36,
+    fontWeight: '700',
+    color: colors.primary,
   },
 });

@@ -31,6 +31,7 @@ import {
 import { useAuth } from '../lib/auth/AuthContext';
 import { apiFetch } from '../lib/api/client';
 import { getOngoingSession } from '../lib/session';
+import { colors } from '../theme/colors';
 
 const WEEKDAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -220,8 +221,8 @@ export default function SettingsScreen() {
           <Switch
             value={reminderSettings.enabled}
             onValueChange={handleToggleReminder}
-            trackColor={{ false: '#D1D1D6', true: '#34C759' }}
-            thumbColor="#fff"
+            trackColor={{ false: colors.line, true: colors.primary }}
+            thumbColor={colors.white}
           />
         </View>
 
@@ -235,7 +236,7 @@ export default function SettingsScreen() {
                 <Text style={styles.settingValueText}>
                   {formatTime(reminderSettings.hour, reminderSettings.minute)}
                 </Text>
-                <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+                <Ionicons name="chevron-forward" size={20} color={colors.inkSub} />
               </View>
             </TouchableOpacity>
 
@@ -245,7 +246,7 @@ export default function SettingsScreen() {
               </View>
               <View style={styles.settingValue}>
                 <Text style={styles.settingValueText}>{getSelectedDaysText()}</Text>
-                <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+                <Ionicons name="chevron-forward" size={20} color={colors.inkSub} />
               </View>
             </TouchableOpacity>
           </>
@@ -255,7 +256,7 @@ export default function SettingsScreen() {
           <View style={styles.settingInfo}>
             <Text style={styles.settingLabel}>테스트 알림 보내기</Text>
           </View>
-          <Ionicons name="notifications-outline" size={20} color="#007AFF" />
+          <Ionicons name="notifications-outline" size={20} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -271,8 +272,8 @@ export default function SettingsScreen() {
           <Switch
             value={intervalSettings.enabled}
             onValueChange={handleToggleIntervalNotification}
-            trackColor={{ false: '#D1D1D6', true: '#34C759' }}
-            thumbColor="#fff"
+            trackColor={{ false: colors.line, true: colors.primary }}
+            thumbColor={colors.white}
           />
         </View>
 
@@ -315,21 +316,21 @@ export default function SettingsScreen() {
             <View style={styles.timePickerContainer}>
               <View style={styles.pickerColumn}>
                 <TouchableOpacity onPress={() => setTempHour((h) => (h + 1) % 24)}>
-                  <Ionicons name="chevron-up" size={24} color="#007AFF" />
+                  <Ionicons name="chevron-up" size={24} color={colors.primary} />
                 </TouchableOpacity>
                 <Text style={styles.pickerValue}>{String(tempHour).padStart(2, '0')}</Text>
                 <TouchableOpacity onPress={() => setTempHour((h) => (h - 1 + 24) % 24)}>
-                  <Ionicons name="chevron-down" size={24} color="#007AFF" />
+                  <Ionicons name="chevron-down" size={24} color={colors.primary} />
                 </TouchableOpacity>
               </View>
               <Text style={styles.pickerSeparator}>:</Text>
               <View style={styles.pickerColumn}>
                 <TouchableOpacity onPress={() => setTempMinute((m) => (m + 5) % 60)}>
-                  <Ionicons name="chevron-up" size={24} color="#007AFF" />
+                  <Ionicons name="chevron-up" size={24} color={colors.primary} />
                 </TouchableOpacity>
                 <Text style={styles.pickerValue}>{String(tempMinute).padStart(2, '0')}</Text>
                 <TouchableOpacity onPress={() => setTempMinute((m) => (m - 5 + 60) % 60)}>
-                  <Ionicons name="chevron-down" size={24} color="#007AFF" />
+                  <Ionicons name="chevron-down" size={24} color={colors.primary} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -423,7 +424,7 @@ export default function SettingsScreen() {
                       {option.label}
                     </Text>
                     {isSelected && (
-                      <Ionicons name="checkmark" size={20} color="#007AFF" />
+                      <Ionicons name="checkmark" size={20} color={colors.primary} />
                     )}
                   </TouchableOpacity>
                 );
@@ -465,32 +466,32 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     fontSize: 16,
-    color: '#007AFF',
+    color: colors.primary,
   },
   deleteAccountText: {
     fontSize: 16,
-    color: '#FF3B30',
+    color: colors.danger,
   },
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: colors.bg,
   },
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     marginTop: 20,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: colors.line,
   },
   sectionTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6D6D72',
+    color: colors.inkSub,
     textTransform: 'uppercase',
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 8,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: colors.bg,
   },
   settingItem: {
     flexDirection: 'row',
@@ -498,20 +499,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: colors.line,
   },
   settingInfo: {
     flex: 1,
   },
   settingLabel: {
     fontSize: 16,
-    color: '#000',
+    color: colors.ink,
   },
   settingDescription: {
     fontSize: 13,
-    color: '#8E8E93',
+    color: colors.inkSub,
     marginTop: 2,
   },
   settingValue: {
@@ -520,12 +521,12 @@ const styles = StyleSheet.create({
   },
   settingValueText: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: colors.inkSub,
     marginRight: 4,
   },
   versionText: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: colors.inkSub,
   },
   modalOverlay: {
     flex: 1,
@@ -534,7 +535,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 20,
     width: '80%',
@@ -542,6 +543,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
+    color: colors.ink,
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -557,11 +559,13 @@ const styles = StyleSheet.create({
   pickerValue: {
     fontSize: 32,
     fontWeight: '600',
+    color: colors.ink,
     marginVertical: 8,
   },
   pickerSeparator: {
     fontSize: 32,
     fontWeight: '600',
+    color: colors.ink,
     marginHorizontal: 16,
   },
   dayPickerContainer: {
@@ -575,18 +579,18 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F0F0F0',
+    backgroundColor: colors.primaryFaint,
   },
   dayButtonSelected: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
   },
   dayButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: colors.inkSub,
   },
   dayButtonTextSelected: {
-    color: '#fff',
+    color: colors.white,
   },
   presetButtons: {
     flexDirection: 'row',
@@ -597,22 +601,22 @@ const styles = StyleSheet.create({
   presetButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: colors.primaryFaint,
     borderRadius: 8,
   },
   presetButtonText: {
     fontSize: 14,
-    color: '#007AFF',
+    color: colors.primary,
     fontWeight: '500',
   },
   saveButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
   saveButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -627,17 +631,17 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: colors.line,
   },
   intervalOptionSelected: {
-    backgroundColor: '#F0F8FF',
+    backgroundColor: colors.primaryFaint,
   },
   intervalOptionText: {
     fontSize: 16,
-    color: '#000',
+    color: colors.ink,
   },
   intervalOptionTextSelected: {
-    color: '#007AFF',
+    color: colors.primary,
     fontWeight: '600',
   },
 });

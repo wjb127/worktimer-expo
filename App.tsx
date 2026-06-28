@@ -11,6 +11,7 @@ import {
 } from './src/screens';
 import { AuthProvider, useAuth } from './src/lib/auth/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
+import { colors } from './src/theme/colors';
 
 const Tab = createBottomTabNavigator();
 
@@ -41,9 +42,23 @@ function MainTabs() {
 
             return <Ionicons name={iconName} size={size} color={color} />;
           },
-          tabBarActiveTintColor: '#007AFF',
-          tabBarInactiveTintColor: '#8E8E93',
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.inkSub,
           headerShown: true,
+          // 모든 화면 헤더에 브랜드명 "필타임"을 좌측 정렬, 블루/볼드로 표시
+          headerTitle: '필타임',
+          headerTitleAlign: 'left',
+          headerTitleStyle: {
+            color: colors.primary,
+            fontWeight: '800',
+            fontSize: 22,
+          },
+          headerStyle: {
+            backgroundColor: colors.white,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.line,
+          },
+          headerShadowVisible: false,
         })}
       >
         <Tab.Screen name="타이머" component={TimerScreen} />
