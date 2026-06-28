@@ -92,15 +92,15 @@
 ## 7. 코드 품질 / 기술부채 (코덱스 아키텍처 평가 2026-06-28, 현 점수 B/78)
 코덱스가 코드 라인 짚어 평가 → 직접 검증 결과 전부 정확. 우선순위는 "출시 전 게이트(사용자 체감) vs 출시 후 부채(내부 품질)"로 재분류.
 
-### 출시 전 게이트 (사용자 체감 — 먼저)
-- [ ] **★ 인증 만료 전파**(가장 실질 버그): `AuthContext.tsx:26`이 토큰 *존재*만 보고 signedIn. `client.ts` refresh 실패 시 `clearTokens()`만 하고 앱 signedIn은 안 내림 → 30일 뒤 refresh 만료되면 무한 401 + 빈화면(로그인 화면으로 안 빠짐). 해결: refresh 실패 → AuthContext signOut 전파 경로(콜백/이벤트).
-- [ ] **env fail-fast**: `client.ts:8` `EXPO_PUBLIC_API_URL as string` 바로 캐스팅 → 누락 시 `undefined${path}` 조용히 실패. 앱 시작 시 검증·throw.
-- [ ] **문서 갱신**: `README.md`(1줄~) "Expo+Supabase"·죽은 `lib/supabase.ts` 참조, 프로젝트 `CLAUDE.md:47` 동일. 실제는 NestJS API/JWT. 멀티프로젝트라 딴 세션이 오해해 잘못 건드릴 위험.
-- [ ] **알림 prefix 취소**: `notifications.ts:185` cancelWorkReminder가 `getAllScheduledNotificationsAsync()`로 전부 취소(207줄에 `interval-work-` prefix 있는데 미사용). reminder/interval/test 침범. 비용 작아 같이 처리.
+### 출시 전 게이트 (사용자 체감) — ✅ 전부 완료 (커밋 7382bdc, 실기기 검증 PASS)
+- [x] **★ 인증 만료 전파**: `client.ts`에 `setAuthExpiredHandler` 콜백 → refresh 실패 시 호출, AuthContext가 등록해 signedOut 전파. jest 단위테스트 추가(refresh 실패→핸들러 호출).
+- [x] **env fail-fast**: `client.ts` `getBase()`로 lazy 검증 — `EXPO_PUBLIC_API_URL` 누락 시 throw. 테스트에 env 주입.
+- [x] **문서 갱신**: README/CLAUDE.md 전면 갱신(Supabase직통 제거 → NestJS API/JWT 구조 반영). 죽은 lib/supabase.ts 참조 삭제.
+- [x] **알림 prefix 취소**: `work-reminder-` prefix 부여 + cancelWorkReminder가 그 prefix만 취소(전체취소 제거).
 
 ### 출시 후 기술부채 (내부 품질 — 동작은 함)
-- [ ] **TimerScreen 도메인 훅 분리**: 세션로드+타이머+고아정리+알림+LiveActivity+모달이 한 컴포넌트(`TimerScreen.tsx:53~`). runBackgroundTasks fire-and-forget. → `useTimer`/`useSessionNotifications` 등 훅 추출. (출시 직전 대수술은 회귀위험 → 출시 후)
-- [ ] **통계 N회 호출 경량화**: `StatsScreen.tsx` daily7/weekly8/monthly6 루프 `apiListSessions`. 1차로 `from~to` 한방조회+클라 그룹핑(N→1, 서버변경 X). 더 크면 서버 집계 endpoint.
+- [ ] **TimerScreen 도메인 훅 분리**: 세션로드+타이머+고아정리+알림+LiveActivity+모달이 한 컴포넌트(`TimerScreen.tsx:53~`). runBackgroundTasks fire-and-forget. → `useTimer`/`useSessionNotifications` 등 훅 추출. (출시 직전 대수술은 회귀위험 → 출시 후. 코덱스 1순위였으나 사용자버그 아니라 보류 결정)
+- [x] **통계 N회 호출 경량화(1차)**: `StatsScreen.tsx` daily7/weekly8/monthly6 → `from~to` 한방조회+클라 그룹핑(N→1, 서버변경X). 실기기 숫자 동일 검증. (더 커지면 서버 집계 endpoint는 후속)
 - [ ] app.json newArch/bridgeless off — SDK54 안정성 이유 OK, 출시 후 RN 신아키텍처 업그레이드 과제.
 
 ## 같이 보면 좋은 문서
