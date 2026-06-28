@@ -26,7 +26,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#060423"
+      "backgroundColor": "#000214"
     },
     "ios": {
       "supportsTablet": true,
@@ -40,7 +40,7 @@
       "package": "kr.codeatlas.worktimer",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#060423"
+        "backgroundColor": "#000214"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
