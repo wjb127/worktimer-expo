@@ -145,11 +145,11 @@ export default function HeatmapView() {
 
   const getColor = (duration: number): string => {
     if (duration === 0) return '#EBEDF0';
-    if (duration < 3 * 3600) return '#9BE9A8';
-    if (duration < 6 * 3600) return '#40C463';
-    if (duration < 9 * 3600) return '#30A14E';
-    if (duration < 12 * 3600) return '#216E39';
-    return '#0E4420';
+    if (duration < 3 * 3600) return '#BFDBFE';
+    if (duration < 6 * 3600) return '#93C5FD';
+    if (duration < 9 * 3600) return '#60A5FA';
+    if (duration < 12 * 3600) return '#3B82F6';
+    return '#2563EB';
   };
 
   const handleYearSelect = (year: number) => {

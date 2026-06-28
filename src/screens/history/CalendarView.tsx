@@ -221,11 +221,11 @@ export default function CalendarView() {
   };
 
   const getDayColor = (duration: number): string => {
-    if (duration >= 12 * 3600) return '#30A14E';
-    if (duration >= 9 * 3600) return '#40C463';
-    if (duration >= 6 * 3600) return '#6DD47E';
-    if (duration >= 3 * 3600) return '#9BE9A8';
-    if (duration > 0) return '#C6F6D5';
+    if (duration >= 12 * 3600) return '#2563EB';
+    if (duration >= 9 * 3600) return '#3B82F6';
+    if (duration >= 6 * 3600) return '#60A5FA';
+    if (duration >= 3 * 3600) return '#93C5FD';
+    if (duration > 0) return '#BFDBFE';
     return 'transparent';
   };
 
