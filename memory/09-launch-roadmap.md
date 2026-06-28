@@ -11,17 +11,19 @@
 - **DB**: 공유 Supabase `bzzjkcrbwwrqlumxigag`의 `codeatlas` 스키마. users/work_sessions/user_settings/refresh_tokens + 신규 login_event/admin_* .
 - **어드민 콘솔**: `https://ss-037-codeatlas-admin.vercel.app` (repo wjb127/ss-037-codeatlas-admin). 듀얼비번(admin/admin123!), postgres.js 직결, 유저관리+IP/기기+CSV. appId로 멀티앱 확장.
 - **인증 검증**: 구글 가입 라이브 확인(qhv147@gmail.com → codeatlas.users → 어드민 표시). Android OAuth 클라이언트 등록됨(debug SHA `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`, pkg kr.codeatlas.worktimer, GCP codeatlas-500015).
+- **데이터**: PWA(웹) 1494세션/1614.7h가 qhv147 계정으로 마이그레이션됨. 아이콘 v2(블루 채움링) + 히트맵 블루 적용. 백엔드에 투두/세션메타 엔드포인트 라이브(모바일 UI 미연결).
 
 ---
 
 ## 1. UI 개선
-- 현재: 기본 RN 스타일(시작/종료 원형버튼, 4탭). 어드민은 깔끔.
-- 추천 시드:
-  - [ ] 디자인 시스템 정립(컬러/타이포/스페이싱 토큰) — `design-consultation` 스킬 활용 가능
-  - [ ] 다크모드 (user_settings.theme 컬럼 이미 존재 → 연결만)
-  - [ ] 타이머 화면 비주얼 폴리시(프로그레스 링/애니메이션)
-  - [ ] 빈 상태/로딩 스켈레톤(기록/통계 첫 진입)
-  - [ ] 앱 아이콘/스플래시 브랜딩
+- 현재: **블루 테마로 전환 중** — 아이콘 v2(Progress Fill Ring, #3B82F6→#2563EB) + 히트맵/달력 블루 완료. 타이머 버튼만 아직 초록.
+- 진행:
+  - [x] 앱 아이콘/스플래시 브랜딩 — v2 채움링(타이머+게임 채움 감성), 배경 #000214. 커밋 3b58075
+  - [x] 히트맵/달력 초록→밝은 블루(아이콘 통일) — 커밋 e1fcffe
+  - [ ] **타이머 화면을 아이콘처럼**(블루 채움링 + 시작버튼 블루) ← 다음 추천(시그니처)
+  - [ ] 디자인 시스템 정립(DESIGN.md 토큰) — `design-consultation` 스킬
+  - [ ] 다크모드 (user_settings.theme 컬럼 존재 → 연결)
+  - [ ] 빈 상태/로딩 스켈레톤
 
 ## 2. UX 개선
 - 추천 시드:
@@ -43,7 +45,8 @@
 | AI 분석/챗/리포트 | L | `analysis_reports` + 집계헬퍼 3파일 이식 | **Anthropic Haiku 4.5** 필수, OpenAI 선택 | 4 |
 | 시간별 넛지 크론 | S~M | push 재사용 | `@nestjs/schedule` | 5 |
 
-- [ ] **B 착수**: 세션메타 + 투두(1·2) — 백엔드 모듈 + 신규 테이블 + JWT 스코프
+- [x] **B 백엔드 완료**: 투두 CRUD + session_todos 링크 + session_meta — TodosModule + 신규 테이블 3개, JWT 스코프, VPS 배포(b59ea99), curl E2E PASS(테넌트격리 포함). **남은건 모바일 UI 붙이기**
+- [x] **PWA 데이터 마이그레이션**: public.work_sessions 1494세션/1614.7h → codeatlas qhv147 계정(session_meta 874). 실기기서 6월 272h54m 확인
 - [ ] 푸리(Expo Push)
 - [ ] AI 분석(Anthropic Haiku 4.5, SSE 스트리밍)
 - [ ] 넛지 크론
