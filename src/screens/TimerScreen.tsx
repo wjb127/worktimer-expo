@@ -30,6 +30,14 @@ import {
 import { colors } from '../theme/colors';
 import HomeBanner from '../components/HomeBanner';
 import SessionEndModal from '../components/SessionEndModal';
+import MilestoneModal from '../components/MilestoneModal';
+import ShareCardModal, { ShareRequest } from '../components/ShareCardModal';
+import { apiGetStats } from '../lib/api/profile';
+import {
+  checkNewMilestones,
+  Achievement,
+  CATEGORY_LABEL,
+} from '../lib/achievements';
 
 const formatTime = (seconds: number): string => {
   const hrs = Math.floor(seconds / 3600);
@@ -59,6 +67,20 @@ export default function TimerScreen() {
   // 세션 종료 후 업무 기록 모달 — 종료된 세션 id + 그 세션의 경과시간 라벨
   const [endedSessionId, setEndedSessionId] = useState<string | null>(null);
   const [endedLabel, setEndedLabel] = useState('');
+  // 마일스톤(새 업적 달성) 축하 + 공유
+  const [milestone, setMilestone] = useState<Achievement | null>(null);
+  const [shareReq, setShareReq] = useState<ShareRequest | null>(null);
+
+  // 세션 종료 모달을 닫은 직후 새 업적 달성 여부 확인 (방금 일해서 달성한 그 순간)
+  const checkMilestones = async () => {
+    try {
+      const stats = await apiGetStats();
+      const fresh = await checkNewMilestones(stats);
+      if (fresh.length > 0) setMilestone(fresh[0]);
+    } catch (e) {
+      console.error('milestone check error:', e);
+    }
+  };
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialLoad = useRef(true);
@@ -286,12 +308,34 @@ export default function TimerScreen() {
       </View>
       </View>
 
-      {/* 세션 종료 후 업무 기록 모달 */}
+      {/* 세션 종료 후 업무 기록 모달 — 닫으면 마일스톤 체크 */}
       <SessionEndModal
         sessionId={endedSessionId}
         elapsedLabel={endedLabel}
-        onClose={() => setEndedSessionId(null)}
+        onClose={() => {
+          setEndedSessionId(null);
+          checkMilestones();
+        }}
       />
+
+      {/* 새 업적 달성 축하 → 자랑하기 */}
+      <MilestoneModal
+        achievement={milestone}
+        onClose={() => setMilestone(null)}
+        onShare={(a) => {
+          setMilestone(null);
+          setShareReq({
+            kind: 'achievement',
+            achievement: {
+              icon: a.icon,
+              title: a.title,
+              desc: a.desc,
+              categoryLabel: CATEGORY_LABEL[a.category],
+            },
+          });
+        }}
+      />
+      <ShareCardModal request={shareReq} onClose={() => setShareReq(null)} />
     </View>
   );
 }

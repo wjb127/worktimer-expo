@@ -37,7 +37,8 @@ import {
   MeResponse,
   MeStats,
 } from '../lib/api/profile';
-import ShareCardModal from '../components/ShareCardModal';
+import ShareCardModal, { ShareRequest } from '../components/ShareCardModal';
+import { computeAchievements, CATEGORY_LABEL } from '../lib/achievements';
 import { getOngoingSession } from '../lib/session';
 import { colors } from '../theme/colors';
 
@@ -150,7 +151,7 @@ export default function SettingsScreen() {
   const [stats, setStats] = useState<MeStats | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState(false);
-  const [showShare, setShowShare] = useState(false);
+  const [shareReq, setShareReq] = useState<ShareRequest | null>(null);
   const [goalSeconds, setGoalSeconds] = useState<number | null>(null);
   const [savingGoal, setSavingGoal] = useState(false);
 
@@ -446,12 +447,52 @@ export default function SettingsScreen() {
         {/* 내 기록 공유 (바이럴 — 잔디/누적/스트릭 카드 생성) */}
         <TouchableOpacity
           style={styles.shareButton}
-          onPress={() => setShowShare(true)}
+          onPress={() => setShareReq({ kind: 'summary' })}
           activeOpacity={0.85}
         >
           <Ionicons name="share-social" size={18} color={colors.white} />
           <Text style={styles.shareButtonText}>내 기록 공유하기</Text>
         </TouchableOpacity>
+
+        {/* 업적 — 달성한 업적 탭하면 공유 카드 */}
+        {stats && (
+          <>
+            <Text style={styles.profileSectionTitle}>업적</Text>
+            <View style={styles.achGrid}>
+              {computeAchievements(stats).map((a) => (
+                <TouchableOpacity
+                  key={a.id}
+                  style={[styles.achItem, !a.unlocked && styles.achItemLocked]}
+                  activeOpacity={a.unlocked ? 0.7 : 1}
+                  onPress={() =>
+                    a.unlocked &&
+                    setShareReq({
+                      kind: 'achievement',
+                      achievement: {
+                        icon: a.icon,
+                        title: a.title,
+                        desc: a.desc,
+                        categoryLabel: CATEGORY_LABEL[a.category],
+                      },
+                    })
+                  }
+                >
+                  <Ionicons
+                    name={a.unlocked ? a.icon : 'lock-closed'}
+                    size={26}
+                    color={a.unlocked ? colors.primary : colors.line}
+                  />
+                  <Text
+                    style={[styles.achItemTitle, !a.unlocked && styles.achItemTitleLocked]}
+                    numberOfLines={1}
+                  >
+                    {a.title}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
 
         {/* 일일 목표 설정 */}
         <Text style={styles.profileSectionTitle}>일일 목표</Text>
@@ -761,7 +802,7 @@ export default function SettingsScreen() {
         </TouchableOpacity>
       </View>
     </ScrollView>
-    <ShareCardModal visible={showShare} onClose={() => setShowShare(false)} />
+    <ShareCardModal request={shareReq} onClose={() => setShareReq(null)} />
     </>
   );
 }
@@ -867,6 +908,31 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   shareButtonText: { color: colors.white, fontSize: 15, fontWeight: '700' },
+  achGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  achItem: {
+    width: '23%',
+    aspectRatio: 1,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 6,
+    borderWidth: 1,
+    borderColor: colors.line,
+    gap: 4,
+  },
+  achItemLocked: { backgroundColor: colors.bg, opacity: 0.7 },
+  achItemTitle: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.ink,
+    textAlign: 'center',
+  },
+  achItemTitleLocked: { color: colors.inkSub },
   profileErrorText: {
     fontSize: 13,
     color: colors.inkSub,

@@ -10,18 +10,28 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
-import ShareCard, { ShareCardData } from './ShareCard';
+import ShareCard, {
+  ShareVariant,
+  AchievementShareData,
+  WeeklyData,
+} from './ShareCard';
 import { apiGetStats } from '../lib/api/profile';
 import { apiListSessions } from '../lib/api/sessions';
 import { formatDateString } from '../lib/dateUtils';
 import { colors } from '../theme/colors';
 
-// 최근 5주(일~토 정렬) 잔디 그리드 빌드. byDate = {YYYY-MM-DD: 초}
+// 공유 요청 — summary는 모달이 직접 로드, 나머지는 데이터 주입받음.
+export type ShareRequest =
+  | { kind: 'summary' }
+  | { kind: 'achievement'; achievement: AchievementShareData }
+  | { kind: 'weekly'; weekly: WeeklyData };
+
+// 최근 5주(일~토 정렬) 잔디 그리드
 function buildWeeks(byDate: Record<string, number>): number[][] {
   const today = new Date();
-  const dow = today.getDay(); // 0=일
+  const dow = today.getDay();
   const lastSat = new Date(today);
-  lastSat.setDate(today.getDate() + (6 - dow)); // 이번주 토요일
+  lastSat.setDate(today.getDate() + (6 - dow));
   const weeks: number[][] = [];
   for (let w = 4; w >= 0; w--) {
     const week: number[] = [];
@@ -35,29 +45,47 @@ function buildWeeks(byDate: Record<string, number>): number[][] {
   return weeks;
 }
 
+const TITLE: Record<ShareRequest['kind'], string> = {
+  summary: '기록 공유',
+  achievement: '업적 공유',
+  weekly: '주간 리캡 공유',
+};
+
 export default function ShareCardModal({
-  visible,
+  request,
   onClose,
 }: {
-  visible: boolean;
+  request: ShareRequest | null;
   onClose: () => void;
 }) {
   const cardRef = useRef<View>(null);
-  const [data, setData] = useState<ShareCardData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [variant, setVariant] = useState<ShareVariant | null>(null);
+  const [loading, setLoading] = useState(false);
   const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
-    if (!visible) return;
+    if (!request) {
+      setVariant(null);
+      return;
+    }
+    // 데이터가 이미 있는 종류는 바로 세팅
+    if (request.kind === 'achievement') {
+      setVariant({ kind: 'achievement', achievement: request.achievement });
+      return;
+    }
+    if (request.kind === 'weekly') {
+      setVariant({ kind: 'weekly', weekly: request.weekly });
+      return;
+    }
+    // summary → stats + 잔디 로드
     let alive = true;
     setLoading(true);
-    setData(null);
+    setVariant(null);
     (async () => {
       try {
-        // 잔디용 최근 35일 범위
         const end = new Date();
         const start = new Date();
-        start.setDate(start.getDate() - 41); // 5주 + 여유
+        start.setDate(start.getDate() - 41);
         const [stats, sessions] = await Promise.all([
           apiGetStats(),
           apiListSessions(formatDateString(start), formatDateString(end)),
@@ -67,14 +95,17 @@ export default function ShareCardModal({
           if (s.end_time) byDate[s.date] = (byDate[s.date] ?? 0) + (s.duration || 0);
         }
         if (!alive) return;
-        setData({
-          totalSeconds: stats.totalSeconds,
-          currentStreakDays: stats.currentStreakDays,
-          thisMonthSeconds: stats.thisMonthSeconds,
-          weeks: buildWeeks(byDate),
+        setVariant({
+          kind: 'summary',
+          summary: {
+            totalSeconds: stats.totalSeconds,
+            currentStreakDays: stats.currentStreakDays,
+            thisMonthSeconds: stats.thisMonthSeconds,
+            weeks: buildWeeks(byDate),
+          },
         });
       } catch (e) {
-        console.error('share card load error:', e);
+        console.error('share summary load error:', e);
       } finally {
         if (alive) setLoading(false);
       }
@@ -82,10 +113,10 @@ export default function ShareCardModal({
     return () => {
       alive = false;
     };
-  }, [visible]);
+  }, [request]);
 
   const handleShare = async () => {
-    if (!cardRef.current || sharing) return;
+    if (!cardRef.current || sharing || !variant) return;
     setSharing(true);
     try {
       const uri = await captureRef(cardRef, {
@@ -106,12 +137,19 @@ export default function ShareCardModal({
     }
   };
 
+  const ready = !!variant && !loading;
+
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={!!request}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
       <View style={styles.overlay}>
         <View style={styles.sheet}>
           <View style={styles.header}>
-            <Text style={styles.title}>기록 공유</Text>
+            <Text style={styles.title}>{request ? TITLE[request.kind] : ''}</Text>
             <TouchableOpacity
               onPress={onClose}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -121,19 +159,19 @@ export default function ShareCardModal({
           </View>
 
           <View style={styles.preview}>
-            {loading || !data ? (
+            {!ready ? (
               <View style={styles.cardPlaceholder}>
                 <ActivityIndicator size="large" color={colors.primary} />
               </View>
             ) : (
-              <ShareCard ref={cardRef} data={data} />
+              <ShareCard ref={cardRef} variant={variant} />
             )}
           </View>
 
           <TouchableOpacity
-            style={[styles.shareBtn, (loading || !data) && styles.shareBtnDisabled]}
+            style={[styles.shareBtn, !ready && styles.shareBtnDisabled]}
             onPress={handleShare}
-            disabled={loading || !data || sharing}
+            disabled={!ready || sharing}
           >
             {sharing ? (
               <ActivityIndicator color={colors.white} />
@@ -151,11 +189,7 @@ export default function ShareCardModal({
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15,23,42,0.55)',
-    justifyContent: 'flex-end',
-  },
+  overlay: { flex: 1, backgroundColor: 'rgba(15,23,42,0.55)', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: colors.bg,
     borderTopLeftRadius: 24,

@@ -12,6 +12,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { apiListSessions } from '../lib/api/sessions';
 import { formatDateString, getMonthStart, getMonthEnd } from '../lib/dateUtils';
 import { colors } from '../theme/colors';
+import ShareCardModal, { ShareRequest } from '../components/ShareCardModal';
+import { WeeklyData } from '../components/ShareCard';
 
 type ViewMode = 'daily' | 'weekly' | 'monthly';
 
@@ -48,6 +50,65 @@ export default function StatsScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>('daily');
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [shareReq, setShareReq] = useState<ShareRequest | null>(null);
+  const [recapLoading, setRecapLoading] = useState(false);
+
+  // 이번 주(일~토) 세션 집계 → 주간 리캡 카드 데이터
+  const buildWeeklyRecap = async (): Promise<WeeklyData> => {
+    const today = new Date();
+    const sun = new Date(today);
+    sun.setDate(today.getDate() - today.getDay());
+    const sat = new Date(sun);
+    sat.setDate(sun.getDate() + 6);
+
+    const sessions = (
+      await apiListSessions(formatDateString(sun), formatDateString(sat))
+    ).filter((s) => s.end_time !== null);
+
+    const byDate: Record<string, number> = {};
+    for (const s of sessions) {
+      byDate[s.date] = (byDate[s.date] ?? 0) + (s.duration || 0);
+    }
+
+    const labels = ['일', '월', '화', '수', '목', '금', '토'];
+    const days = labels.map((label, i) => {
+      const d = new Date(sun);
+      d.setDate(sun.getDate() + i);
+      return { label, seconds: byDate[formatDateString(d)] ?? 0 };
+    });
+
+    const total = days.reduce((a, d) => a + d.seconds, 0);
+    const activeDays = days.filter((d) => d.seconds > 0).length;
+    const avg = activeDays > 0 ? Math.floor(total / activeDays) : 0;
+    let topIdx = 0;
+    days.forEach((d, i) => {
+      if (d.seconds > days[topIdx].seconds) topIdx = i;
+    });
+    const topDayLabel = days[topIdx].seconds > 0 ? `${labels[topIdx]}요일` : '아직 없음';
+    const weekLabel = `${sun.getMonth() + 1}/${sun.getDate()} ~ ${sat.getMonth() + 1}/${sat.getDate()}`;
+
+    return {
+      weekLabel,
+      totalSeconds: total,
+      avgSeconds: avg,
+      sessionCount: sessions.length,
+      topDayLabel,
+      days,
+    };
+  };
+
+  const handleRecap = async () => {
+    if (recapLoading) return;
+    setRecapLoading(true);
+    try {
+      const weekly = await buildWeeklyRecap();
+      setShareReq({ kind: 'weekly', weekly });
+    } catch (e) {
+      console.error('weekly recap error:', e);
+    } finally {
+      setRecapLoading(false);
+    }
+  };
 
   // 기간 내 완료 세션을 date(YYYY-MM-DD) → 합계(초)로 한 번에 집계.
   // 기존엔 버킷마다 apiListSessions를 N번 호출했지만, 범위 한방 조회 + 클라 그룹핑으로 N→1.
@@ -243,6 +304,19 @@ export default function StatsScreen() {
 
   return (
     <View style={styles.container}>
+      {/* 주간 리캡 공유 (바이럴 — Wrapped 카드) */}
+      <TouchableOpacity
+        style={styles.recapButton}
+        onPress={handleRecap}
+        disabled={recapLoading}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="share-social" size={16} color={colors.white} />
+        <Text style={styles.recapButtonText}>
+          {recapLoading ? '준비 중...' : '이번주 리캡 공유'}
+        </Text>
+      </TouchableOpacity>
+
       {/* 뷰 모드 선택 */}
       <View style={styles.modeSelector}>
         {(['daily', 'weekly', 'monthly'] as ViewMode[]).map((mode) => (
@@ -327,6 +401,8 @@ export default function StatsScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <ShareCardModal request={shareReq} onClose={() => setShareReq(null)} />
     </View>
   );
 }
@@ -336,6 +412,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
+  recapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 4,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+  },
+  recapButtonText: { color: colors.white, fontSize: 14, fontWeight: '700' },
   modeSelector: {
     flexDirection: 'row',
     padding: 16,
