@@ -15,7 +15,9 @@
 - **브랜드**: 앱 이름 **필타임**(영어 Filltime). 표시명만 변경, 번들ID `kr.codeatlas.worktimer`/슬러그 `worktimer-expo`/scheme 유지. 도메인 filltime.app 선점 권장.
 - **UI 블루테마 완료**: 헤더 필타임 블루, 타이머 블루 버튼/링, 히트맵·달력 2시간 8단계 블루(H:MM 표기, 글자색 적응), 로그인 리디자인. `src/theme/colors.ts` 팔레트.
 - **프로필 1차 라이브**: 설정 상단 카드 + 누적통계(총시간/세션/스트릭/주월) + 일일목표. 백엔드 `/me`·`/me/stats`·`/me/settings`.
-- **SDUI 배너 라이브**: `codeatlas.app_banner` + 공개 `GET /config/banners`(앱/버전/기간 필터) → 홈 배너+상세모달. 릴리즈 없이 공지 제어. (어드민 편집기는 후속)
+- **SDUI 배너 라이브**: `codeatlas.app_banner` + 공개 `GET /config/banners`(앱/버전/기간 필터) → 홈 배너+상세모달. 릴리즈 없이 공지 제어.
+- **어드민 배너 편집기 라이브**(2026-06-28): `ss-037-codeatlas-admin`에 사용자/공지배너 탭 + `/api/admin/banners` CRUD(생성/토글/편집/삭제). app_banner를 웹에서 제어 → SDUI 루프 완성. 커밋 1d5208f.
+- **할일/세션기록/통계통합/AI분석 라이브**(2026-06-28, work-timer 웹 방식 포팅): 백엔드 `/worktimer/todos` CRUD(dacdd29). 모바일 할일 탭 + 세션종료 업무기록모달(업무내용+할일연결+완료처리) + 통계를 기록 서브탭으로 통합 + AI분석 출시예정 잠금탭. 하단 5탭(타이머/기록/할일/AI분석/설정). 커밋 c01c568. Galaxy A16 E2E PASS.
 
 ---
 
@@ -86,6 +88,20 @@
   - [ ] 스토어 스크린샷/아이콘/설명
   - [ ] **로케일별 앱 이름**(영어 출시): 기본 필타임 + en→Filltime. iOS expo.locales{en:CFBundleDisplayName}, Android values-en config plugin. 스토어 등록명 언어별(한 필타임/영 Filltime)
   - [ ] 도메인 filltime.app 선점, 최종 스토어 exact 중복 검색
+
+## 7. 코드 품질 / 기술부채 (코덱스 아키텍처 평가 2026-06-28, 현 점수 B/78)
+코덱스가 코드 라인 짚어 평가 → 직접 검증 결과 전부 정확. 우선순위는 "출시 전 게이트(사용자 체감) vs 출시 후 부채(내부 품질)"로 재분류.
+
+### 출시 전 게이트 (사용자 체감 — 먼저)
+- [ ] **★ 인증 만료 전파**(가장 실질 버그): `AuthContext.tsx:26`이 토큰 *존재*만 보고 signedIn. `client.ts` refresh 실패 시 `clearTokens()`만 하고 앱 signedIn은 안 내림 → 30일 뒤 refresh 만료되면 무한 401 + 빈화면(로그인 화면으로 안 빠짐). 해결: refresh 실패 → AuthContext signOut 전파 경로(콜백/이벤트).
+- [ ] **env fail-fast**: `client.ts:8` `EXPO_PUBLIC_API_URL as string` 바로 캐스팅 → 누락 시 `undefined${path}` 조용히 실패. 앱 시작 시 검증·throw.
+- [ ] **문서 갱신**: `README.md`(1줄~) "Expo+Supabase"·죽은 `lib/supabase.ts` 참조, 프로젝트 `CLAUDE.md:47` 동일. 실제는 NestJS API/JWT. 멀티프로젝트라 딴 세션이 오해해 잘못 건드릴 위험.
+- [ ] **알림 prefix 취소**: `notifications.ts:185` cancelWorkReminder가 `getAllScheduledNotificationsAsync()`로 전부 취소(207줄에 `interval-work-` prefix 있는데 미사용). reminder/interval/test 침범. 비용 작아 같이 처리.
+
+### 출시 후 기술부채 (내부 품질 — 동작은 함)
+- [ ] **TimerScreen 도메인 훅 분리**: 세션로드+타이머+고아정리+알림+LiveActivity+모달이 한 컴포넌트(`TimerScreen.tsx:53~`). runBackgroundTasks fire-and-forget. → `useTimer`/`useSessionNotifications` 등 훅 추출. (출시 직전 대수술은 회귀위험 → 출시 후)
+- [ ] **통계 N회 호출 경량화**: `StatsScreen.tsx` daily7/weekly8/monthly6 루프 `apiListSessions`. 1차로 `from~to` 한방조회+클라 그룹핑(N→1, 서버변경 X). 더 크면 서버 집계 endpoint.
+- [ ] app.json newArch/bridgeless off — SDK54 안정성 이유 OK, 출시 후 RN 신아키텍처 업그레이드 과제.
 
 ## 같이 보면 좋은 문서
 - `05-architecture-roadmap.md` — M0~M5 전체 아키텍처/로드맵
