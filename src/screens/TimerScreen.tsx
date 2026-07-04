@@ -40,6 +40,7 @@ import {
 } from '../lib/achievements';
 import { track } from '../lib/analytics';
 import { captureException } from '../lib/errorTracking';
+import { maybeRequestReview } from '../lib/reviewPrompt';
 
 const formatTime = (seconds: number): string => {
   const hrs = Math.floor(seconds / 3600);
@@ -332,7 +333,11 @@ export default function TimerScreen() {
       {/* 새 업적 달성 축하 → 자랑하기 */}
       <MilestoneModal
         achievement={milestone}
-        onClose={() => setMilestone(null)}
+        onClose={() => {
+          setMilestone(null);
+          // 마일스톤 축하를 닫는 순간은 긍정적 순간 → 리뷰 요청 시도 (내부에서 빈도 제한/자체 예외 처리).
+          void maybeRequestReview();
+        }}
         onShare={(a) => {
           setMilestone(null);
           setShareReq({
