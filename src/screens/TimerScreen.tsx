@@ -204,8 +204,9 @@ export default function TimerScreen() {
       const sessionLabel = formatTime(elapsedSeconds);
       const result = await endSession(currentSession.id, currentSession.start_time);
       if (result) {
-        // 세션 종료 계측 (경과 시간은 리셋 전 값 사용)
-        track('session_end', { duration_seconds: elapsedSeconds });
+        // 세션 종료 계측 — 서버가 타임스탬프로 계산한 duration 우선(백그라운드
+        // throttle로 과소집계되는 클라 elapsedSeconds 대신). 없으면 클라값 폴백.
+        track('session_end', { duration_seconds: result.duration || elapsedSeconds });
         setIsRunning(false);
         setElapsedSeconds(0);
         setCurrentSession(null);
