@@ -7,9 +7,6 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
-    "experiments": {
-      "bridgeless": false
-    },
     "plugins": [
       "expo-live-activity",
       "expo-secure-store",
