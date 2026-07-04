@@ -40,8 +40,7 @@
 - **Vercel**: 기본 alias `ss-042-filltime-landing.vercel.app` + 예쁜 alias `filltime.vercel.app`
 - **페이지**: `/`(홈, 필수 링크 위주 미니멀 히어로) · `/privacy`(개인정보처리방침) · `/terms`(이용약관)
 - 개인정보처리방침 내용은 앱 실제 데이터 흐름 반영(구글/애플 로그인, PostHog, Sentry, Supabase/Vultr 호스팅 국외이전 고지 포함). `[담당자명]`/`[연락처]` 플레이스홀더 — 실제 정보로 교체 필요
-- **⚠️ 미해결**: Vercel 팀 Deployment Protection(SSO)이 걸려있어서 지금 URL 접속 시 로그인 화면으로 리다이렉트됨. 대시보드에서 직접 꺼야 함:
-  `https://vercel.com/seungbeen-wis-projects/ss-042-filltime-landing/settings/deployment-protection` → Vercel Authentication Disabled로 변경 (스토어 심사자가 로그인 없이 봐야 하므로 출시 전 필수)
+- [x] Deployment Protection 해제 완료(2026-07-05, 사용자가 대시보드에서 직접 끔) — 홈/privacy/terms 3개 페이지 전부 curl로 `HTTP:200` 공개 접속 검증됨
 - 홈페이지는 아직 마케팅 카피/스크린샷 없음 — 스토어 등록 후 다운로드 버튼·스크린샷 보강 예정
 
 ## D. 출시 후 (수익화 순서 — `10-viral-share-strategy.md` 프레임)
