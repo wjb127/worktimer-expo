@@ -18,6 +18,7 @@
 - **SDUI 배너 라이브**: `codeatlas.app_banner` + 공개 `GET /config/banners`(앱/버전/기간 필터) → 홈 배너+상세모달. 릴리즈 없이 공지 제어.
 - **어드민 배너 편집기 라이브**(2026-06-28): `ss-037-codeatlas-admin`에 사용자/공지배너 탭 + `/api/admin/banners` CRUD(생성/토글/편집/삭제). app_banner를 웹에서 제어 → SDUI 루프 완성. 커밋 1d5208f.
 - **할일/세션기록/통계통합/AI분석 라이브**(2026-06-28, work-timer 웹 방식 포팅): 백엔드 `/worktimer/todos` CRUD(dacdd29). 모바일 할일 탭 + 세션종료 업무기록모달(업무내용+할일연결+완료처리) + 통계를 기록 서브탭으로 통합 + AI분석 출시예정 잠금탭. 하단 5탭(타이머/기록/할일/AI분석/설정). 커밋 c01c568. Galaxy A16 E2E PASS.
+- **수익화 준비 4종 라이브**(2026-07-04, opus 서브에이전트 구현 + spec/품질 2단계 리뷰 + 통합리뷰): ① 이벤트 애널리틱스(PostHog, `src/lib/analytics.ts`) 11종 이벤트 계측 + AI분석 탭 "출시 알림 받기" 프리미엄 관심 버튼(결제없이 지불의사 측정) ② Sentry 크래시트래킹(`src/lib/errorTracking.ts`, 모듈스코프 init로 첫렌더 크래시까지) ③ 첫실행 온보딩 3장(`src/screens/OnboardingScreen.tsx`, 몰입·꾸준함·성취, 수평스크롤 대신 버튼-어드밴스) ④ 인앱리뷰 요청(`src/lib/reviewPrompt.ts`, 마일스톤 닫기 시 자체 빈도제한 2번째성취/60일쿨다운/평생3회). **4종 전부 env 키 없으면 완전 no-op(fail-safe) → 지금 상태로 스토어 올려도 무영향.** tsc 0에러, 유닛테스트 26/26(신규 21). 커밋 4792d92~e4508b6(8커밋). **활성화 대기: `EXPO_PUBLIC_POSTHOG_KEY`·`EXPO_PUBLIC_SENTRY_DSN` env, Sentry 소스맵용 `SENTRY_ORG/PROJECT/AUTH_TOKEN`(EAS secret). identifyUser는 배선만 남음(로그인 이벤트 현재 익명).**
 
 ---
 
@@ -33,7 +34,7 @@
 
 ## 2. UX 개선
 - 추천 시드:
-  - [ ] 온보딩(첫 실행 가이드)
+  - [x] 온보딩(첫 실행 가이드) — 3장 가치소구(몰입·꾸준함·성취) + 로그인 유도, `onboarding_seen_v1` 1회 게이팅. 커밋 8886e1a/c894515
   - [ ] 햅틱 피드백(시작/종료)
   - [ ] 세션 수정 UX 개선(편집 API는 이미 있음: PATCH /sessions/:id/edit)
   - [ ] 통계 인사이트(주간 요약, 추세 코멘트)
@@ -61,7 +62,7 @@
 
 ## 4. 기타 조언 (아키텍처/운영)
 - [ ] **PWA(work-timer 웹) 싱크**: 웹도 Supabase직통→NestJS API 클라이언트로 전환하면 폰↔웹 실시간 싱크. (현재 웹은 public.work_sessions 직통이라 폰과 분리됨). 단계: 세션만 먼저 → todos/push → analysis.
-- [ ] 에러 트래킹(Sentry) + 분석 도입
+- [x] 에러 트래킹(Sentry) + 분석(PostHog) 도입 — 코드 라이브(fail-safe no-op). 커밋 4b59438/dd62d7c(Sentry), 4792d92(PostHog). **env 키만 넣으면 켜짐**(위 스냅샷 참조)
 - [ ] 어드민에 앱 추가될 때마다 appId 셀렉터에 자동 반영(이미 byApp 기반이라 거의 자동)
 - [ ] CI/CD(EAS 빌드 자동화, 백엔드 GitHub Actions 배포)
 
