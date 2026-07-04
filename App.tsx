@@ -15,6 +15,8 @@ import { AuthProvider, useAuth } from './src/lib/auth/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
 import { colors } from './src/theme/colors';
 import { initAnalytics, track } from './src/lib/analytics';
+import { initErrorTracking } from './src/lib/errorTracking';
+import * as Sentry from '@sentry/react-native';
 
 const Tab = createBottomTabNavigator();
 
@@ -91,9 +93,11 @@ function Root() {
   return <MainTabs />;
 }
 
-export default function App() {
-  // 앱 마운트 시 애널리틱스 초기화 + 앱 오픈 이벤트 (키 없으면 no-op)
+function App() {
+  // 앱 마운트 시 에러 트래킹 → 애널리틱스 초기화 + 앱 오픈 이벤트 (DSN/키 없으면 no-op)
+  // 에러 트래킹을 먼저 켜서 이후 초기화 단계의 에러도 잡히도록 한다.
   useEffect(() => {
+    initErrorTracking();
     initAnalytics();
     track('app_open');
   }, []);
@@ -104,3 +108,6 @@ export default function App() {
     </AuthProvider>
   );
 }
+
+// Sentry.wrap은 초기화 전에도 안전한 passthrough HOC (미초기화 시 no-op)
+export default Sentry.wrap(App);

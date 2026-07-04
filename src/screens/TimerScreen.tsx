@@ -39,6 +39,7 @@ import {
   CATEGORY_LABEL,
 } from '../lib/achievements';
 import { track } from '../lib/analytics';
+import { captureException } from '../lib/errorTracking';
 
 const formatTime = (seconds: number): string => {
   const hrs = Math.floor(seconds / 3600);
@@ -83,6 +84,7 @@ export default function TimerScreen() {
       }
     } catch (e) {
       console.error('milestone check error:', e);
+      captureException(e, { where: 'checkMilestones' });
     }
   };
 
@@ -152,6 +154,7 @@ export default function TimerScreen() {
       runBackgroundTasks(ongoing, total, elapsed);
     } catch (error) {
       console.error('loadData error:', error);
+      captureException(error, { where: 'loadData' });
       if (!isRefresh) {
         setLoading(false);
       }

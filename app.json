@@ -23,7 +23,8 @@
       "expo-font",
       "./plugins/withFmtFix",
       "./plugins/withGoogleModularHeaders",
-      "expo-localization"
+      "expo-localization",
+      "@sentry/react-native/expo"
     ],
     "splash": {
       "image": "./assets/splash-icon.png",
