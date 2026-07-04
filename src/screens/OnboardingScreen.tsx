@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -46,9 +46,14 @@ export default function OnboardingScreen({ onDone }: Props) {
   const [step, setStep] = useState(0);
   const isLast = step === SLIDES.length - 1;
   const slide = SLIDES[step];
+  // 마무리(finish/skip) 재진입 가드 — markOnboardingSeen await 사이 더블탭으로
+  // 이벤트가 이중 발화(완주율 지표 왜곡)되는 걸 막는다.
+  const finishing = useRef(false);
 
   // 시작하기(마지막 슬라이드) — 완료 계측 후 노출 기록 → 로그인으로.
   const finish = async () => {
+    if (finishing.current) return;
+    finishing.current = true;
     track('onboarding_complete');
     await markOnboardingSeen();
     onDone();
@@ -56,6 +61,8 @@ export default function OnboardingScreen({ onDone }: Props) {
 
   // 건너뛰기 — 어느 단계에서 건너뛰었는지 함께 계측.
   const skip = async () => {
+    if (finishing.current) return;
+    finishing.current = true;
     track('onboarding_skip', { step });
     await markOnboardingSeen();
     onDone();

@@ -5,7 +5,7 @@ import { PostHog } from 'posthog-react-native';
 // 모든 PostHog 호출은 try/catch로 감싸고 fire-and-forget 한다.
 
 // 계측 이벤트 이름 (이 목록만 track에 허용).
-// onboarding_* 과 review_prompt_shown 은 후속 작업에서 사용 (지금은 계측 X).
+// review_prompt_shown 은 후속 작업(인앱 리뷰)에서 사용.
 export type AnalyticsEvent =
   | 'app_open'
   | 'login_success'
