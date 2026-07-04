@@ -7,7 +7,8 @@ import React, {
 } from 'react';
 import { saveTokens, clearTokens, getAccessToken } from './tokenStore';
 import { setAuthExpiredHandler } from '../api/client';
-import { track, resetAnalytics } from '../analytics';
+import { apiGetMe } from '../api/profile';
+import { track, identifyUser, resetAnalytics } from '../analytics';
 
 interface AuthState {
   loading: boolean;
@@ -36,8 +37,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signInWithTokens = useCallback(async (a: string, r: string) => {
     await saveTokens(a, r);
     setSignedIn(true);
-    // provider/사용자 id는 이 흐름에 노출되지 않음 → prop 없이 기록
-    track('login_success');
+    // 유저 단위 분석을 위해 /me에서 id·provider 조회 후 identify.
+    // 로그인 전환은 이미 끝났으니 백그라운드로 처리(실패해도 익명 기록으로 폴백).
+    apiGetMe()
+      .then((me) => {
+        identifyUser(me.id);
+        track('login_success', { provider: me.provider });
+      })
+      .catch(() => track('login_success'));
   }, []);
 
   const signOut = useCallback(async () => {
