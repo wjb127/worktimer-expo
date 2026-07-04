@@ -93,11 +93,13 @@ function Root() {
   return <MainTabs />;
 }
 
+// 에러 트래킹은 렌더 이전(모듈 스코프)에 초기화해야 앱 시작·첫 렌더 단계의
+// 크래시까지 잡힌다. useEffect는 첫 커밋 이후 실행돼 그 구간을 놓침. (DSN 없으면 no-op)
+initErrorTracking();
+
 function App() {
-  // 앱 마운트 시 에러 트래킹 → 애널리틱스 초기화 + 앱 오픈 이벤트 (DSN/키 없으면 no-op)
-  // 에러 트래킹을 먼저 켜서 이후 초기화 단계의 에러도 잡히도록 한다.
+  // 애널리틱스는 마운트 시 초기화 + 앱 오픈 이벤트 (키 없으면 no-op)
   useEffect(() => {
-    initErrorTracking();
     initAnalytics();
     track('app_open');
   }, []);
