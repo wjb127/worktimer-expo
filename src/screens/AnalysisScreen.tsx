@@ -1,6 +1,18 @@
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { track } from '../lib/analytics';
+
+// 프리미엄(AI 분석) 출시 알림 신청 여부 저장 키
+const PREMIUM_INTEREST_KEY = 'premium_interest_requested_v1';
 
 // AI 업무 분석 — 출시 예정(유료화 예정) 잠금 화면.
 // 실제 분석 엔진(Anthropic Haiku)은 후속 릴리즈에서 연결.
@@ -33,6 +45,29 @@ const FEATURES: {
 ];
 
 export default function AnalysisScreen() {
+  // 출시 알림 신청 완료 상태 (마운트 시 저장값 복원)
+  const [requested, setRequested] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(PREMIUM_INTEREST_KEY)
+      .then((v) => {
+        if (v === '1') setRequested(true);
+      })
+      .catch(() => {
+        // 무시 (저장 조회 실패해도 화면은 정상 동작)
+      });
+  }, []);
+
+  const handleInterest = async () => {
+    track('premium_interest_click');
+    setRequested(true);
+    try {
+      await AsyncStorage.setItem(PREMIUM_INTEREST_KEY, '1');
+    } catch {
+      // 무시
+    }
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* 히어로 */}
@@ -63,6 +98,35 @@ export default function AnalysisScreen() {
             <Ionicons name="lock-closed" size={16} color={colors.line} />
           </View>
         ))}
+      </View>
+
+      {/* 출시 알림 받기 (프리미엄 관심 표시) */}
+      <View style={styles.cta}>
+        {requested ? (
+          <View style={styles.doneChip}>
+            <Ionicons
+              name="checkmark-circle"
+              size={20}
+              color={colors.primary}
+            />
+            <Text style={styles.doneText}>
+              알림 신청 완료! 출시되면 알려드릴게요
+            </Text>
+          </View>
+        ) : (
+          <>
+            <Text style={styles.ctaHelper}>
+              AI 분석은 프리미엄 기능으로 준비 중이에요
+            </Text>
+            <TouchableOpacity
+              style={styles.ctaButton}
+              onPress={handleInterest}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.ctaButtonText}>출시 알림 받기</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
       {/* 안내 */}
@@ -126,6 +190,37 @@ const styles = StyleSheet.create({
   featureTextCol: { flex: 1 },
   featureTitle: { fontSize: 15, fontWeight: '700', color: colors.ink },
   featureDesc: { fontSize: 13, color: colors.inkSub, marginTop: 3, lineHeight: 18 },
+  // 출시 알림 CTA
+  cta: { marginTop: 20, alignItems: 'center' },
+  ctaHelper: {
+    fontSize: 13,
+    color: colors.inkSub,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  ctaButton: {
+    width: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  ctaButtonText: { color: colors.white, fontSize: 16, fontWeight: '700' },
+  // 신청 완료 칩 (비활성 표시)
+  doneChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    width: '100%',
+    backgroundColor: colors.primaryFaint,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+  },
+  doneText: { fontSize: 14, fontWeight: '600', color: colors.ink },
   notice: {
     flexDirection: 'row',
     alignItems: 'center',

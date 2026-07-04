@@ -38,6 +38,7 @@ import {
   Achievement,
   CATEGORY_LABEL,
 } from '../lib/achievements';
+import { track } from '../lib/analytics';
 
 const formatTime = (seconds: number): string => {
   const hrs = Math.floor(seconds / 3600);
@@ -76,7 +77,10 @@ export default function TimerScreen() {
     try {
       const stats = await apiGetStats();
       const fresh = await checkNewMilestones(stats);
-      if (fresh.length > 0) setMilestone(fresh[0]);
+      if (fresh.length > 0) {
+        track('milestone_achieved', { id: fresh[0].id });
+        setMilestone(fresh[0]);
+      }
     } catch (e) {
       console.error('milestone check error:', e);
     }
@@ -200,6 +204,8 @@ export default function TimerScreen() {
       const sessionLabel = formatTime(elapsedSeconds);
       const result = await endSession(currentSession.id, currentSession.start_time);
       if (result) {
+        // 세션 종료 계측 (경과 시간은 리셋 전 값 사용)
+        track('session_end', { duration_seconds: elapsedSeconds });
         setIsRunning(false);
         setElapsedSeconds(0);
         setCurrentSession(null);
@@ -218,6 +224,7 @@ export default function TimerScreen() {
       // 시작
       const session = await startSession();
       if (session) {
+        track('session_start');
         setCurrentSession(session);
         setIsRunning(true);
         setElapsedSeconds(0);

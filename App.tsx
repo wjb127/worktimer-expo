@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
@@ -13,6 +14,7 @@ import {
 import { AuthProvider, useAuth } from './src/lib/auth/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
 import { colors } from './src/theme/colors';
+import { initAnalytics, track } from './src/lib/analytics';
 
 const Tab = createBottomTabNavigator();
 
@@ -90,6 +92,12 @@ function Root() {
 }
 
 export default function App() {
+  // 앱 마운트 시 애널리틱스 초기화 + 앱 오픈 이벤트 (키 없으면 no-op)
+  useEffect(() => {
+    initAnalytics();
+    track('app_open');
+  }, []);
+
   return (
     <AuthProvider>
       <Root />

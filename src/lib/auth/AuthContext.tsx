@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import { saveTokens, clearTokens, getAccessToken } from './tokenStore';
 import { setAuthExpiredHandler } from '../api/client';
+import { track, resetAnalytics } from '../analytics';
 
 interface AuthState {
   loading: boolean;
@@ -35,11 +36,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signInWithTokens = useCallback(async (a: string, r: string) => {
     await saveTokens(a, r);
     setSignedIn(true);
+    // provider/사용자 id는 이 흐름에 노출되지 않음 → prop 없이 기록
+    track('login_success');
   }, []);
 
   const signOut = useCallback(async () => {
     await clearTokens();
     setSignedIn(false);
+    resetAnalytics();
   }, []);
 
   return (

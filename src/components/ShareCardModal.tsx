@@ -19,6 +19,7 @@ import { apiGetStats } from '../lib/api/profile';
 import { apiListSessions } from '../lib/api/sessions';
 import { formatDateString } from '../lib/dateUtils';
 import { colors } from '../theme/colors';
+import { track } from '../lib/analytics';
 
 // 공유 요청 — summary는 모달이 직접 로드, 나머지는 데이터 주입받음.
 export type ShareRequest =
@@ -68,6 +69,8 @@ export default function ShareCardModal({
       setVariant(null);
       return;
     }
+    // 공유 카드 모달 오픈 계측
+    track('share_card_open', { kind: request.kind });
     // 데이터가 이미 있는 종류는 바로 세팅
     if (request.kind === 'achievement') {
       setVariant({ kind: 'achievement', achievement: request.achievement });
@@ -129,6 +132,8 @@ export default function ShareCardModal({
           mimeType: 'image/png',
           dialogTitle: '내 기록 공유하기',
         });
+        // 네이티브 공유 성공 후 계측
+        track('share_card_shared', { kind: variant.kind });
       }
     } catch (e) {
       console.error('share error:', e);
