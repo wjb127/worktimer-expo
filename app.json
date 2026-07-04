@@ -22,7 +22,8 @@
       ],
       "expo-font",
       "./plugins/withFmtFix",
-      "./plugins/withGoogleModularHeaders"
+      "./plugins/withGoogleModularHeaders",
+      "expo-localization"
     ],
     "splash": {
       "image": "./assets/splash-icon.png",
