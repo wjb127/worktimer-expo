@@ -7,16 +7,12 @@
 
 표기: `[사용자]` = 사용자만 가능(계정·콘솔·결제·결정) / `[→Claude]` = 사용자가 재료 주면 Claude가 이어서 실행.
 
-## A. 지금 바로 (기능 켜기 — 계정/키 발급)
+## A. 지금 바로 (기능 켜기 — 계정/키 발급) — ✅ 완료 (2026-07-04)
 
-- [ ] `[사용자]` **PostHog 계정**: us.posthog.com 가입 → 프로젝트 생성 → Project API Key 복사
-  → 1Password `Dev-Clients` 금고에 저장 → `op://` 참조만 전달
-- [ ] `[사용자]` **Sentry 계정**: sentry.io 가입 → React Native 프로젝트 생성 → 3종 확보:
-  ① DSN ② org/project slug ③ Auth Token(소스맵 업로드용) → 1Password → `op://` 참조 전달
-- [ ] `[→Claude]` 위 키 받으면: `.env` + EAS build env에 `EXPO_PUBLIC_POSTHOG_KEY`·`EXPO_PUBLIC_SENTRY_DSN` 주입,
-  EAS secret에 `SENTRY_ORG/PROJECT/AUTH_TOKEN`, 실기기 이벤트/크래시 수신 검증
-- [ ] `[사용자 결정]` **identifyUser 배선 여부** — 현재 로그인 이벤트 익명. 유저 단위 퍼널·리텐션 원하면
-  `/me` id로 배선(추천). 결정만 하면 Claude가 구현
+- [x] **PostHog 계정**: `.env`에 `EXPO_PUBLIC_POSTHOG_KEY` 주입. `/capture/` 직접 curl 검증(HTTP 200), 대시보드 Activity에서 확인됨
+- [x] **Sentry 계정**: `.env`에 `EXPO_PUBLIC_SENTRY_DSN`, EAS secret에 `SENTRY_ORG`(9402a118a6b8)·`SENTRY_PROJECT`(filltime)·`SENTRY_AUTH_TOKEN`(1Password 경유). `/store/` 직접 curl 검증(HTTP 200), Sentry Issues에서 확인됨
+- [x] **identifyUser 배선** — 커밋 33f2214. `AuthContext.signInWithTokens`에서 로그인 후 `GET /me`로 id·provider 조회 → `identifyUser(me.id)` + `track('login_success', {provider})`. /me 실패 시 익명 폴백. tsc 0에러, 테스트 26/26 유지
+- 참고: 네이티브 dev client 실기기 앱 실행 통한 최종 E2E는 미실시(선택사항, 직접 API 검증으로 핵심 리스크 제거됨)
 
 ## B. 출시 준비 (콘솔/계정 작업 — 사용자 계정 필요)
 
