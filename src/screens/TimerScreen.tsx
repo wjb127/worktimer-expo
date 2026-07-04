@@ -336,7 +336,9 @@ export default function TimerScreen() {
         onClose={() => {
           setMilestone(null);
           // 마일스톤 축하를 닫는 순간은 긍정적 순간 → 리뷰 요청 시도 (내부에서 빈도 제한/자체 예외 처리).
-          void maybeRequestReview();
+          // 모달 fade-out 애니메이션이 끝난 뒤 요청해야 iOS 리뷰 시트가 조용히 드롭되며
+          // 3회뿐인 평생 프롬프트를 헛되이 소진하는 걸 막는다.
+          setTimeout(() => void maybeRequestReview(), 600);
         }}
         onShare={(a) => {
           setMilestone(null);
