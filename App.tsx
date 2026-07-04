@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
@@ -10,11 +10,13 @@ import {
   TodoScreen,
   AnalysisScreen,
   SettingsScreen,
+  OnboardingScreen,
 } from './src/screens';
 import { AuthProvider, useAuth } from './src/lib/auth/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
 import { colors } from './src/theme/colors';
 import { initAnalytics, track } from './src/lib/analytics';
+import { getOnboardingSeen } from './src/lib/onboarding';
 import { initErrorTracking } from './src/lib/errorTracking';
 import * as Sentry from '@sentry/react-native';
 
@@ -82,14 +84,28 @@ function MainTabs() {
 
 function Root() {
   const { loading, signedIn } = useAuth();
-  if (loading) {
+  // 온보딩 노출 여부 (null = 저장값 로딩 중)
+  const [onboardingSeen, setOnboardingSeen] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    getOnboardingSeen().then(setOnboardingSeen);
+  }, []);
+
+  // 인증 로딩 또는 온보딩 플래그 로딩 중이면 스피너
+  if (loading || onboardingSeen === null) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" />
       </View>
     );
   }
-  if (!signedIn) return <LoginScreen />;
+  // 미로그인: 온보딩을 아직 안 봤으면 온보딩 → 그 외엔 로그인
+  if (!signedIn) {
+    if (!onboardingSeen) {
+      return <OnboardingScreen onDone={() => setOnboardingSeen(true)} />;
+    }
+    return <LoginScreen />;
+  }
   return <MainTabs />;
 }
 

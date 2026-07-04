@@ -4,3 +4,4 @@ export { default as StatsScreen } from './StatsScreen';
 export { default as TodoScreen } from './TodoScreen';
 export { default as AnalysisScreen } from './AnalysisScreen';
 export { default as SettingsScreen } from './SettingsScreen';
+export { default as OnboardingScreen } from './OnboardingScreen';
