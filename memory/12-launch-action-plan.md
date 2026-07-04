@@ -39,8 +39,9 @@
 - **GitHub**: https://github.com/wjb127/ss-042-filltime-landing (private)
 - **Vercel**: 기본 alias `ss-042-filltime-landing.vercel.app` + 예쁜 alias `filltime.vercel.app`
 - **페이지**: `/`(홈, 필수 링크 위주 미니멀 히어로) · `/privacy`(개인정보처리방침) · `/terms`(이용약관)
-- 개인정보처리방침 내용은 앱 실제 데이터 흐름 반영(구글/애플 로그인, PostHog, Sentry, Supabase/Vultr 호스팅 국외이전 고지 포함). `[담당자명]`/`[연락처]` 플레이스홀더 — 실제 정보로 교체 필요
+- [x] 개인정보처리방침·이용약관에 실제 사업자 정보 반영(2026-07-05, 사업자등록증 PDF 기반) — 상호 코들라스(Codlas), 대표 위승빈, 사업자등록번호 237-02-03826, 인천 서구 청라동 소재. 연락 이메일은 `wjb127@naver.com`(개인 gmail 대신 사용, 스팸 감수 결정)
 - [x] Deployment Protection 해제 완료(2026-07-05, 사용자가 대시보드에서 직접 끔) — 홈/privacy/terms 3개 페이지 전부 curl로 `HTTP:200` 공개 접속 검증됨
+- [ ] 랜딩 전체 푸터에 사업자 정보 상시 노출 — 지금은 privacy/terms 페이지 본문에만 있어서 홈에선 안 보임(작업 진행 중)
 - 홈페이지는 아직 마케팅 카피/스크린샷 없음 — 스토어 등록 후 다운로드 버튼·스크린샷 보강 예정
 
 ## D. 출시 후 (수익화 순서 — `10-viral-share-strategy.md` 프레임)
