@@ -37,7 +37,14 @@
   - nginx `/etc/nginx/conf.d/00-hardening.conf`: `server_tokens off`(버전숨김) + `limit_req_zone rate=20r/s`; api 서버블록에 `proxy_hide_header X-Powered-By` + `limit_req burst=50 nodelay`. 검증: 헤더 `Server: nginx`만·X-Powered-By 제거, 100동시요청→43개 429. 백업 `api.codeatlas.kr.bak-20260712`
   - fail2ban `jail.local`: 밴타임 10m→1h, nginx-limit-req(maxretry10)·nginx-botsearch jail 추가. 활성 jail 3개(sshd/nginx-limit-req/nginx-botsearch)
   - 커널 재부팅: 6.8.0-124→134, reboot-required 해제, 전 서비스 복구·API 200 확인
-- [ ] **Cloudflare 이관(선택, 진행중)** — codeatlas.kr은 **가비아 NS**(CF 아님). api·jusohub 2레코드뿐(MX·root·www 없음)이라 이관 저위험. CF 계정에 이미 12개 존 있음(토큰 `op://Dev-Clients/otdvwuq4kkzw7xakwqwrcamshi/773gkd5l242v2kko7z3vilzegm`). 이관 시 origin IP 은닉+엣지 WAF/rate-limit. **핵심 주의: 프록시 후 ufw 443을 CF IP대역만 허용해야 우회차단 됨 + certbot은 HTTP-01→DNS-01(CF플러그인) 전환 필요(포트80 의존 제거)**. NS 변경은 사용자가 가비아에서 직접(achiel/aida.ns.cloudflare.com)
+- [~] **Cloudflare 이관(진행중, 2026-07-12)** — codeatlas.kr은 **가비아 NS**였음. api·jusohub 2레코드뿐(MX·root·www 없음)이라 저위험.
+  - **완료(스테이징)**: CF 계정(`Qhv147@gmail.com`, acct `46e9985a2cd78037a239e6a0a1a4067d`)에 codeatlas.kr 존 생성(id `a6b374a69ec4558c86093424711a7a82`, **status pending**). api·jusohub A레코드(→45.77.135.225) **프록시 ON**. SSL=Full, Always-HTTPS=on. **전부 pending이라 NS 변경 전엔 실서비스 무영향**
+  - **사용자 할 일(단 1스텝)**: 가비아 codeatlas.kr 네임서버를 `ns.gabia.net` 계열 → **`achiel.ns.cloudflare.com` + `aida.ns.cloudflare.com`** 로 변경. 전파(수분~수시간) 후 존 active
+  - **★ active 후 Claude 재개 체크리스트(순서 중요)**:
+    1. nginx CF real-IP 복원: `set_real_ip_from <CF대역>` + `real_ip_header CF-Connecting-IP` — 안 하면 rate-limit/fail2ban이 실클라 대신 CF IP를 봄
+    2. certbot HTTP-01→**DNS-01**(certbot-dns-cloudflare, CF토큰) 전환 후 `renew --dry-run` — 포트80 의존 제거(origin잠금 전제조건)
+    3. ufw 80/443을 **CF IP대역만 허용**(22는 유지) — 이게 우회차단의 핵심. `curl --resolve`로 origin 직타 차단 확인
+    4. 검증: CF경유 API 200 + origin직접 차단 + cert 갱신 OK
 
 ## E. 광고용 랜딩페이지 (신규, 2026-07-05)
 
