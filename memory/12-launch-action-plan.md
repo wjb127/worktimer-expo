@@ -33,6 +33,11 @@
 - [ ] codeatlas RLS 정비 — **보류, 사용자가 직접 검토 예정.** 조사 결과: 테이블 11개 전부 RLS 비활성이지만 `service_role`/`postgres`는 원래 RLS 우회 롤이라 백엔드·어드민은 무관. 진짜 리스크는 "`codeatlas` 스키마가 Supabase PostgREST(anon 키로 접근되는 REST API)에 노출돼 있는가" — 이건 SQL로 확인 안 되고 Supabase 대시보드 Settings→API→Exposed schemas에서만 확인 가능(당시 MCP 연결 끊겨 있어 미확인). `codeatlas`가 노출 목록에 없으면 RLS 켤 필요 시급하지 않음, 있으면 RLS보다 그 목록에서 빼는 게 더 간단한 수정
 - [ ] Apple 계정삭제 revoke 구현 (B의 .p8 받은 후 — 심사 리젝 사유)
 - [x] VPS SSH 하드닝(2026-07-12) — 브루트포스 17,991건 진단(침입 성공 0건, fail2ban 누적 1,266 IP 차단 확인) 후 `/etc/ssh/sshd_config.d/00-hardening.conf`로 비번 로그인 차단(`PasswordAuthentication no` + `PermitRootLogin prohibit-password`). **이후 VPS 접속은 키(ED25519, qhv147) 전용** — 비번 경로는 "Permission denied (publickey)"가 정상. 백업: `sshd_config.bak-20260712`. 잠금 사고 시 Vultr 웹 콘솔로 복구
+- [x] VPS 앱계층 하드닝(2026-07-12, 보안점수 76→~85 B+) — 서버 실태: node(codeatlas-api :3000) + PHP(jusohub 포털 :8080/8088) 2개 프로젝트, DB(3306)·node(3000) 내부바인딩, `.env` 600 root, TLS LE 유효. 조치:
+  - nginx `/etc/nginx/conf.d/00-hardening.conf`: `server_tokens off`(버전숨김) + `limit_req_zone rate=20r/s`; api 서버블록에 `proxy_hide_header X-Powered-By` + `limit_req burst=50 nodelay`. 검증: 헤더 `Server: nginx`만·X-Powered-By 제거, 100동시요청→43개 429. 백업 `api.codeatlas.kr.bak-20260712`
+  - fail2ban `jail.local`: 밴타임 10m→1h, nginx-limit-req(maxretry10)·nginx-botsearch jail 추가. 활성 jail 3개(sshd/nginx-limit-req/nginx-botsearch)
+  - 커널 재부팅: 6.8.0-124→134, reboot-required 해제, 전 서비스 복구·API 200 확인
+- [ ] **Cloudflare 이관(선택, 진행중)** — codeatlas.kr은 **가비아 NS**(CF 아님). api·jusohub 2레코드뿐(MX·root·www 없음)이라 이관 저위험. CF 계정에 이미 12개 존 있음(토큰 `op://Dev-Clients/otdvwuq4kkzw7xakwqwrcamshi/773gkd5l242v2kko7z3vilzegm`). 이관 시 origin IP 은닉+엣지 WAF/rate-limit. **핵심 주의: 프록시 후 ufw 443을 CF IP대역만 허용해야 우회차단 됨 + certbot은 HTTP-01→DNS-01(CF플러그인) 전환 필요(포트80 의존 제거)**. NS 변경은 사용자가 가비아에서 직접(achiel/aida.ns.cloudflare.com)
 
 ## E. 광고용 랜딩페이지 (신규, 2026-07-05)
 
