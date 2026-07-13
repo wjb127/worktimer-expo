@@ -37,14 +37,13 @@
   - nginx `/etc/nginx/conf.d/00-hardening.conf`: `server_tokens off`(버전숨김) + `limit_req_zone rate=20r/s`; api 서버블록에 `proxy_hide_header X-Powered-By` + `limit_req burst=50 nodelay`. 검증: 헤더 `Server: nginx`만·X-Powered-By 제거, 100동시요청→43개 429. 백업 `api.codeatlas.kr.bak-20260712`
   - fail2ban `jail.local`: 밴타임 10m→1h, nginx-limit-req(maxretry10)·nginx-botsearch jail 추가. 활성 jail 3개(sshd/nginx-limit-req/nginx-botsearch)
   - 커널 재부팅: 6.8.0-124→134, reboot-required 해제, 전 서비스 복구·API 200 확인
-- [~] **Cloudflare 이관(진행중, 2026-07-12)** — codeatlas.kr은 **가비아 NS**였음. api·jusohub 2레코드뿐(MX·root·www 없음)이라 저위험.
-  - **완료(스테이징)**: CF 계정(`Qhv147@gmail.com`, acct `46e9985a2cd78037a239e6a0a1a4067d`)에 codeatlas.kr 존 생성(id `a6b374a69ec4558c86093424711a7a82`, **status pending**). api·jusohub A레코드(→45.77.135.225) **프록시 ON**. SSL=Full, Always-HTTPS=on. **전부 pending이라 NS 변경 전엔 실서비스 무영향**
-  - **사용자 할 일(단 1스텝)**: 가비아 codeatlas.kr 네임서버를 `ns.gabia.net` 계열 → **`achiel.ns.cloudflare.com` + `aida.ns.cloudflare.com`** 로 변경. 전파(수분~수시간) 후 존 active
-  - **★ active 후 Claude 재개 체크리스트(순서 중요)**:
-    1. nginx CF real-IP 복원: `set_real_ip_from <CF대역>` + `real_ip_header CF-Connecting-IP` — 안 하면 rate-limit/fail2ban이 실클라 대신 CF IP를 봄
-    2. certbot HTTP-01→**DNS-01**(certbot-dns-cloudflare, CF토큰) 전환 후 `renew --dry-run` — 포트80 의존 제거(origin잠금 전제조건)
-    3. ufw 80/443을 **CF IP대역만 허용**(22는 유지) — 이게 우회차단의 핵심. `curl --resolve`로 origin 직타 차단 확인
-    4. 검증: CF경유 API 200 + origin직접 차단 + cert 갱신 OK
+- [x] **Cloudflare 이관 완료(2026-07-14, 보안점수 ~85→~90 A-)** — codeatlas.kr을 가비아 NS→CF로 이관. api·jusohub 프록시 뒤로. origin IP 은닉+우회 직타 차단 완성.
+  - CF 존 `a6b374a69ec4558c86093424711a7a82`(acct `46e9985a2cd78037a239e6a0a1a4067d`, `Qhv147@gmail.com`), active. api·jusohub A레코드 프록시 ON, SSL=Full, Always-HTTPS=on. NS = achiel/aida.ns.cloudflare.com (레지스트리 등록 확인)
+  - nginx `conf.d/10-cloudflare-realip.conf`: CF 22개 대역 `set_real_ip_from` + `real_ip_header CF-Connecting-IP` (rate-limit/fail2ban이 실클라 IP 인식)
+  - certbot **DNS-01 전환**: `python3-certbot-dns-cloudflare` 설치, `/root/.secrets/cloudflare.ini`(600, CF토큰), api·jusohub 둘 다 재발급 성공 + 갱신설정 `authenticator=dns-cloudflare`, certbot.timer active. **포트80 의존 제거 → origin 잠금 가능해짐**
+  - **ufw origin 잠금**: 80/443을 CF 22개 대역만 허용(44규칙), anywhere 규칙 제거. **22(SSH)는 유지**. 검증: CF경유 api 200 + origin 직타(--resolve 45.77.135.225) 443/80 전부 timeout 차단 + SSH 정상
+  - **★ Bot Fight Mode/브라우저챌린지 의도적 OFF** — 모바일 앱 API 호출은 JS 챌린지 못 풀어 죽음. API 존은 L3/4 자동 DDoS(챌린지 없음)만
+  - **남은 소소한 노출**: 8080/8088(jusohub PHP 직결포트)이 아직 anywhere 개방 — jusohub.codeatlas.kr:443이 CF로 정상동작하므로 직결포트는 잉여 가능성. jusohub 프로젝트라 미변경, 필요시 CF대역 제한 또는 폐쇄 검토
 
 ## E. 광고용 랜딩페이지 (신규, 2026-07-05)
 
