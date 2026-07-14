@@ -26,6 +26,11 @@
     "production": {}
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "/Users/seungbeenwi/.config/eas-submit/worktimer-play-sa.json",
+        "track": "production"
+      }
+    }
   }
 }
