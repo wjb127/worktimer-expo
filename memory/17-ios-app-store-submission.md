@@ -9,8 +9,9 @@
 ## 결론(07-15): iOS 프로덕션 빌드 완료 + ASC 업로드 진행 → 이후 메타데이터·심사제출만 남음
 
 - iOS 프로덕션 빌드(store) **FINISHED** (build `2f875c2c`, v1.0.0 / build 1)
-- ASC 앱레코드 생성됨(ascAppId **6790886125**) → `eas submit -p ios` 업로드 진행
-- **eas submit 자동화 세팅 완료** — 다음부턴 `eas build -p ios --profile production --auto-submit` 비대화형
+- ASC 앱레코드 생성됨(ascAppId **6790886125**)
+- **★ eas submit이 무료티어 큐(Free Tier Queue)에 42분 걸려 업로드 시작도 안 함** → **altool 직접 업로드로 우회** → `UPLOAD SUCCEEDED`(Delivery UUID f6f9cd39). 애플 인제스트 5~15분 뒤 ASC 빌드 목록에 뜸
+- **eas submit 자동화 세팅 완료** — 다음부턴 `eas build -p ios --profile production --auto-submit` 비대화형 (단 무료큐 느리면 altool 우회)
 - 남은 것: App Store Connect에서 **스크린샷·설명·연령등급 메타데이터 채우고 "심사 제출"** (첫 앱은 수동 게이트, 안드 첫 제출과 동일)
 
 ## ★★ 핵심 함정: ASC 키 계정 착각 (개인 vs 클라) — 하마터면 클라 계정에 앱 생성할 뻔
