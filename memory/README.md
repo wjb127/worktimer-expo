@@ -15,7 +15,7 @@
 - Apple Team `9Q26686S8R` · Expo owner `@gawall` · EAS projectId `31c0b3a1-6f4a-4b05-ad00-89924a249f68`
 - DB: 공유 Supabase `bzzjkcrbwwrqlumxigag`의 **codeatlas 스키마**(백엔드, TLS strict) / 앱은 NestJS API 경유
 - 랜딩: `ss-042-filltime-landing` → filltime.vercel.app (개인정보처리방침/약관, 사업자 코들라스)
-- 진행(2026-07-14): 백엔드 하드닝+CF이관 ✅ / 측정·랜딩 ✅ / UI 대개편 Android 실기기 ✅ / **Android Play 프로덕션 심사 제출 직전까지 전자동 완료**(게스트모드·AAB v2·선언10/10·스토어·국가 전부 — 마지막 "검토전송" 클릭만 대기, → 16번) / **남은건 최종제출·GCP SHA-1·iOS 빌드·Apple revoke**
+- 진행(2026-07-15): 백엔드 하드닝+CF이관 ✅ / 측정·랜딩 ✅ / UI 대개편 Android 실기기 ✅ / **Android Play 프로덕션 심사 제출 완료 ✅**(게스트모드·AAB v2·선언10/10·스토어·국가·최종전송 전부, "검토 중" 상태 → 16번) / **GCP OAuth SHA-1 등록+동의화면 프로덕션 게시 완료 ✅**(구글로그인 동작) / **남은건 심사결과 대기 → iOS 빌드·Apple revoke**
 
 ## 파일 인덱스
 
@@ -36,7 +36,7 @@
 | `13-release-blockers-local-fixes.md` | ★ 출시 블로커 로컬 처리 — EAS env, expo-doctor, SDK patch, Android 실기기 smoke |
 | `14-sdui-app-factory-strategy.md` | ★ SDUI 앱 팩토리 경영 판정 — A/B 정책 경계, 하이브리드 구조, 규모·경제성·MVP 가드레일 |
 | `15-session-2026-07-14-ui-hardening.md` | ★ 세션종합(07-14) — 백엔드하드닝·CF이관·동시성수정·UI대개편(종아이콘/탭바)·기록탭 CRUD + 현재상태 + 다음진행 |
-| `16-android-play-console-submission.md` | ★ Android Play 심사 제출 자동화(07-14) — 게스트모드·계정삭제·AAB v2·선언10/10·스토어·국가 + 식별자(앱ID/트랙ID) + 남은건 최종제출·GCP SHA-1 |
+| `16-android-play-console-submission.md` | ★ Android Play 심사 제출 완료(07-15) — 게스트모드·AAB v2·선언10/10·스토어·국가·최종전송 + GCP OAuth SHA-1 2개 등록·동의화면 프로덕션 게시(구글로그인) + 식별자(앱ID/트랙ID/SHA-1/OAuth클라) |
 | `raw/` | 원문 작업 로그(날짜별, 기본 비노출·지시 시에만 열람) |
 | `.private/01-codeatlas-infra.md` | (private) VPS·DB·op 시크릿 참조 |
 
