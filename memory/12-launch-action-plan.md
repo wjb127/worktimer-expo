@@ -43,7 +43,11 @@
   - certbot **DNS-01 전환**: `python3-certbot-dns-cloudflare` 설치, `/root/.secrets/cloudflare.ini`(600, CF토큰), api·jusohub 둘 다 재발급 성공 + 갱신설정 `authenticator=dns-cloudflare`, certbot.timer active. **포트80 의존 제거 → origin 잠금 가능해짐**
   - **ufw origin 잠금**: 80/443을 CF 22개 대역만 허용(44규칙), anywhere 규칙 제거. **22(SSH)는 유지**. 검증: CF경유 api 200 + origin 직타(--resolve 45.77.135.225) 443/80 전부 timeout 차단 + SSH 정상
   - **★ Bot Fight Mode/브라우저챌린지 의도적 OFF** — 모바일 앱 API 호출은 JS 챌린지 못 풀어 죽음. API 존은 L3/4 자동 DDoS(챌린지 없음)만
-  - **남은 소소한 노출**: 8080/8088(jusohub PHP 직결포트)이 아직 anywhere 개방 — jusohub.codeatlas.kr:443이 CF로 정상동작하므로 직결포트는 잉여 가능성. jusohub 프로젝트라 미변경, 필요시 CF대역 제한 또는 폐쇄 검토
+  - ~~8080/8088 jusohub 직결포트 노출~~ → 아래 jusohub 제거로 해소(포트 폐쇄됨)
+- [x] **jusohub(주소허브) VPS 정리(2026-07-14)** — 다른 서버로 이관 완료(브랜드 도메인 jusohubgo.com→208.87.241.137, 한글도메인→141.164.55.40로 이미 이전 확인)라 이 VPS에서 제거. codeatlas는 MariaDB·PHP·해당 웹루트 전부 미사용이라 무관.
+  - **백업 후 제거**: `/root/jusohub-backup-20260714/`(88M — DB덤프 2개 + nginx설정 + 웹루트 tar) 떠두고 진행
+  - 제거: nginx 사이트 2개(jusohub/jusowhy-portal), 인증서 jusohub.codeatlas.kr, ufw 8080/8088, CF DNS jusohub.codeatlas.kr 레코드(→codeatlas.kr엔 api만 남음), 웹루트 319M(`/var/www/{jusohub,jusowhy-portal}`), php8.3-fpm 중지+비활성
+  - **미제거(사용자 요청으로 보존)**: MariaDB DB 2개(`jusohub_wp`,`jusowhy_portal_wp`) + mariadb 서비스 살아있음. DROP은 훅이 차단(하드룰, 우회마커 없음)→사용자 직접 실행 필요했으나 "놔둬라"로 보류. 나중에 완전삭제 시: `mysql -e "DROP DATABASE jusohub_wp; DROP DATABASE jusowhy_portal_wp;"` 후 mariadb disable + 백업 삭제
 
 ## E. 광고용 랜딩페이지 (신규, 2026-07-05)
 
