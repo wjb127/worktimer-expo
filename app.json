@@ -31,6 +31,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "kr.codeatlas.worktimer",
+      "buildNumber": "1",
       "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false

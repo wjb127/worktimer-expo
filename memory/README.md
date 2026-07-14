@@ -15,7 +15,7 @@
 - Apple Team `9Q26686S8R` · Expo owner `@gawall` · EAS projectId `31c0b3a1-6f4a-4b05-ad00-89924a249f68`
 - DB: 공유 Supabase `bzzjkcrbwwrqlumxigag`의 **codeatlas 스키마**(백엔드, TLS strict) / 앱은 NestJS API 경유
 - 랜딩: `ss-042-filltime-landing` → filltime.vercel.app (개인정보처리방침/약관, 사업자 코들라스)
-- 진행(2026-07-15): 백엔드 하드닝+CF이관 ✅ / 측정·랜딩 ✅ / UI 대개편 Android 실기기 ✅ / **Android Play 프로덕션 심사 제출 완료 ✅**(게스트모드·AAB v2·선언10/10·스토어·국가·최종전송 전부, "검토 중" 상태 → 16번) / **GCP OAuth SHA-1 등록+동의화면 프로덕션 게시 완료 ✅**(구글로그인 동작) / **eas submit 배포자동화 세팅+검증(200) 완료 ✅**(SA키 gcloud, 다음부턴 `eas build --auto-submit`, 브라우저 없이 → 16번) / **남은건 심사결과 대기 → iOS 빌드·Apple revoke**
+- 진행(2026-07-15): 백엔드 하드닝+CF이관 ✅ / 측정·랜딩 ✅ / UI 대개편 Android 실기기 ✅ / **Android Play 프로덕션 심사 제출 완료 ✅**(게스트모드·AAB v2·선언10/10·스토어·국가·최종전송 전부, "검토 중" 상태 → 16번) / **GCP OAuth SHA-1 등록+동의화면 프로덕션 게시 완료 ✅**(구글로그인 동작) / **eas submit 배포자동화 세팅+검증(200) 완료 ✅**(SA키 gcloud, 다음부턴 `eas build --auto-submit`, 브라우저 없이 → 16번) / **iOS 프로덕션 빌드 완료+ASC 업로드 진행 ✅**(ascAppId 6790886125, eas submit ios 세팅, EAS Workflow CI → 17번) / **남은건 iOS 첫심사 메타데이터·심사제출 + 양OS 심사결과 대기**
 
 ## 파일 인덱스
 
@@ -37,6 +37,7 @@
 | `14-sdui-app-factory-strategy.md` | ★ SDUI 앱 팩토리 경영 판정 — A/B 정책 경계, 하이브리드 구조, 규모·경제성·MVP 가드레일 |
 | `15-session-2026-07-14-ui-hardening.md` | ★ 세션종합(07-14) — 백엔드하드닝·CF이관·동시성수정·UI대개편(종아이콘/탭바)·기록탭 CRUD + 현재상태 + 다음진행 |
 | `16-android-play-console-submission.md` | ★ Android Play 심사 제출 완료(07-15) — 게스트모드·AAB v2·선언10/10·스토어·국가·최종전송 + GCP OAuth SHA-1 2개·동의화면 게시(구글로그인) + **eas submit 자동화(SA키·gcloud우회·API검증)** + 식별자(앱ID/트랙ID/SHA-1/OAuth클라/SA) |
+| `17-ios-app-store-submission.md` | ★ iOS App Store 배포(07-15) — 빌드 완료·ASC 업로드 + eas submit ios 세팅 + **EAS Workflow CI** + ★ASC키 개인vs클라 함정 + 식별자(ascAppId/키ID/Issuer/Team/타겟) + 첫심사 메타데이터 수동게이트 |
 | `raw/` | 원문 작업 로그(날짜별, 기본 비노출·지시 시에만 열람) |
 | `.private/01-codeatlas-infra.md` | (private) VPS·DB·op 시크릿 참조 |
 

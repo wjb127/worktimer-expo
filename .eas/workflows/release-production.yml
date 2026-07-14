@@ -1,0 +1,51 @@
+# 프로덕션 릴리스 자동화 — git 태그(vX.Y.Z) 푸시 시 iOS+Android 빌드 → 스토어 자동 제출
+#
+# 사용법:  git tag v1.0.1 && git push origin v1.0.1
+# 수동 실행: eas workflow:run .eas/workflows/release-production.yml
+#
+# 전제조건:
+#  1) Expo GitHub App이 이 repo(wjb127/worktimer-expo)에 연결돼야 태그 push 자동 트리거됨
+#     (미연결이면 위 '수동 실행'으로 돌리면 됨 — 빌드/제출 동작은 동일)
+#  2) 자격증명: iOS = EAS 서버 저장분(첫 빌드 때 생성) / Android = eas.json submit의 Play SA 키
+#  3) 버전 자동증가: eas.json cli.appVersionSource=remote + production.autoIncrement=true (아래 참고)
+#
+# ⚠️ 프로덕션 제출 = 심사로 바로 전송됨. 테스트 먼저 원하면 submit params의 profile을
+#    internal 트랙용 프로필로 바꾸거나 submit_* job을 주석 처리.
+
+name: Production Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build_android:
+    name: Build Android (production)
+    type: build
+    params:
+      platform: android
+      profile: production
+
+  build_ios:
+    name: Build iOS (production)
+    type: build
+    params:
+      platform: ios
+      profile: production
+
+  submit_android:
+    name: Submit → Google Play
+    type: submit
+    needs: [build_android]
+    params:
+      platform: android
+      profile: production
+
+  submit_ios:
+    name: Submit → App Store Connect
+    type: submit
+    needs: [build_ios]
+    params:
+      platform: ios
+      profile: production

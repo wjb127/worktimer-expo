@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 16.0.0"
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -23,13 +24,21 @@
         "buildType": "apk"
       }
     },
-    "production": {}
+    "production": {
+      "autoIncrement": true
+    }
   },
   "submit": {
     "production": {
       "android": {
         "serviceAccountKeyPath": "/Users/seungbeenwi/.config/eas-submit/worktimer-play-sa.json",
         "track": "production"
+      },
+      "ios": {
+        "ascApiKeyPath": "/Users/seungbeenwi/.config/eas-submit/AuthKey_NWM428GNG4.p8",
+        "ascApiKeyId": "NWM428GNG4",
+        "ascApiKeyIssuerId": "f8a8b51b-e563-4cc0-a0e7-91f387396c25",
+        "ascAppId": "6790886125"
       }
     }
   }
