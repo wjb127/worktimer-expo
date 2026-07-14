@@ -288,31 +288,31 @@ export default function TimerScreen() {
       </View>
 
       <View style={styles.buttonContainer}>
-        {/* 프로그레스 링 */}
-        <Svg width={180} height={180} style={styles.progressRing}>
+        {/* 프로그레스 링 (버튼과 함께 1.3배 확대) */}
+        <Svg width={234} height={234} style={styles.progressRing}>
           {/* 배경 원 */}
           <Circle
-            cx={90}
-            cy={90}
-            r={85}
+            cx={117}
+            cy={117}
+            r={110}
             stroke={colors.primaryLight}
-            strokeWidth={6}
+            strokeWidth={7}
             fill="transparent"
           />
           {/* 프로그레스 원 */}
           {isRunning && (
             <Circle
-              cx={90}
-              cy={90}
-              r={85}
+              cx={117}
+              cy={117}
+              r={110}
               stroke={colors.primary}
-              strokeWidth={6}
+              strokeWidth={7}
               fill="transparent"
-              strokeDasharray={2 * Math.PI * 85}
-              strokeDashoffset={2 * Math.PI * 85 * (1 - (elapsedSeconds % 60) / 60)}
+              strokeDasharray={2 * Math.PI * 110}
+              strokeDashoffset={2 * Math.PI * 110 * (1 - (elapsedSeconds % 60) / 60)}
               strokeLinecap="round"
               rotation={-90}
-              origin="90, 90"
+              origin="117, 117"
             />
           )}
         </Svg>
@@ -399,8 +399,8 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   buttonContainer: {
-    width: 180,
-    height: 180,
+    width: 234,
+    height: 234,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 40,
@@ -439,9 +439,9 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   button: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
+    width: 195,
+    height: 195,
+    borderRadius: 98,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: colors.primary,
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: colors.white,
-    fontSize: 28,
+    fontSize: 36,
     fontWeight: '700',
   },
   totalSection: {

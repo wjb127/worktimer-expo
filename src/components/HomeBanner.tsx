@@ -92,16 +92,14 @@ export default function HomeBanner() {
             color={accentColor}
             style={styles.icon}
           />
-          <View style={styles.textCol}>
-            <Text style={[styles.title, { color: titleColor }]} numberOfLines={1}>
-              {banner.title}
-            </Text>
-            {banner.body ? (
-              <Text style={[styles.body, { color: bodyColor }]} numberOfLines={1}>
-                {banner.body}
-              </Text>
-            ) : null}
-          </View>
+          {/* 슬림 단일 라인 — 제목만 노출(본문은 탭하면 뜨는 상세 모달에서).
+              타이머가 화면 중앙 히어로로 오도록 배너 높이를 최소화한다. */}
+          <Text
+            style={[styles.title, styles.titleFlex, { color: titleColor }]}
+            numberOfLines={1}
+          >
+            {banner.title}
+          </Text>
           <Ionicons
             name="chevron-forward"
             size={18}
@@ -173,10 +171,10 @@ export default function HomeBanner() {
 const styles = StyleSheet.create({
   card: {
     width: '100%',
-    borderRadius: 14,
-    paddingVertical: 12,
+    borderRadius: 12,
+    paddingVertical: 10,
     paddingHorizontal: 14,
-    marginBottom: 16,
+    marginBottom: 8,
   },
   cardInfo: {
     backgroundColor: colors.primaryFaint,
@@ -185,9 +183,9 @@ const styles = StyleSheet.create({
   },
   cardEvent: { backgroundColor: colors.primary },
   row: { flexDirection: 'row', alignItems: 'center' },
-  icon: { marginRight: 10 },
-  textCol: { flex: 1 },
-  title: { fontSize: 15, fontWeight: '700' },
+  icon: { marginRight: 8 },
+  title: { fontSize: 14, fontWeight: '700' },
+  titleFlex: { flex: 1 },
   body: { fontSize: 13, marginTop: 2 },
   chevron: { marginLeft: 6, opacity: 0.7 },
   closeBtn: { marginLeft: 6 },
