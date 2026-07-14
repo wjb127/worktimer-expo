@@ -12,6 +12,7 @@ import {
   SettingsScreen,
   OnboardingScreen,
 } from './src/screens';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/lib/auth/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
 import { colors } from './src/theme/colors';
@@ -120,10 +121,14 @@ function App() {
     track('app_open');
   }, []);
 
+  // SafeAreaProvider: edgeToEdge(안드 시스템바 뒤로 렌더) 하에서 탭바·헤더·모달이
+  // 상/하단 시스템바(상태바·내비게이션바)와 겹치지 않도록 인셋 컨텍스트를 공급한다.
   return (
-    <AuthProvider>
-      <Root />
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <Root />
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 

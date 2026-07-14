@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiJson } from '../lib/api/client';
 import { useAuth } from '../lib/auth/AuthContext';
 import { colors } from '../theme/colors';
@@ -24,6 +25,7 @@ type Pair = { accessToken: string; refreshToken: string };
 export default function LoginScreen() {
   const { signInWithTokens } = useAuth();
   const [busy, setBusy] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const google = async () => {
     try {
@@ -84,7 +86,12 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 },
+      ]}
+    >
       <View style={styles.brand}>
         <Image
           source={require('../../assets/icon.png')}

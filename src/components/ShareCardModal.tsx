@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import ShareCard, {
@@ -63,6 +64,7 @@ export default function ShareCardModal({
   const [variant, setVariant] = useState<ShareVariant | null>(null);
   const [loading, setLoading] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (!request) {
@@ -152,7 +154,7 @@ export default function ShareCardModal({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
           <View style={styles.header}>
             <Text style={styles.title}>{request ? TITLE[request.kind] : ''}</Text>
             <TouchableOpacity

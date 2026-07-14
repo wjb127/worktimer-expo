@@ -1,12 +1,6 @@
 import { useState, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Platform,
-  StatusBar,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { track } from '../lib/analytics';
@@ -43,6 +37,7 @@ const SLIDES: Slide[] = [
 type Props = { onDone: () => void };
 
 export default function OnboardingScreen({ onDone }: Props) {
+  const insets = useSafeAreaInsets();
   const [step, setStep] = useState(0);
   const isLast = step === SLIDES.length - 1;
   const slide = SLIDES[step];
@@ -77,7 +72,12 @@ export default function OnboardingScreen({ onDone }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24 },
+      ]}
+    >
       {/* 상단 우측 건너뛰기 — 마지막 슬라이드에서는 숨김 */}
       <View style={styles.topBar}>
         {!isLast && (
@@ -130,9 +130,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.white,
     paddingHorizontal: 24,
-    paddingBottom: 40,
-    // 상태바 높이만큼 상단 여백 확보 (SafeArea 미사용 화면 관례)
-    paddingTop: (Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 44) + 12,
+    // 상/하단 여백은 useSafeAreaInsets로 인라인 주입 (시스템바 겹침 방지)
   },
   topBar: {
     height: 32,

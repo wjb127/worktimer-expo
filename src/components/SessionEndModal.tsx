@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Todo,
   apiListTodos,
@@ -38,6 +39,7 @@ export default function SessionEndModal({
   const [markDone, setMarkDone] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const insets = useSafeAreaInsets();
 
   // 모달이 열릴 때마다 초기화 + 진행중 할일 로드
   useEffect(() => {
@@ -99,7 +101,7 @@ export default function SessionEndModal({
         style={styles.overlay}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
           {/* 핸들 + 헤더 */}
           <View style={styles.handle} />
           <View style={styles.header}>
