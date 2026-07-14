@@ -14,6 +14,16 @@ import { colors } from '../theme/colors';
 // 세션 동안 닫은 배너 id 를 기억(모듈 레벨 — 화면 재진입에도 유지). 영속 저장은 안 함.
 const dismissedIds = new Set<string>();
 
+// SDUI 신뢰경계: 서버가 내려준 URL을 그대로 열지 않는다. 안전한 스킴만 허용해
+// 백엔드 탈취 시 악성 딥링크(다른 앱 실행)/피싱 스킴을 못 열게 한다.
+const ALLOWED_URL_SCHEMES = ['https:', 'mailto:', 'tel:'];
+const isSafeActionUrl = (url: string | null | undefined): url is string => {
+  if (!url) return false;
+  const colon = url.indexOf(':');
+  if (colon < 0) return false;
+  return ALLOWED_URL_SCHEMES.includes(url.slice(0, colon + 1).toLowerCase());
+};
+
 const KIND_ICON: Record<Banner['kind'], keyof typeof Ionicons.glyphMap> = {
   notice: 'megaphone',
   event: 'sparkles',
@@ -58,7 +68,8 @@ export default function HomeBanner() {
   };
 
   const openActionUrl = async () => {
-    if (!banner.actionUrl) return;
+    // 안전 스킴(https/mailto/tel)만 — 그 외(커스텀 딥링크/file: 등)는 무시
+    if (!isSafeActionUrl(banner.actionUrl)) return;
     try {
       await Linking.openURL(banner.actionUrl);
     } catch {
