@@ -89,6 +89,9 @@ export default function TimerScreen() {
     }
   };
 
+  // 시작/종료 재진입 가드 — 빠른 더블탭 시 startSession/endSession 중복 실행
+  // (세션 중복 생성) 방지. await 구간 동안 두 번째 탭을 무시한다.
+  const startStopBusy = useRef(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialLoad = useRef(true);
 
@@ -202,6 +205,16 @@ export default function TimerScreen() {
   }, [isRunning, elapsedSeconds, todayTotal]);
 
   const handleStartStop = async () => {
+    if (startStopBusy.current) return;
+    startStopBusy.current = true;
+    try {
+      await runStartStop();
+    } finally {
+      startStopBusy.current = false;
+    }
+  };
+
+  const runStartStop = async () => {
     if (isRunning && currentSession) {
       // 종료 (타임스탬프 기반 duration 계산)
       const endedId = currentSession.id;

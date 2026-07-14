@@ -67,4 +67,41 @@ describe('apiFetch', () => {
     expect(onExpired).toHaveBeenCalled();
     setAuthExpiredHandler(null);
   });
+
+  it('동시 401 시 refresh를 한 번만 발사한다 (single-flight — 오로그아웃 방지)', async () => {
+    let current = 'old';
+    (store.getAccessToken as jest.Mock).mockImplementation(() =>
+      Promise.resolve(current),
+    );
+    (store.saveTokens as jest.Mock).mockImplementation((a: string) => {
+      current = a;
+      return Promise.resolve();
+    });
+    (store.getRefreshToken as jest.Mock).mockResolvedValue('ref');
+
+    let refreshCalls = 0;
+    global.fetch = jest.fn((url: string, opts?: RequestInit) => {
+      if (String(url).includes('/auth/refresh')) {
+        refreshCalls++;
+        return Promise.resolve({
+          status: 201,
+          ok: true,
+          json: () =>
+            Promise.resolve({ accessToken: 'new', refreshToken: 'r2' }),
+        } as Response);
+      }
+      const auth = (opts?.headers as Record<string, string>)?.Authorization;
+      const status = auth === 'Bearer new' ? 200 : 401;
+      return Promise.resolve({
+        status,
+        ok: status < 400,
+        json: () => Promise.resolve({}),
+      } as Response);
+    }) as jest.Mock;
+
+    const [a, b] = await Promise.all([apiFetch('/me'), apiFetch('/todos')]);
+    expect(refreshCalls).toBe(1); // 두 개의 동시 401이 refresh를 딱 한 번만
+    expect(a.ok).toBe(true);
+    expect(b.ok).toBe(true);
+  });
 });

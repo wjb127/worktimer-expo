@@ -23,7 +23,20 @@ export function setAuthExpiredHandler(handler: (() => void) | null): void {
   onAuthExpired = handler;
 }
 
-async function refresh(): Promise<boolean> {
+// 진행 중인 refresh 하나를 공유(single-flight). 동시 401들이 각자 refresh를
+// 발사하면 백엔드의 원자적 회전(재사용 탐지)에 의해 두 번째부터 거부돼
+// 정상 유저가 오로그아웃된다 → 한 번만 실행하고 결과를 모두가 공유.
+let refreshInFlight: Promise<boolean> | null = null;
+
+function refresh(): Promise<boolean> {
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = doRefresh().finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
+}
+
+async function doRefresh(): Promise<boolean> {
   const rt = await getRefreshToken();
   if (!rt) {
     onAuthExpired?.();
