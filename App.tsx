@@ -12,9 +12,10 @@ import {
   SettingsScreen,
   OnboardingScreen,
 } from './src/screens';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/lib/auth/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
+import AnnouncementBell from './src/components/AnnouncementBell';
 import { colors } from './src/theme/colors';
 import { initAnalytics, track } from './src/lib/analytics';
 import { getOnboardingSeen } from './src/lib/onboarding';
@@ -24,11 +25,13 @@ import * as Sentry from '@sentry/react-native';
 const Tab = createBottomTabNavigator();
 
 function MainTabs() {
+  const insets = useSafeAreaInsets();
   return (
     <NavigationContainer>
       <Tab.Navigator
         screenOptions={({ route }) => ({
-          tabBarIcon: ({ focused, color, size }) => {
+          // 하단 탭바 1.3배 확대 — 아이콘 24→30, 라벨 13, 높이 상향(+안전영역 인셋)
+          tabBarIcon: ({ focused, color }) => {
             let iconName: keyof typeof Ionicons.glyphMap;
 
             switch (route.name) {
@@ -51,10 +54,19 @@ function MainTabs() {
                 iconName = 'ellipse';
             }
 
-            return <Ionicons name={iconName} size={size} color={color} />;
+            return <Ionicons name={iconName} size={30} color={color} />;
           },
           tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.inkSub,
+          tabBarLabelStyle: { fontSize: 13, fontWeight: '600', marginBottom: 4 },
+          tabBarIconStyle: { marginTop: 4 },
+          tabBarStyle: {
+            height: 64 + insets.bottom,
+            paddingTop: 8,
+            paddingBottom: insets.bottom + 8,
+            borderTopWidth: 1,
+            borderTopColor: colors.line,
+          },
           headerShown: true,
           // 모든 화면 헤더에 브랜드명 "필타임"을 좌측 정렬, 블루/볼드로 표시
           headerTitle: '필타임',
@@ -64,6 +76,8 @@ function MainTabs() {
             fontWeight: '800',
             fontSize: 22,
           },
+          // 헤더 우측 공지 종 아이콘
+          headerRight: () => <AnnouncementBell />,
           headerStyle: {
             backgroundColor: colors.white,
             borderBottomWidth: 1,

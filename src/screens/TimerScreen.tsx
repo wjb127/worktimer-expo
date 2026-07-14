@@ -28,7 +28,6 @@ import {
   isLiveActivityRunning,
 } from '../lib/liveActivity';
 import { colors } from '../theme/colors';
-import HomeBanner from '../components/HomeBanner';
 import SessionEndModal from '../components/SessionEndModal';
 import MilestoneModal from '../components/MilestoneModal';
 import ShareCardModal, { ShareRequest } from '../components/ShareCardModal';
@@ -265,10 +264,7 @@ export default function TimerScreen() {
 
   return (
     <View style={styles.container}>
-      {/* 서버 구동 배너/공지 — 전용 공간(흐름 배치, 콘텐츠를 아래로 밀어냄) */}
-      <View style={styles.bannerSlot}>
-        <HomeBanner />
-      </View>
+      {/* 공지는 헤더 종 아이콘(AnnouncementBell)으로 이동 — 타이머 화면은 배너 공간 0 */}
       <View style={styles.content}>
       <Text style={styles.dateText}>{formatDate()}</Text>
       <View style={styles.timerSection}>
@@ -376,12 +372,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
-  // 배너 전용 공간 (흐름 배치 — 콘텐츠를 아래로 밀어내 겹침 없음)
-  bannerSlot: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-  },
-  // 타이머 본문 — 남은 공간에서 중앙 정렬
+  // 타이머 본문 — 전체 공간 중앙 정렬 (배너 슬롯 제거 → 완전 중앙)
   content: {
     flex: 1,
     alignItems: 'center',
