@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import {
   apiListSessions,
   apiEditTimes,
+  apiCreateManual,
   apiDelete,
 } from '../../lib/api/sessions';
 import { WorkSession } from '../../types/session';
@@ -59,9 +60,14 @@ export default function CalendarView() {
   const [monthData, setMonthData] = useState<Record<string, number>>({});
   const [showColors, setShowColors] = useState(true);
   const [editingSession, setEditingSession] = useState<WorkSession | null>(null);
+  // 빈 구간 추가 모드 — 클릭한 시(hour). null이면 편집 모드(editingSession 사용)
+  const [addingHour, setAddingHour] = useState<number | null>(null);
   const [editStartTime, setEditStartTime] = useState('');
   const [editEndTime, setEditEndTime] = useState('');
   const [monthTotal, setMonthTotal] = useState(0);
+  // 모달이 add 모드인지 edit 모드인지
+  const isAddMode = addingHour !== null;
+  const modalVisible = editingSession !== null || addingHour !== null;
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -105,6 +111,11 @@ export default function CalendarView() {
     }
   };
 
+  const closeModal = () => {
+    setEditingSession(null);
+    setAddingHour(null);
+  };
+
   const openEditModal = (session: WorkSession) => {
     const start = new Date(session.start_time);
     const end = new Date(session.end_time!);
@@ -114,11 +125,20 @@ export default function CalendarView() {
     setEditEndTime(
       `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`
     );
+    setAddingHour(null);
     setEditingSession(session);
   };
 
+  // 빈 구간(시간 행) 클릭 → 그 시각 기본값으로 추가 모달
+  const openAddModal = (hour: number) => {
+    setEditingSession(null);
+    setEditStartTime(`${String(hour).padStart(2, '0')}:00`);
+    setEditEndTime(`${String(Math.min(hour + 1, 23)).padStart(2, '0')}:00`);
+    setAddingHour(hour);
+  };
+
   const handleSaveSession = async () => {
-    if (!editingSession || !selectedDate) return;
+    if (!selectedDate) return;
 
     const [startH, startM] = editStartTime.split(':').map(Number);
     const [endH, endM] = editEndTime.split(':').map(Number);
@@ -139,17 +159,25 @@ export default function CalendarView() {
     }
 
     try {
-      await apiEditTimes(
-        editingSession.id,
-        newStart.toISOString(),
-        newEnd.toISOString(),
-      );
+      if (isAddMode) {
+        await apiCreateManual(
+          newStart.toISOString(),
+          newEnd.toISOString(),
+          selectedDate,
+        );
+      } else if (editingSession) {
+        await apiEditTimes(
+          editingSession.id,
+          newStart.toISOString(),
+          newEnd.toISOString(),
+        );
+      }
     } catch {
       Alert.alert('오류', '저장에 실패했습니다');
       return;
     }
 
-    setEditingSession(null);
+    closeModal();
     loadDaySessions(selectedDate);
     loadMonthData();
   };
@@ -170,7 +198,7 @@ export default function CalendarView() {
             return;
           }
 
-          setEditingSession(null);
+          closeModal();
           loadDaySessions(selectedDate);
           loadMonthData();
         },
@@ -326,11 +354,19 @@ export default function CalendarView() {
           <Text style={styles.sessionListTitle}>
             {selectedDate} 기록 ({sessions.length}개)
           </Text>
+          <Text style={styles.timelineHint}>
+            빈 시간대를 탭해 기록 추가 · 파란 막대를 탭해 수정
+          </Text>
           <View style={styles.timeline}>
             {Array.from({ length: 24 }, (_, hour) => (
               <View key={hour} style={styles.timelineRow}>
                 <Text style={styles.timelineHour}>{String(hour).padStart(2, '0')}</Text>
-                <View style={styles.timelineSlot}>
+                {/* 빈 구간 탭 → 추가 모달 (세션 막대는 내부 TouchableOpacity가 먼저 잡아 편집) */}
+                <TouchableOpacity
+                  style={styles.timelineSlot}
+                  activeOpacity={0.6}
+                  onPress={() => openAddModal(hour)}
+                >
                   {sessions.map((session) => {
                     const startDate = new Date(session.start_time);
                     const endDate = new Date(session.end_time!);
@@ -369,7 +405,7 @@ export default function CalendarView() {
                       />
                     );
                   })}
-                </View>
+                </TouchableOpacity>
               </View>
             ))}
           </View>
@@ -393,26 +429,25 @@ export default function CalendarView() {
       )}
       </ScrollView>
 
-      {/* 세션 수정 모달 */}
+      {/* 세션 추가/수정 모달 (add/edit 겸용) */}
       <Modal
-        visible={editingSession !== null}
+        visible={modalVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => setEditingSession(null)}
+        onRequestClose={closeModal}
       >
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
-          onPress={() => setEditingSession(null)}
+          onPress={closeModal}
         >
           <View style={styles.editModal} onStartShouldSetResponder={() => true}>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setEditingSession(null)}
-            >
+            <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
               <Ionicons name="close" size={24} color={colors.inkSub} />
             </TouchableOpacity>
-            <Text style={styles.editModalTitle}>업무 시간 수정</Text>
+            <Text style={styles.editModalTitle}>
+              {isAddMode ? '업무 기록 추가' : '업무 시간 수정'}
+            </Text>
 
             <View style={styles.editTimeRow}>
               <Text style={styles.editTimeLabel}>시작</Text>
@@ -438,19 +473,33 @@ export default function CalendarView() {
               />
             </View>
 
-            <View style={styles.editButtonRow}>
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={handleDeleteSession}
-              >
-                <Ionicons name="trash-outline" size={18} color={colors.danger} />
-                <Text style={styles.deleteButtonText}>삭제</Text>
-              </TouchableOpacity>
+            <View
+              style={[
+                styles.editButtonRow,
+                isAddMode && styles.editButtonRowAdd,
+              ]}
+            >
+              {/* 삭제는 편집 모드에서만 */}
+              {!isAddMode && (
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={handleDeleteSession}
+                >
+                  <Ionicons
+                    name="trash-outline"
+                    size={18}
+                    color={colors.danger}
+                  />
+                  <Text style={styles.deleteButtonText}>삭제</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 style={styles.saveButton}
                 onPress={handleSaveSession}
               >
-                <Text style={styles.saveButtonText}>저장</Text>
+                <Text style={styles.saveButtonText}>
+                  {isAddMode ? '추가' : '저장'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -571,25 +620,33 @@ const styles = StyleSheet.create({
     color: colors.ink,
     marginBottom: 12,
   },
+  timelineHint: {
+    fontSize: 12,
+    color: colors.inkSub,
+    marginBottom: 10,
+  },
   timeline: {
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: 8,
+    borderRadius: 10,
     overflow: 'hidden',
   },
+  // 시간표 두껍게: 행 높이 24 → 40
   timelineRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 24,
+    height: 40,
     borderBottomWidth: 1,
     borderBottomColor: colors.line,
   },
   timelineHour: {
-    width: 28,
-    fontSize: 10,
+    width: 36,
+    fontSize: 12,
     color: colors.inkSub,
     textAlign: 'center',
     backgroundColor: colors.bg,
+    height: '100%',
+    lineHeight: 40,
   },
   timelineSlot: {
     flex: 1,
@@ -599,10 +656,10 @@ const styles = StyleSheet.create({
   },
   timelineBlock: {
     position: 'absolute',
-    top: 2,
-    bottom: 2,
+    top: 5,
+    bottom: 5,
     backgroundColor: colors.primary,
-    borderRadius: 3,
+    borderRadius: 4,
   },
   sessionSummary: {
     marginTop: 12,
@@ -671,7 +728,12 @@ const styles = StyleSheet.create({
   editButtonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: 8,
+  },
+  // add 모드: 삭제 버튼 없으니 저장(추가) 버튼 우측 정렬
+  editButtonRowAdd: {
+    justifyContent: 'flex-end',
   },
   deleteButton: {
     flexDirection: 'row',

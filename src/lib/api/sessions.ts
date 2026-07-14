@@ -52,6 +52,17 @@ export const apiEditTimes = (id: string, startTime: string, endTime: string) =>
     body: JSON.stringify({ startTime, endTime }),
   }).then(mapSession);
 
+// 임의 시작/종료로 완료 세션 생성 (CalendarView 빈 구간 추가)
+export const apiCreateManual = (
+  startTime: string,
+  endTime: string,
+  date: string,
+) =>
+  apiJson<ApiSession>('/worktimer/sessions/manual', {
+    method: 'POST',
+    body: JSON.stringify({ startTime, endTime, date }),
+  }).then(mapSession);
+
 export const apiDelete = (id: string) =>
   apiFetch(`/worktimer/sessions/${id}`, { method: 'DELETE' }).then(
     () => undefined,
