@@ -69,6 +69,22 @@ export default function LoginScreen() {
     }
   };
 
+  // 게스트/데모 로그인 — 로그인 없이 앱 둘러보기 (Play 심사자 접근 · 신규 체험용)
+  const guest = async () => {
+    try {
+      setBusy(true);
+      const pair = await apiJson<Pair>('/auth/guest', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      await signInWithTokens(pair.accessToken, pair.refreshToken);
+    } catch (e) {
+      Alert.alert('게스트 로그인 실패', String((e as Error)?.message ?? e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   // 개발/E2E 전용 우회 로그인 (__DEV__ 빌드에만 노출, 운영 빌드엔 없음)
   const devLogin = async () => {
     try {
@@ -121,6 +137,15 @@ export default function LoginScreen() {
         disabled={busy}
       >
         <Text style={styles.googleText}>Google로 계속하기</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.guestBtn}
+        onPress={guest}
+        disabled={busy}
+        accessibilityLabel="게스트로 둘러보기"
+      >
+        <Text style={styles.guestText}>게스트로 둘러보기</Text>
       </TouchableOpacity>
 
       {(__DEV__ || process.env.EXPO_PUBLIC_E2E === '1') && (
@@ -179,6 +204,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   googleText: { fontSize: 16, fontWeight: '600', color: colors.ink },
+  // 게스트 버튼 — 보조 톤(텍스트 버튼)으로 소셜 로그인이 1차 CTA임을 유지
+  guestBtn: {
+    marginTop: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  guestText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.inkSub,
+    textDecorationLine: 'underline',
+  },
   // 개발/E2E 전용 버튼 — 보조(secondary) 톤으로 1차 CTA가 아님을 명확히
   devBtn: {
     marginTop: 28,

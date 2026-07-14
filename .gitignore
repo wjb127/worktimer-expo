@@ -47,3 +47,4 @@ ios.bak/
 out/ship-evidence-mo/
 report-mo-*.html
 report-codeatlas-*.html
+.playwright-mcp/
