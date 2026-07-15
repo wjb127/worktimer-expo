@@ -43,11 +43,21 @@ codeatlas DB를 공유 Supabase에서 VPS(45.77.135.225) 로컬 PostgreSQL 16으
 - ★★ **함정: postgres.js에 `?schema=` 붙은 URL 주면 조용히 연결 거부** — Prisma 전용 파라미터를 PG 서버에 그대로 전달해서. 어드민 auth가 전부 try/catch라 에러도 안 보임(401만 나옴). postgres.js용 URL엔 schema 파라미터 제거 필수
 - Vercel 구 배포는 살아있음(stale Supabase 봄) — 혼란 방지 위해 pause/삭제 권장(사용자 결정)
 
+## R2 오프사이트 백업 — 완료 ✅ (07-16)
+- 버킷 `codeatlas-backups`(Qhv147 CF계정 46e9985a...) — 백업 스크립트가 pg_dump 후 `rclone copyto` 업로드. **로컬 30일 + R2 90일** 보존
+- 자격증명: CF API 토큰(`op://Dev-Clients/otdvwuq4kkzw7xakwqwrcamshi`)에서 파생 — **access_key_id=토큰ID, secret=SHA256(토큰값)** (CF 공식 S3 호환 방식). VPS `/root/.config/rclone/rclone.conf`(600)
+- ★함정: apt rclone(1.60)은 R2에 501 NotImplemented 재시도 소음 → **공식 최신(1.74)을 /usr/local/bin에** 설치로 해결(클린 실행 검증됨)
+- 검증: R2에 61KB 백업 안착 확인(rclone ls)
+
+## Vercel 구 어드민 정리 — 완료 ✅ (07-16)
+- **git 연동 해제**(`vercel git disconnect`) — ★git push가 stale Vercel 자동배포를 계속 만들고 있었음(푸시 1분 뒤 새 배포 발견). 연동 끊어 재발 차단
+- 프로덕션 배포 4개 전부 삭제 → 기본 도메인 404. 프로젝트·env는 보존(롤백 가능). 어드민 진입점은 **admin.codeatlas.kr 유일**
+- (참고: Vercel CLI vca_ 토큰은 REST PATCH에 안 먹힘 — CLI 명령으로 우회)
+
 ## 남은 것
-- [ ] **R2 오프사이트 백업** — 사용자가 CF 대시보드에서 R2 API 토큰 발급 → rclone/aws-cli로 nightly 업로드 추가
-- [ ] **Vercel 구 어드민 배포 pause/삭제** (사용자 결정 — stale DB 보는 이중 어드민 방지)
 - [ ] **Supabase 정리** — 2주 관찰(~07-30) 후 codeatlas 스키마 제거. 그 전까진 롤백 백스톱
 - [ ] mariadb(미사용, jusohub 잔재) 내리면 메모리 회수 — 사용자 보류 중이었음
+- [ ] 어드민 실로그인 확인(사용자, Keychain 비번) — smoke는 통과, 대시보드 렌더만 눈확인
 
 ## 같이 보면 좋은 문서
 - `12-launch-action-plan.md` — C섹션 백엔드 하드닝·CF 이관 (이 문서의 선행 인프라)
