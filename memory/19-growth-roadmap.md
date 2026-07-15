@@ -31,7 +31,7 @@
 ## Phase 2 — 리텐션 인프라 (여는 습관 만들기)
 "시간추적 앱 사망원인 = 안 켜는 습관" 정면돌파. 마찰↓ + 재방문 훅.
 - [ ] **홈화면 위젯** — 오늘 시간/잔디 상시노출(리텐션+스샷 소재). 최우선.
-- [ ] **Expo Push 인프라** → 주간 리캡 자동발송(월요일). 이미 리캡 카드 로직은 있음(Tier1), 푸시만 대기.
+- [~] **Expo Push 클라이언트 완료(2026-07-15, OFF)** — `expo-constants`+`expo-notifications` plugin 추가, `notifications.ts registerForPushNotifications()`(Device가드→권한→getExpoPushTokenAsync→dedupe→POST, 전부 fail-safe), `profile.ts apiRegisterPushToken`→POST `/me/push-token`, App.tsx signedIn시 등록. tsc0·테스트38. **남은건 백엔드**: `/me/push-token` 엔드포인트+DB저장 + 주간리캡 크론(월) — codeatlas-platform-api repo, 서버작업·배포. 이미 리캡 카드 로직은 있음(Tier1).
 - [ ] **주간 스트릭 전환** — 일간 아니라 **주 N일** 기준(Strava 논리: 일하는 날 들쭉날쭉 → 일간은 쉽게 깨져 좌절). + 스트릭 위험 알림("이번주 안 채우면 12주 연속 깨짐").
 - [ ] **"오늘의 집중 점수"** 단일 숫자 UX 검토(RescueTime Pulse/Opal Score식) — 매일 여는 훅
 - [ ] 세션종료 회고 강화(Session 벤치) — 한 줄 회고를 스탯·히트맵과 연결

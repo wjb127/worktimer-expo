@@ -1,6 +1,9 @@
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import * as Device from 'expo-device';
+import Constants from 'expo-constants';
+import { apiRegisterPushToken } from './api/profile';
 
 // 알림 핸들러 설정
 Notifications.setNotificationHandler({
@@ -20,6 +23,8 @@ const STORAGE_KEYS = {
   WORK_REMINDER_DAYS: '@settings/workReminderDays',
   WORK_INTERVAL_NOTIFICATION_ENABLED: '@settings/workIntervalNotificationEnabled',
   WORK_INTERVAL_MINUTES: '@settings/workIntervalMinutes',
+  // 마지막으로 백엔드에 등록한 Expo 푸시 토큰 — 동일 토큰 재등록 방지(중복 POST 절감)
+  LAST_PUSH_TOKEN: '@push/lastRegisteredToken',
 };
 
 // 업무 시작 알림 ID prefix — cancelWorkReminder가 이 prefix만 취소(interval/test 알림 침범 방지)
@@ -327,4 +332,46 @@ export async function scheduleHourlyWorkNotifications(elapsedSeconds: number = 0
 
 export async function cancelHourlyWorkNotifications(): Promise<void> {
   return cancelIntervalWorkNotifications();
+}
+
+// ── 원격 푸시(Expo Push) 토큰 등록 ───────────────────────────────────────────
+// 주간 리캡 등 서버발 알림을 받기 위한 Expo 푸시 토큰을 획득해 백엔드에 등록한다.
+// 핵심 원칙: 어떤 단계가 실패해도(권한거부·시뮬레이터·엔드포인트 미구현) 절대 throw하지 않는다.
+// 백엔드 엔드포인트가 아직 없으면 조용히 실패 = "스위치 OFF" 상태(토큰만 준비, 발송은 백엔드 준비 후).
+
+// app.json extra.eas.projectId — getExpoPushTokenAsync에 명시 전달(권장).
+function getProjectId(): string | undefined {
+  const fromConfig = Constants.expoConfig?.extra?.eas?.projectId;
+  const fromEas = (Constants as { easConfig?: { projectId?: string } }).easConfig?.projectId;
+  return (fromConfig as string | undefined) ?? fromEas;
+}
+
+// 로그인 후 / 앱 시작 시(이미 로그인 상태) 호출. fire-and-forget 안전.
+export async function registerForPushNotifications(): Promise<void> {
+  try {
+    // 시뮬레이터/에뮬레이터는 원격 푸시 토큰을 못 받음 → 조용히 스킵
+    if (!Device.isDevice) return;
+
+    const granted = await requestNotificationPermissions();
+    if (!granted) return;
+
+    const projectId = getProjectId();
+    const { data: token } = await Notifications.getExpoPushTokenAsync(
+      projectId ? { projectId } : undefined,
+    );
+    if (!token) return;
+
+    // 동일 토큰이면 재등록 생략(불필요한 POST 절감)
+    const last = await AsyncStorage.getItem(STORAGE_KEYS.LAST_PUSH_TOKEN);
+    if (last === token) return;
+
+    await apiRegisterPushToken({
+      token,
+      platform: Platform.OS === 'ios' ? 'ios' : 'android',
+    });
+    // 성공적으로 등록된 경우에만 캐시(실패 시 다음 기회에 재시도되도록)
+    await AsyncStorage.setItem(STORAGE_KEYS.LAST_PUSH_TOKEN, token);
+  } catch {
+    // 권한거부·네트워크·백엔드 미구현 등 모든 실패를 삼킨다(앱 흐름 비차단).
+  }
 }

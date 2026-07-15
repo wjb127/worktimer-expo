@@ -35,6 +35,12 @@ export interface SettingsResponse {
   theme: string;
 }
 
+// POST /me/push-token 요청 본문 — Expo 푸시 토큰 등록(주간 리캡 등 원격 발송용)
+export interface RegisterPushTokenBody {
+  token: string; // Expo push token (ExponentPushToken[...])
+  platform: 'ios' | 'android';
+}
+
 export const apiGetMe = () => apiJson<MeResponse>('/me');
 
 export const apiGetStats = () => apiJson<MeStats>('/me/stats');
@@ -42,5 +48,12 @@ export const apiGetStats = () => apiJson<MeStats>('/me/stats');
 export const apiUpdateSettings = (body: UpdateSettingsBody) =>
   apiJson<SettingsResponse>('/me/settings', {
     method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+
+// 백엔드에 Expo 푸시 토큰 저장. 엔드포인트 미구현 시 apiJson이 throw → 호출부가 삼킨다.
+export const apiRegisterPushToken = (body: RegisterPushTokenBody) =>
+  apiJson<{ ok: boolean }>('/me/push-token', {
+    method: 'POST',
     body: JSON.stringify(body),
   });

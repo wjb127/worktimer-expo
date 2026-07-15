@@ -20,6 +20,7 @@ import { colors } from './src/theme/colors';
 import { initAnalytics, track } from './src/lib/analytics';
 import { initPurchases } from './src/lib/purchases';
 import { getOnboardingSeen } from './src/lib/onboarding';
+import { registerForPushNotifications } from './src/lib/notifications';
 import { initErrorTracking } from './src/lib/errorTracking';
 import * as Sentry from '@sentry/react-native';
 
@@ -106,6 +107,12 @@ function Root() {
   useEffect(() => {
     getOnboardingSeen().then(setOnboardingSeen);
   }, []);
+
+  // 로그인 상태가 되면 Expo 푸시 토큰을 백엔드에 등록(주간 리캡 등 원격 발송용).
+  // fire-and-forget 안전 — 권한거부·시뮬레이터·백엔드 미구현 시 조용히 no-op.
+  useEffect(() => {
+    if (signedIn) registerForPushNotifications();
+  }, [signedIn]);
 
   // 인증 로딩 또는 온보딩 플래그 로딩 중이면 스피너
   if (loading || onboardingSeen === null) {
