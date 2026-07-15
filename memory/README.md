@@ -15,7 +15,7 @@
 - Apple Team `9Q26686S8R` · Expo owner `@gawall` · EAS projectId `31c0b3a1-6f4a-4b05-ad00-89924a249f68`
 - DB: 공유 Supabase `bzzjkcrbwwrqlumxigag`의 **codeatlas 스키마**(백엔드, TLS strict) / 앱은 NestJS API 경유
 - 랜딩: `ss-042-filltime-landing` → filltime.vercel.app (개인정보처리방침/약관, 사업자 코들라스)
-- 진행(2026-07-15): 백엔드 하드닝+CF이관 ✅ / 측정·랜딩 ✅ / UI 대개편 Android 실기기 ✅ / **Android Play 프로덕션 심사 제출 완료 ✅**(게스트모드·AAB v2·선언10/10·스토어·국가·최종전송 전부, "검토 중" 상태 → 16번) / **GCP OAuth SHA-1 등록+동의화면 프로덕션 게시 완료 ✅**(구글로그인 동작) / **eas submit 배포자동화 세팅+검증(200) 완료 ✅**(SA키 gcloud, 다음부턴 `eas build --auto-submit`, 브라우저 없이 → 16번) / **iOS App Store 심사제출 완료 ✅ WAITING_FOR_REVIEW**(빌드·altool업로드·스샷·연령등급·앱개인정보·심사제출 전부 playwright, ascAppId 6790886125 → 17번) / **남은건 양OS(Play+App Store) 심사결과 대기 → 승인시 라이브** / **성장 로드맵 확정(07-15): 경쟁리서치(18) 기반 측정→리텐션→구독→바이럴→소셜 Phase0~5(19). 대원칙=광고X·핵심무료·리텐션확인후수익화**
+- 진행(2026-07-15): 백엔드 하드닝+CF이관 ✅ / 측정·랜딩 ✅ / UI 대개편 Android 실기기 ✅ / **Android Play 프로덕션 심사 제출 완료 ✅**(게스트모드·AAB v2·선언10/10·스토어·국가·최종전송 전부, "검토 중" 상태 → 16번) / **GCP OAuth SHA-1 등록+동의화면 프로덕션 게시 완료 ✅**(구글로그인 동작) / **eas submit 배포자동화 세팅+검증(200) 완료 ✅**(SA키 gcloud, 다음부턴 `eas build --auto-submit`, 브라우저 없이 → 16번) / **iOS App Store 심사제출 완료 ✅ WAITING_FOR_REVIEW**(빌드·altool업로드·스샷·연령등급·앱개인정보·심사제출 전부 playwright, ascAppId 6790886125 → 17번) / **iOS 심사 승인됨(07-16, READY_FOR_SALE) — ★판매지역 미설정 함정 해결(availability 175개국 설정, 24h 내 스토어 노출 → 17번)** / Android는 심사 대기 / **성장 로드맵 확정(07-15): 경쟁리서치(18) 기반 측정→리텐션→구독→바이럴→소셜 Phase0~5(19). 대원칙=광고X·핵심무료·리텐션확인후수익화**
 
 ## 파일 인덱스
 

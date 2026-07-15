@@ -6,7 +6,13 @@
 펴볼 때: "iOS 어디까지 했지", "ASC 키 어느 거였지(개인 vs 클라)", "iOS 배포 함정", "eas submit ios 세팅".
 재사용 SOP는 스킬 `/ios-app-store-deploy`. 이 문서는 이 앱 실제 진행상태.
 
-## 결론(07-15): iOS 심사 제출 100% 완료 ✅ — 상태 `WAITING_FOR_REVIEW` (애플 심사 대기)
+## 결론(07-16 갱신): **심사 승인됨(READY_FOR_SALE)** — 판매중단 함정 해결, 24h 내 스토어 노출
+- 07-16 애플 메일 "판매가 중단되었습니다" → 조사: 심사는 **통과**(1.0 READY_FOR_SALE), 가격(175개국 무료)·계약(무료앱계약 활성)·은행·세금 전부 정상인데 **appAvailabilityV2가 404 = 판매지역이 통째로 미설정**이 원인
+- ★★ **함정: 첫 제출 때 "가격"만 설정하고 "앱 사용 가능 여부(availability)"를 따로 설정 안 하면, 심사 통과해도 "판매 중단" 상태로 승인됨.** 가격≠지역 — 별개 설정이다
+- 해결(playwright): 가격 페이지 → "사용 가능 여부 설정" → "모든 국가 또는 지역"(기본 선택) → 다음 → 확인 → 175개국 "처리 중→사용 가능". API 교차검증: appAvailabilityV2 404→200, availableInNewTerritories=true
+- 진단 루트(재사용): `GET /v1/apps/{id}/appStoreVersions`(상태) + `appPriceSchedule`(가격) + `appAvailabilityV2`(지역 — 404면 이 함정) + 웹 /business(계약 활성 여부)
+
+## (07-15): iOS 심사 제출 100% 완료 ✅ — 상태 `WAITING_FOR_REVIEW` (애플 심사 대기)
 
 **메타데이터·스샷·설문·심사제출까지 전부 playwright로 끝냄.** ASC API로 확인: `버전 1.0 | appStoreState=WAITING_FOR_REVIEW`.
 - iOS 프로덕션 빌드(store) FINISHED (build `2f875c2c`, v1.0.0 / build 1) → **altool 직접 업로드로 무료큐 우회** → VALID
