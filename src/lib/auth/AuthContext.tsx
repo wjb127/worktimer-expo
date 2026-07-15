@@ -9,6 +9,7 @@ import { saveTokens, clearTokens, getAccessToken } from './tokenStore';
 import { setAuthExpiredHandler } from '../api/client';
 import { apiGetMe } from '../api/profile';
 import { track, identifyUser, resetAnalytics } from '../analytics';
+import { logInPurchases, logOutPurchases } from '../purchases';
 
 interface AuthState {
   loading: boolean;
@@ -42,6 +43,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     apiGetMe()
       .then((me) => {
         identifyUser(me.id);
+        // RC appUserID를 우리 user id로 통일(크로스디바이스 구독 복원). 키 없으면 no-op.
+        logInPurchases(me.id);
         track('login_success', { provider: me.provider });
       })
       .catch(() => track('login_success'));
@@ -51,6 +54,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await clearTokens();
     setSignedIn(false);
     resetAnalytics();
+    // RC 익명 appUserID로 리셋. 키 없으면 no-op.
+    logOutPurchases();
   }, []);
 
   return (

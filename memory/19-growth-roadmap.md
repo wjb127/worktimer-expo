@@ -39,7 +39,8 @@
 
 ## Phase 3 — 수익화 (구독, RevenueCat)
 리텐션 확인 후 착수. **광고 아님, 구독.**
-- [ ] **RevenueCat 붙이기** + 구독상품 등록(양 스토어)
+- [~] **RevenueCat SDK 플러밍 완료(2026-07-15, 스위치 OFF)** — `react-native-purchases@10.4.2` 설치 + `src/lib/purchases.ts`(analytics.ts 미러링 fail-safe 래퍼: initPurchases/logInPurchases/logOutPurchases/hasPremium/getCurrentOffering, 키없으면 완전 no-op·hasPremium항상false). App.tsx init 배선 + AuthContext에 logIn/logOut(identifyUser 짝). env `EXPO_PUBLIC_REVENUECAT_IOS_KEY`/`_ANDROID_KEY` 빈값=OFF. entitlement id `"premium"`. tsc0·테스트38(purchases 12신규). **네이티브 빌드는 위젯·푸시와 묶어서 1회**. ★남은 사용자액션: RC계정·API키·구독상품·offering 생성(Phase3 ON 시점)
+- [ ] 구독상품 등록(양 스토어) + RC offering 구성
 - [ ] **프리미엄 = AI분석 + 카드테마/꾸미기 + 상세통계 + 무제한 카테고리 + 위젯 고급형** (공유·기본기록은 무료 유지)
 - [ ] **페이월 위치**: 온보딩 끝 + "당신의 시간패턴 분석중..." 로딩 직후(Day0 80% 노림). + **contextual paywall**(AI분석/프리미엄카드/상세통계 탭할 때 그 자리 업셀 — "막는"게 아니라 "완성"하는 톤)
 - [ ] **가격**: 연간 기본선택 + "월대비 X% 절약" 배지 + 7일 무료체험. 플랜 2~3개만. 한국 **월 3,900~5,900원 / 연 29,000~49,000원** 구간. 관심클릭 데이터 보고 확정. **너무 싸게 잡지 말 것**(고가가 전환 오히려↑).
