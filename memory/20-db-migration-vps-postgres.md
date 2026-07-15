@@ -35,9 +35,17 @@ codeatlas DB를 공유 Supabase에서 VPS(45.77.135.225) 로컬 PostgreSQL 16으
 5. `prisma migrate resolve --applied <각 마이그레이션>` 베이스라인 → 이후 deploy.sh가 migrate deploy
 6. 백업 크론 + **복원 리허설 1회** (백업 파일이 진짜 복원되는지)
 
+## 어드민 콘솔(ss-037) — VPS 이사 완료 ✅ (07-16, ②안)
+- ①(NestJS 포팅)은 실측 후 폐기(users 라우트만 268줄, 포팅버그 리스크) → ②(VPS 이사, 코드변경 최소)로 사용자 재승인
+- **https://admin.codeatlas.kr** — systemd `codeatlas-admin`(:3001, 하드닝, codeatlas 유저) + nginx + LE cert(DNS-01) + CF 프록시 ON. ss-037 커밋 `ad2e9e2`, 재배포 `./deploy/deploy-vps.sh`
+- 변경: next standalone + db.ts 로컬이면 ssl off. env는 `/opt/codeatlas-admin/.env`(640)
+- 검증: /login 200 + 오답로그인 401 + **admin_login_attempts 실제 기록 확인**(catch가 DB실패 삼키므로 401만으론 증거 아님 — 테이블 행으로 검증하는 게 정석)
+- ★★ **함정: postgres.js에 `?schema=` 붙은 URL 주면 조용히 연결 거부** — Prisma 전용 파라미터를 PG 서버에 그대로 전달해서. 어드민 auth가 전부 try/catch라 에러도 안 보임(401만 나옴). postgres.js용 URL엔 schema 파라미터 제거 필수
+- Vercel 구 배포는 살아있음(stale Supabase 봄) — 혼란 방지 위해 pause/삭제 권장(사용자 결정)
+
 ## 남은 것
-- [ ] **어드민 콘솔(ss-037) 경로** — Vercel에서 postgres.js로 Supabase 직결 중 → 지금은 이관 시점 스냅샷(stale)을 봄. 깨진 건 아님. NestJS admin API(①안, 라우트 5개 포팅: login/stats/users/users[id]/banners — users만 268줄) or 어드민 VPS 이사(②안, 코드변경 0)
 - [ ] **R2 오프사이트 백업** — 사용자가 CF 대시보드에서 R2 API 토큰 발급 → rclone/aws-cli로 nightly 업로드 추가
+- [ ] **Vercel 구 어드민 배포 pause/삭제** (사용자 결정 — stale DB 보는 이중 어드민 방지)
 - [ ] **Supabase 정리** — 2주 관찰(~07-30) 후 codeatlas 스키마 제거. 그 전까진 롤백 백스톱
 - [ ] mariadb(미사용, jusohub 잔재) 내리면 메모리 회수 — 사용자 보류 중이었음
 
