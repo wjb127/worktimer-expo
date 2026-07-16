@@ -1,7 +1,7 @@
 # codeatlas 플랫폼 멀티테넌시 아키텍처 합의문 v1.2 (전문)
 
 **최종 갱신**: 2026-07-17
-**상태**: **v1.2 승인·Phase 0~3 구현 완료** (backend `2358912`, codex 검수 진행) — 배포는 사용자 승인 대기
+**상태**: **v1.2 승인·Phase 0~3 구현 + codex 검수 3라운드 완료** (backend `2358912`→`55ee9cc`→`cc2aab8`) — 배포는 사용자 승인 대기. 미해결 정책 1건: 게스트 body appId(암호학 바인딩 불가 — 토론 대기). ⚠️교훈: python 치환은 assert 필수(라운드2 무산 사고)
 구현 요점: registry.ts(SSOT+startup validation) / aud→appId 서버판정 / JWT {sub,appId}+레거시 A안 / @AppScope·TenantGuard·ScopeAnnotationValidator(fail-closed 부팅) / AppActor 전 서비스 / User @@unique([appId,id]) / 교차 테넌트 e2e 8케이스(유닛26+e2e24 통과). diary WIP는 `diary-wip-checkpoint-20260717` 브랜치 격리
 당사자: 위승빈(최종 결정권자) · Claude(플랫폼 구현·리뷰) · Codex(구현·리뷰)
 
