@@ -36,11 +36,15 @@ auth.service·schema.prisma·app.module 3개 파일은 내 수정과 **혼합**�
 4. 본 레포 커밋은 `git hash-object -w` + `git update-index --cacheinfo`로 워크트리 버전을 index에 직접 스테이징 — **워킹트리(남의 WIP) 무접촉**
 5. 커밋 후 `git status`: 내 것 = 커밋됨, 남의 WIP = ` M`으로 그대로 보존
 
-## 결정 대기 (사용자)
-- [ ] #6 Apple 로그인 토큰 revoke 구현 여부 (Apple client secret 필요)
-- [ ] #11 어드민 API appId 스코핑 (멀티앱 확장 시 필수 — diary 온보딩 전에 하면 좋음)
-- [ ] #2 잔존 guest-demo 계정·데이터 삭제 여부 (내 E2E 테스트 데이터 섞여있음)
-- [ ] #3 기존 로컬체험 플래그 보유자 회수 여부 (현재 영구 grandfather — 사실상 오너 폰뿐일 가능성)
+## 후속 처리 (07-16 저녁)
+- [x] #11 어드민 appId 스코핑 — `84f5ac5` 배포·스모크 완료 (users 15로 정합)
+- [x] #6 Apple revoke — `2dd685c` **로컬만**(배포 X): apple-revoke.ts(ES256 client_secret, 의존성 0) + 로그인 code→refresh token 저장 + 삭제 시 폐기. 앱은 authorizationCode 전달 커밋. **배포하려면 env 3개**(APPLE_TEAM_ID/APPLE_SIGNIN_KEY_ID/APPLE_SIGNIN_PRIVATE_KEY — SIWA 키 필요) 주입
+- 유지 결정: guest-demo 존치, 로컬체험 grandfather 유지
+
+## 2차 감사 + Codex 리뷰 잔여 이슈 (검토만 — 수정 대기)
+- **P1 (다음 백엔드 배포에 묶을 것)**: ①웹훅 원장·상태 **$transaction 묶기**(원장 성공 후 상태 실패 시 재시도가 중복으로 skip돼 영구 미반영) ②세션 start/end **동시성** — `(user_id) WHERE end_time IS NULL` partial unique index + 조건부 updateMany ③**게스트 증폭** — 익명 /auth/guest가 호출당 3행 생성, 게스트 전용 스로틀+TTL 정리 필요(내 #2 수정의 부작용) ④JWT에 appId 없음 — **diary 배포 전 필수**(diary 세션과 함께)
+- **P1 (앱 v1.0.1 전)**: ⑤페이월 "7일 무료 체험" 문구가 체험 비대상자에게도 표시(introEligibility 확인 필요) ⑥자동 로그아웃(refresh 만료) 경로는 푸시캐시 안 지움 ⑦monthly-only 오퍼링이면 CTA 비활성(패키지 폴백 선택 필요)
+- **P2 백로그**: Apple revoke 저장 fire-and-forget 레이스·revoke 실패 무시, 평문 refresh token(암호화), BILLING_ISSUE grace period, 이메일 마스킹 정규식(1~2자), fetch timeout, 페이월 ScrollView, 마크다운 strip 부분 구현, 회귀 테스트 부재
 
 ## 같이 보면 좋은 문서
 - `21-session-2026-07-16-monetization-sprint.md` — 같은 날 수익화 스프린트
