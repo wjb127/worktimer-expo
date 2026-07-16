@@ -1,6 +1,7 @@
-# 멀티테넌시 아키텍처 합의문 — Codex v1.0 후보안 = 최종 텍스트 (위승빈 승인 대기)
+# 멀티테넌시 아키텍처 합의문 v1.2 — 최종 텍스트 (위승빈 승인 대기)
 
-**최종 갱신**: 2026-07-17 (Codex v1.0 후보안을 Claude 검토 승인 — 이견 0, 재작성 불필요. 승인 시 이 텍스트가 그대로 docs/architecture/tenancy.md 기초가 됨)
+**최종 갱신**: 2026-07-17 (v1.2 — 양 에이전트 검토 완료·이견 0. 전문은 대화 로그, 승인 시 docs/architecture/tenancy.md로 반입)
+★ v1.2 변경(Codex 코드 검증 기반): **레거시 토큰 = A안 확정, B안(refresh 전량폐기) 기각** — 게스트는 로그인마다 guest-{uuid} 신규 계정 + 복구 자격증명 없음 → 전량 폐기 시 기록 있는 게스트 영구 접근 불가 (판단 기준 = 유저 수 아니라 **복구 가능성**. Claude의 B 추천은 오판이었음) / **refresh는 opaque(DB 해시)** — appId는 access JWT에만, 회전 시 user.appId 서버 복원(rotateRefresh 기존 조회 재활용, 추가 쿼리 0) / 레거시 access JWT는 TTL 동안 user.appId 임시 scope, 이후 401, payload.appId≠DB.appId면 401, worktimer 하드코딩 금지 / **User @@unique([appId, id])가 복합 FK 선행 조건**(현 스키마에 없음 — Phase 3에서 추가)
 ★ 후보안 확정 내용: 거버넌스 = 양 에이전트 검토 의견 기록 → **위승빈 최종 승인**(3자 만장일치 아님) / 신뢰체인에 azp 추가·공유 audience면 production 인증 불허·푸시/웹훅/어드민/서비스 토큰도 앱 scope 필수 / 불변식 10개 / **레거시 JWT: 즉시 폐기(강제 재로그인)가 기본 선택**(§6.5 — 문서 승인 = 이것도 승인) / 게이트 = Phase 0~3 완료 + 7조건 + diary 배포 전 전체 회귀 / 트리거는 자동결정 아닌 재검토 트리거 / 소유권 불명확 시 수정 금지·보고
 
 codeatlas 플랫폼 격리 통제 합의안. 펴볼 때: "diary 재개 조건", "새 앱 추가 절차", "테넌시 규칙".
@@ -36,10 +37,10 @@ codeatlas 플랫폼 격리 통제 합의안. 펴볼 때: "diary 재개 조건", 
 - 앱별 스키마/DB/서비스 분리는 예외 승격만: 민감 데이터·계약상 독립성·트래픽 편중·매각 가능성
 
 ## 미결 (사용자 결정 1개)
-- [ ] **위승빈 최종 승인** — 승인 시 ①합의문 확정(레거시 JWT 즉시폐기 기본선택 포함) ②Phase 0(diary WIP checkpoint·인계) 착수
-- [x] 레거시 JWT 방식 → 후보안 §6에 통합(DB 조회 전환 + 재로그인 허용 시 즉시 폐기 기본)
+- [ ] **위승빈 v1.2 최종 승인** — 승인 시 Phase 0(diary WIP checkpoint·인계) 착수
+- [x] 레거시 토큰 = A안 확정 / B안 기각(게스트 복구 불가) — 결정 기록 §12
 - [x] 실행 소유권 = 플랫폼 세션(Registry·JWT·Guard·테스트), diary 세션은 checkpoint 후 인계 — 쌍방 동의
-- 합의문 전문은 대화 로그(07-17)에 있음 — Phase 1에서 docs/architecture/tenancy.md로 레포 반입
+- 합의문 v1.2 전문은 대화 로그(07-17) — Phase 1에서 docs/architecture/tenancy.md로 레포 반입
 
 ## 같이 보면 좋은 문서
 - `22-security-audit-fixes.md` — 이 플랜의 배경 (JWT appId 구멍·멀티세션 충돌 실사고)
