@@ -19,7 +19,7 @@
 
 ## ★사용자 액션 대기 (블로커)
 - [x] ~~Anthropic API 키~~ **해결(07-16)**: 재발급 불필요 — work-timer Vercel prod env의 키가 살아있었음(200). `vercel env pull`→VPS `/opt/codeatlas-api/.env` 주입→**AI 자유채팅 ON**(E2E 실응답 확인). ⚠️주입 시 .env 소유권 함정: sed -i가 root 소유로 재생성→하드닝 드롭인(User=codeatlas) 때문에 EACCES 크래시→`chown codeatlas:codeatlas`로 복구. ⚠️발견 버그: 세션 0개 유저도 systemPrompt에 "시간대: 0시" 가짜 통계 주입(ai.service.ts bestHour indexOf) → 빈데이터 가드 필요(미수정)
-- [ ] **구독 가격 결정** (권장: 월4,900/연34,000+7일체험) → ASC/Play 상품+RC 오퍼링 생성(브라우저 자동화 가능) → 페이월 자동 실결제 전환
+- [x] ~~구독 가격~~ **완료(07-16): 월 4,900 / 연 29,000 + 연간 7일 체험 확정** → ASC 상품 2개(가격 175지역·체험오퍼·MISSING_METADATA=심사스샷만 남음) + Play `filltime_premium` monthly/yearly ACTIVE + freetrial7d ACTIVE + RC offering `default` 구성·REST 검증 완료. 상세·함정은 19번 Phase3. 남은것: 페이월 2플랜 UI(다음 빌드), iOS 심사스샷(v1.0.1 때), Android 실결제는 내부테스트 트랙에서
 - [ ] **iOS 대화형 빌드 1회** (FilltimeWidget 프로비저닝): `cd ~/Project/worktimer-expo && EXPO_ASC_API_KEY_PATH=~/.config/eas-submit/AuthKey_NWM428GNG4.p8 EXPO_ASC_KEY_ID=NWM428GNG4 EXPO_ASC_ISSUER_ID=f8a8b51b-e563-4cc0-a0e7-91f387396c25 npx eas-cli build -p ios --profile production` (전부 Yes)
 - [ ] admin.codeatlas.kr 실로그인 눈확인 / 폰에서 빌드6 기능 확인(AI채팅·페이월·할일903개)
 
