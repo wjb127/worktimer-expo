@@ -1,6 +1,6 @@
-# 멀티테넌시 아키텍처 플랜 — 3자 합의 v1.0 확정 (위승빈·Claude·Codex)
+# 멀티테넌시 아키텍처 합의문 v1.1 (사용자 최종 승인 대기)
 
-**최종 갱신**: 2026-07-17 (v1.0 합의문 확정 — 이견 0)
+**최종 갱신**: 2026-07-17 (v1.1 — Codex 제안본 기반 재작성, Claude 동의 완료. ⚠️v1.0의 "확정" 표기는 선반영 오류였음)
 
 codeatlas 플랫폼 격리 통제 합의안. 펴볼 때: "diary 재개 조건", "새 앱 추가 절차", "테넌시 규칙".
 ★ v1.0 추가 확정: **AppActor {userId, appId} 객체 전달**(원시 파라미터 2개 대체) / **registry startup validation**(중복 appId·aud·route prefix = 부팅 실패) / **멀티세션 제어 = Phase 0 하드 게이트로 승격** / 교차 **라우트 403·객체 404** 구분 / 실행순서 = WIP checkpoint·인계 → 헌장·Registry → aud 기반 JWT·AppScopeGuard → AppActor·격리테스트(**여기 통과 = diary 재개**) → 기존 DB 증분 강화 / **공유 auth 소유권 = 플랫폼 세션으로 인계 확정**(diary WIP는 checkpoint commit 후)
@@ -13,7 +13,7 @@ codeatlas 플랫폼 격리 통제 합의안. 펴볼 때: "diary 재개 조건", 
 
 ## 불변식 5 (docs/architecture/tenancy.md에 들어갈 내용)
 1. 클라이언트 body/header의 appId는 인증 근거로 사용 금지 (**aud 기반 서버 판정** — 앱마다 자체 OAuth 클라이언트 필수. 예외: 게스트/dev는 aud 없음 → registry 검증 + 저권한으로 한계 수용, 문서화)
-2. 모든 JWT에는 서버가 결정한 appId 포함 (**레거시 토큰 전환**: appId 없으면 'worktimer' 간주, refresh 회전 시 재발급 — access 15분이라 창 짧음)
+2. 모든 JWT에는 서버가 결정한 appId 포함. **레거시 토큰: worktimer 기본 귀속 금지(v1.0 폐기)** — sub로 DB 조회해 소속 확인(jwt.strategy가 이미 user 행 조회하므로 추가 쿼리 0), 단일 소속만 재발급, 모호/없음은 401. 호환기간 후 appId 없는 토큰 전부 401. **대안 B: refresh 전량 폐기+강제 재로그인(유저 ~15명이라 Claude·Codex 모두 B 추천) — 사용자 결정 대기**
 3. 앱 전용 API에는 앱 스코프 필수
 4. 사용자 소유 데이터 접근은 appId + userId 필수 — **교차 테넌트 객체 접근은 404** (403 금지: 존재 자체 비노출, OWASP BOLA)
 5. 신규 앱은 AppRegistry 등록 + 교차 테넌트 테스트 통과 없이 병합 금지
@@ -25,19 +25,19 @@ codeatlas 플랫폼 격리 통제 합의안. 펴볼 때: "diary 재개 조건", 
 - **P3 DB 2차 방어선**: `User unique(appId, id)` + **diary 신규 테이블은 day 1 composite FK** (appId,userId)→User(appId,id). worktimer 기존 테이블 소급은 후속 유지보수 윈도우
 - **P4 멀티세션 운영 규약**: 세션당 git worktree + 공유코어(auth/core/schema/registry)는 플랫폼 세션 단일 소유 + /add-app 스킬 + 공유코어 수정 감지 훅
 
-## Diary 재개 게이트 (Codex 최종안 채택)
-**Phase 2~4 통과 전까지 diary 기능 개발·배포 재개 금지.**
-게이트 4조건: ①JWT에 서버 결정 appId ②worktimer 토큰 → diary API 404/403 ③타앱 userId/objectId 접근 실패 ④신규 앱 등록 = registry+테스트 (문서 복사 아님)
-- ⚠️ 해석 플래그(Codex 재확인 필요): P3 범위는 "User unique + diary 신규 테이블 FK"까지가 게이트, **worktimer 기존 테이블 소급은 게이트 제외** (Claude 입장 — diary가 라이브 DB 마이그레이션에 인질 잡히지 않게)
+## Diary 재개 게이트 (v1.1 — "Phase 2~4 통과" 표현 폐기, 7조건 고정)
+①Registry가 런타임 SSOT로 동작 ②서버가 appId 판정+JWT·refresh 포함 ③AppScopeGuard 누락 시 fail-closed(공개 라우트는 명시적 public만) ④서비스가 명시적 AppActor로 소유권 확인 ⑤라우트 교차 403·객체 교차 404 테스트 통과 ⑥body appId 위조·appId 없는 JWT 테스트 통과 ⑦신규 diary 테이블 day-one 격리 제약.
+**worktimer 기존 테이블 복합 FK 소급은 게이트 제외 확정.** 응답 정책: 라우트 403 / 객체 404 / 무효 토큰 401 / 객체 API에서 403 금지.
+추가 확정: 게스트·dev는 Registry 등록 **AppIdentityResolver**로 판정 / 문서는 tenancy.md + app-onboarding.md 2개로 축소(커지면 분리)
 
 ## 후순위 (합의)
 - Prisma 커스텀 린트, RLS → 1차 보안 경계 완성 후 단계 도입 (RLS는 runtime DB role 분리 + FORCE ROW LEVEL SECURITY 설계 선행 — 현재 owner 접속이라 무력)
 - 앱별 스키마/DB/서비스 분리는 예외 승격만: 민감 데이터·계약상 독립성·트래픽 편중·매각 가능성
 
-## 미결
-- [x] 실행 소유권 → **플랫폼 세션(Claude)** — diary WIP checkpoint commit + 인계 선행 (합의문 Phase 0)
-- [ ] P0(WIP 정리·인계) 착수 GO 사인 — diary 세션 쪽 checkpoint가 선행이라 사용자 조율 필요
-- 해석 플래그 해소됨: 기존 worktimer 테이블 복합 FK 소급은 diary 재개 게이트에서 제외(Phase 4) — Codex 명시 동의
+## 미결 (사용자 결정 2개)
+- [ ] **레거시 JWT 전환 방식**: A) DB 조회 점진 전환 B) refresh 전량 폐기+강제 재로그인 ← Claude·Codex 공동 추천(유저 ~15명)
+- [ ] 합의문 v1.1 최종 승인 → 승인 시 Phase 0(diary WIP checkpoint·인계) 착수
+- [x] 실행 소유권 = B안(플랫폼 세션이 Registry·JWT·Guard·테스트, diary 세션은 checkpoint 후 인계) — 쌍방 동의
 
 ## 같이 보면 좋은 문서
 - `22-security-audit-fixes.md` — 이 플랜의 배경 (JWT appId 구멍·멀티세션 충돌 실사고)
