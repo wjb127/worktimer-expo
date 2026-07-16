@@ -64,9 +64,10 @@ export const apiCreateManual = (
   }).then(mapSession);
 
 export const apiDelete = (id: string) =>
-  apiFetch(`/worktimer/sessions/${id}`, { method: 'DELETE' }).then(
-    () => undefined,
-  );
+  apiFetch(`/worktimer/sessions/${id}`, { method: 'DELETE' }).then((res) => {
+    // 감사 #10: 404/500을 성공처럼 삼키면 화면-서버 불일치 — 실패는 throw
+    if (!res.ok) throw new Error(`API ${res.status} DELETE session`);
+  });
 
 export const apiListSessions = (from: string, to: string) =>
   apiJson<ApiSession[]>(

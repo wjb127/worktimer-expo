@@ -375,3 +375,15 @@ export async function registerForPushNotifications(): Promise<void> {
     // 권한거부·네트워크·백엔드 미구현 등 모든 실패를 삼킨다(앱 흐름 비차단).
   }
 }
+
+// 로그아웃 시 호출(감사 #8) — 캐시를 비워 다음 로그인 유저가 같은 기기 토큰을
+// 재등록하게 한다(서버 upsert가 토큰 소유자를 새 유저로 이관). 안 비우면
+// A 로그아웃 → B 로그인 시 "동일 토큰" 판정으로 재등록이 생략돼 B 기기가
+// A 소유 토큰으로 남아 A의 알림이 B에게 간다.
+export async function clearPushTokenCache(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(STORAGE_KEYS.LAST_PUSH_TOKEN);
+  } catch {
+    // 무시
+  }
+}

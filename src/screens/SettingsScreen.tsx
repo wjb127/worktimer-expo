@@ -136,10 +136,16 @@ export default function SettingsScreen() {
         text: '삭제',
         style: 'destructive',
         onPress: async () => {
+          // 감사 #6: 서버 삭제가 실제 성공했을 때만 로그아웃 — 실패를 성공처럼 보이지 않게
           try {
-            await apiFetch('/auth/account', { method: 'DELETE' });
-          } finally {
+            const res = await apiFetch('/auth/account', { method: 'DELETE' });
+            if (!res.ok) throw new Error(`delete failed (${res.status})`);
             await signOut();
+          } catch {
+            Alert.alert(
+              '삭제 실패',
+              '계정 삭제에 실패했어요. 네트워크 확인 후 다시 시도해주세요.',
+            );
           }
         },
       },

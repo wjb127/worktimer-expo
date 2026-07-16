@@ -36,7 +36,10 @@ export const apiUpdateTodo = (
   });
 
 export const apiDeleteTodo = (id: string) =>
-  apiFetch(`/worktimer/todos/${id}`, { method: 'DELETE' }).then(() => undefined);
+  apiFetch(`/worktimer/todos/${id}`, { method: 'DELETE' }).then((res) => {
+    // 감사 #10: 404/500을 성공처럼 삼키면 화면-서버 불일치 — 실패는 throw
+    if (!res.ok) throw new Error(`API ${res.status} DELETE todo`);
+  });
 
 export const apiReorderTodos = (items: { id: string; sortOrder: number }[]) =>
   apiJson<{ ok: boolean }>('/worktimer/todos/reorder', {

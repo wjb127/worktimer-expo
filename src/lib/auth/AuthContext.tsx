@@ -5,11 +5,17 @@ import React, {
   useState,
   useCallback,
 } from 'react';
-import { saveTokens, clearTokens, getAccessToken } from './tokenStore';
-import { setAuthExpiredHandler } from '../api/client';
+import {
+  saveTokens,
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+} from './tokenStore';
+import { apiFetch, setAuthExpiredHandler } from '../api/client';
 import { apiGetMe } from '../api/profile';
 import { track, identifyUser, resetAnalytics } from '../analytics';
 import { logInPurchases, logOutPurchases } from '../purchases';
+import { clearPushTokenCache } from '../notifications';
 
 interface AuthState {
   loading: boolean;
@@ -51,9 +57,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signOut = useCallback(async () => {
+    // 감사 #7: 서버측 refresh token 폐기 — 로컬만 지우면 탈취 토큰이 30일간 회전 가능.
+    // 오프라인이어도 로컬 로그아웃은 항상 진행(베스트에포트).
+    try {
+      const rt = await getRefreshToken();
+      if (rt) {
+        await apiFetch('/auth/logout', {
+          method: 'POST',
+          body: JSON.stringify({ refreshToken: rt }),
+        });
+      }
+    } catch {
+      // 무시 — 로컬 로그아웃은 계속
+    }
     await clearTokens();
     setSignedIn(false);
     resetAnalytics();
+    // 감사 #8: 푸시 토큰 캐시 초기화 — 다음 로그인 유저가 재등록해 토큰 소유자를 넘겨받도록
+    await clearPushTokenCache();
     // RC 익명 appUserID로 리셋. 키 없으면 no-op.
     logOutPurchases();
   }, []);
