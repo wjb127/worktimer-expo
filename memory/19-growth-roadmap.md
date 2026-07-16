@@ -35,7 +35,7 @@
 
 ## Phase 2 — 리텐션 인프라 (여는 습관 만들기)
 "시간추적 앱 사망원인 = 안 켜는 습관" 정면돌파. 마찰↓ + 재방문 훅.
-- [ ] **홈화면 위젯** — 오늘 시간/잔디 상시노출(리텐션+스샷 소재). 최우선.
+- [~] **홈화면 위젯 코드 완료(2026-07-16, 커밋 806c528)** — Android `react-native-android-widget`(FilltimeWidget: 오늘시간/이번주/연속일, 다크+블루, 30분주기) + iOS `@bacons/apple-targets`(targets/widget SwiftUI, App Group `group.kr.codeatlas.worktimer`). `src/lib/widget.ts` publishWidgetData(fail-safe) — 세션시작/종료+로그인 시 갱신. ★함정: apple-targets `?? targets[0]` 폴백이 **expo-live-activity의 LiveActivity 타겟을 오인**해 buildConfigurationList 크래시 → patch-package로 이름 정확매칭 패치(+postinstall, EAS 서버빌드 반영). @expo/prebuild-config 루트 devDep(apple-targets require 해소, doctor 경고는 의도적). 검증: prebuild 양OS(두 타겟 공존)+swiftc parse+tsc0+테스트38. **빌드2**: Android preview `0aacc8c2` 트리거 / iOS는 새 타겟 프로비저닝 = 대화형 1회 필요(사용자). 잔디 미니그리드는 v2에서.
 - [~] **Expo Push 클라이언트 완료(2026-07-15, OFF)** — `expo-constants`+`expo-notifications` plugin 추가, `notifications.ts registerForPushNotifications()`(Device가드→권한→getExpoPushTokenAsync→dedupe→POST, 전부 fail-safe), `profile.ts apiRegisterPushToken`→POST `/me/push-token`, App.tsx signedIn시 등록. tsc0·테스트38. **백엔드 엔드포인트 완료(2026-07-15, codeatlas-platform-api 커밋 `5b95ef4` 로컬)**: PushToken 모델+`push_tokens` 마이그레이션(IF NOT EXISTS) + `POST /me/push-token`(token unique upsert, 기기이관 대응) + RegisterPushTokenDto. nest build 통과. ★남은건 ①프로덕션 DB 적용(Supabase codeatlas 스키마 CREATE TABLE, 승인 대기) ②백엔드 배포(deploy.sh, 승인 대기) ③주간리캡 발송 크론(Phase2 활성화). 리캡 카드 로직은 이미 있음(Tier1).
 - [ ] **주간 스트릭 전환** — 일간 아니라 **주 N일** 기준(Strava 논리: 일하는 날 들쭉날쭉 → 일간은 쉽게 깨져 좌절). + 스트릭 위험 알림("이번주 안 채우면 12주 연속 깨짐").
 - [ ] **"오늘의 집중 점수"** 단일 숫자 UX 검토(RescueTime Pulse/Opal Score식) — 매일 여는 훅
