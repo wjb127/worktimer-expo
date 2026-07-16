@@ -54,8 +54,16 @@ codeatlas DB를 공유 Supabase에서 VPS(45.77.135.225) 로컬 PostgreSQL 16으
 - 프로덕션 배포 4개 전부 삭제 → 기본 도메인 404. 프로젝트·env는 보존(롤백 가능). 어드민 진입점은 **admin.codeatlas.kr 유일**
 - (참고: Vercel CLI vca_ 토큰은 REST PATCH에 안 먹힘 — CLI 명령으로 우회)
 
+## 구 웹 워크타이머 데이터 이관 ✅ (07-16 — "이관 미흡" 체감의 진짜 정체)
+- **`public.work_sessions`(공유 Supabase, 구 work-timer 웹앱 테이블)에 1,616행/1,810h** — 모바일만 codeatlas로 전환됐고 **웹은 여전히 public에 기록 중**이었음(당일 기록 존재). codeatlas엔 1,498행/1,615h만 = **195h가 웹에만**
+- 이관: service_role PostgREST로 전체 덤프 → VPS에서 **start_time 초절삭 anti-join** → 미존재 **122세션 INSERT**(구글유저 631269b9..., category/description은 session_meta로) → 최종 **1,620세션/1,810h 정합**. 사전 백업 `codeatlas-20260716-0519.sql.gz`
+- 구 테이블 특징: 정수 id, user_id 전부 null(단일유저 웹), category/description 인라인
+- 접근 함정: codeatlas 롤·어드민 롤 모두 public 권한 없음(격리 설계) → **service_role 키(ss-037 .env.local)로 PostgREST 조회**가 유일 경로였음
+- ⚠️ **미해결: 웹이 계속 public에 쓰면 diff 재발** — 옵션: ①웹을 codeatlas API로 전환(근본) ②주기 동기화 크론 ③웹 중단. 사용자 결정 대기
+
 ## 남은 것
-- [ ] **Supabase 정리** — 2주 관찰(~07-30) 후 codeatlas 스키마 제거. 그 전까진 롤백 백스톱
+- [ ] **웹 워크타이머 → codeatlas 전환 or 동기화** (위 참조, 사용자 결정)
+- [ ] **Supabase 정리** — 2주 관찰(~07-30) 후 codeatlas 스키마 제거. **단 public.work_sessions는 웹 문제 해결 전까지 보존**
 - [ ] mariadb(미사용, jusohub 잔재) 내리면 메모리 회수 — 사용자 보류 중이었음
 - [ ] 어드민 실로그인 확인(사용자, Keychain 비번) — smoke는 통과, 대시보드 렌더만 눈확인
 
