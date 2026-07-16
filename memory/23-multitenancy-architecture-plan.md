@@ -1,7 +1,8 @@
 # codeatlas 플랫폼 멀티테넌시 아키텍처 합의문 v1.2 (전문)
 
 **최종 갱신**: 2026-07-17
-**상태**: Claude·Codex 상호 검토 완료(이견 0) · **위승빈 최종 승인 대기**
+**상태**: **v1.2 승인·Phase 0~3 구현 완료** (backend `2358912`, codex 검수 진행) — 배포는 사용자 승인 대기
+구현 요점: registry.ts(SSOT+startup validation) / aud→appId 서버판정 / JWT {sub,appId}+레거시 A안 / @AppScope·TenantGuard·ScopeAnnotationValidator(fail-closed 부팅) / AppActor 전 서비스 / User @@unique([appId,id]) / 교차 테넌트 e2e 8케이스(유닛26+e2e24 통과). diary WIP는 `diary-wip-checkpoint-20260717` 브랜치 격리
 당사자: 위승빈(최종 결정권자) · Claude(플랫폼 구현·리뷰) · Codex(구현·리뷰)
 
 펴볼 때: "diary 재개 조건", "새 앱 추가 절차", "테넌시 규칙", "레거시 토큰 전환".
