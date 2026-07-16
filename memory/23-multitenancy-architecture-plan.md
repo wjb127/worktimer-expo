@@ -1,6 +1,7 @@
-# 멀티테넌시 아키텍처 합의문 v1.1 (사용자 최종 승인 대기)
+# 멀티테넌시 아키텍처 합의문 — Codex v1.0 후보안 = 최종 텍스트 (위승빈 승인 대기)
 
-**최종 갱신**: 2026-07-17 (v1.1 — Codex 제안본 기반 재작성, Claude 동의 완료. ⚠️v1.0의 "확정" 표기는 선반영 오류였음)
+**최종 갱신**: 2026-07-17 (Codex v1.0 후보안을 Claude 검토 승인 — 이견 0, 재작성 불필요. 승인 시 이 텍스트가 그대로 docs/architecture/tenancy.md 기초가 됨)
+★ 후보안 확정 내용: 거버넌스 = 양 에이전트 검토 의견 기록 → **위승빈 최종 승인**(3자 만장일치 아님) / 신뢰체인에 azp 추가·공유 audience면 production 인증 불허·푸시/웹훅/어드민/서비스 토큰도 앱 scope 필수 / 불변식 10개 / **레거시 JWT: 즉시 폐기(강제 재로그인)가 기본 선택**(§6.5 — 문서 승인 = 이것도 승인) / 게이트 = Phase 0~3 완료 + 7조건 + diary 배포 전 전체 회귀 / 트리거는 자동결정 아닌 재검토 트리거 / 소유권 불명확 시 수정 금지·보고
 
 codeatlas 플랫폼 격리 통제 합의안. 펴볼 때: "diary 재개 조건", "새 앱 추가 절차", "테넌시 규칙".
 ★ v1.0 추가 확정: **AppActor {userId, appId} 객체 전달**(원시 파라미터 2개 대체) / **registry startup validation**(중복 appId·aud·route prefix = 부팅 실패) / **멀티세션 제어 = Phase 0 하드 게이트로 승격** / 교차 **라우트 403·객체 404** 구분 / 실행순서 = WIP checkpoint·인계 → 헌장·Registry → aud 기반 JWT·AppScopeGuard → AppActor·격리테스트(**여기 통과 = diary 재개**) → 기존 DB 증분 강화 / **공유 auth 소유권 = 플랫폼 세션으로 인계 확정**(diary WIP는 checkpoint commit 후)
@@ -34,10 +35,11 @@ codeatlas 플랫폼 격리 통제 합의안. 펴볼 때: "diary 재개 조건", 
 - Prisma 커스텀 린트, RLS → 1차 보안 경계 완성 후 단계 도입 (RLS는 runtime DB role 분리 + FORCE ROW LEVEL SECURITY 설계 선행 — 현재 owner 접속이라 무력)
 - 앱별 스키마/DB/서비스 분리는 예외 승격만: 민감 데이터·계약상 독립성·트래픽 편중·매각 가능성
 
-## 미결 (사용자 결정 2개)
-- [ ] **레거시 JWT 전환 방식**: A) DB 조회 점진 전환 B) refresh 전량 폐기+강제 재로그인 ← Claude·Codex 공동 추천(유저 ~15명)
-- [ ] 합의문 v1.1 최종 승인 → 승인 시 Phase 0(diary WIP checkpoint·인계) 착수
-- [x] 실행 소유권 = B안(플랫폼 세션이 Registry·JWT·Guard·테스트, diary 세션은 checkpoint 후 인계) — 쌍방 동의
+## 미결 (사용자 결정 1개)
+- [ ] **위승빈 최종 승인** — 승인 시 ①합의문 확정(레거시 JWT 즉시폐기 기본선택 포함) ②Phase 0(diary WIP checkpoint·인계) 착수
+- [x] 레거시 JWT 방식 → 후보안 §6에 통합(DB 조회 전환 + 재로그인 허용 시 즉시 폐기 기본)
+- [x] 실행 소유권 = 플랫폼 세션(Registry·JWT·Guard·테스트), diary 세션은 checkpoint 후 인계 — 쌍방 동의
+- 합의문 전문은 대화 로그(07-17)에 있음 — Phase 1에서 docs/architecture/tenancy.md로 레포 반입
 
 ## 같이 보면 좋은 문서
 - `22-security-audit-fixes.md` — 이 플랜의 배경 (JWT appId 구멍·멀티세션 충돌 실사고)
