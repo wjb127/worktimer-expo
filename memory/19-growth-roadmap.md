@@ -28,10 +28,11 @@
   - D7 < 15% → Phase 2 전부 + 온보딩/코어루프 수리 우선. 페이월 보류.
 - 근거: RevenueCat "Day0가 전부" + 습관앱 리텐션이 시간추적 1번 사망원인
 
-### C 배치 빌드 진행 (2026-07-15)
-접근: **RC+푸시 먼저 빌드검증 → 위젯 별도**(사용자 선택, 위젯 config 오류가 배치빌드 깨뜨리는 리스크 격리).
-- 빌드1(RC+푸시 검증): Android preview APK 빌드 `6ea7e910-296a-46e2-8af0-11e9b5bb0bd8` 큐등록(gawall). expo-doctor 18/18 통과. RC키 EAS env 없음=OFF로 빌드(의도대로). → 실기기(SM-A165N) 설치·검증 예정
-- iOS preview는 ad-hoc cert 필요라 후속. 위젯은 빌드2로 별도 사이클.
+### C 배치 빌드 — 실기기 검증 완료 ✅ (2026-07-16, SM-A165N 무선adb)
+- **빌드3(`2e36e206`) 최종 검증**: 앱 구동·크래시0 / **위젯 홈화면 실렌더**(다크캔버스+블루 "0분/이번 주 0분") / **RC configure 성공**("no Play Store products... safely ignore" = 오퍼링만 빈 의도된 상태) / headless 에러 재발 없음
+- ★★ **위젯 투명 사고 → new arch 전환으로 해결(`b191bf0`)**: legacy arch + headlessJS 초기화 버그(RN#47592 계열)로 "[runtime not ready] PlatformConstants not found" → 렌더 전 사망. **newArchEnabled: true**(라이브러리 전수 호환확인) + index.ts 최상위 Platform 분기 제거(headless 번들평가 초기 TurboModule 조회 금지)로 해결. 기술부채(RN 신아키텍처) 겸사 해소
+- ★ 실기기 함정: 무선adb는 `adb mdns services`로 자동발견(케이블 인식 불가 시), 기존 dev서명 설치본은 EAS APK와 서명충돌 → uninstall 필요(단 Android 자동백업이 로그인토큰 복원해줌), zsh에서 `ADB="adb -s ..."` 변수실행 불가(word-split)
+- **잔여: Android 푸시 FCM 미설정** — "Default FirebaseApp failed to initialize" → 토큰획득 불가(fail-safe로 무해). Firebase 프로젝트(기존 GCP codeatlas-500015에 추가) + google-services.json + app.json googleServicesFile + EAS FCM V1 자격증명 필요
 
 ## Phase 2 — 리텐션 인프라 (여는 습관 만들기)
 "시간추적 앱 사망원인 = 안 켜는 습관" 정면돌파. 마찰↓ + 재방문 훅.
