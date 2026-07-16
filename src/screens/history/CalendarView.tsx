@@ -21,6 +21,8 @@ import {
 import { WorkSession } from '../../types/session';
 import { getLocalToday, getMonthStart, getMonthEnd } from '../../lib/dateUtils';
 import { colors, getHeatColor, getHeatTextColor } from '../../theme/colors';
+import { usePremium } from '../../lib/premium';
+import PaywallModal from '../../components/PaywallModal';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -60,6 +62,10 @@ export default function CalendarView() {
   const [monthData, setMonthData] = useState<Record<string, number>>({});
   const [showColors, setShowColors] = useState(true);
   const [editingSession, setEditingSession] = useState<WorkSession | null>(null);
+  // 기록 수정은 프리미엄 기능 — 미구독이면 페이월, 언락 직후 이어서 열기
+  const { isPremium, refresh: refreshPremium } = usePremium();
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const [pendingEdit, setPendingEdit] = useState<WorkSession | null>(null);
   // 빈 구간 추가 모드 — 클릭한 시(hour). null이면 편집 모드(editingSession 사용)
   const [addingHour, setAddingHour] = useState<number | null>(null);
   const [editStartTime, setEditStartTime] = useState('');
@@ -117,6 +123,15 @@ export default function CalendarView() {
   };
 
   const openEditModal = (session: WorkSession) => {
+    if (!isPremium) {
+      setPendingEdit(session);
+      setPaywallOpen(true);
+      return;
+    }
+    doOpenEditModal(session);
+  };
+
+  const doOpenEditModal = (session: WorkSession) => {
     const start = new Date(session.start_time);
     const end = new Date(session.end_time!);
     setEditStartTime(
@@ -505,6 +520,22 @@ export default function CalendarView() {
           </View>
         </TouchableOpacity>
       </Modal>
+      <PaywallModal
+        visible={paywallOpen}
+        featureName="기록 수정"
+        onClose={() => {
+          setPaywallOpen(false);
+          setPendingEdit(null);
+        }}
+        onUnlocked={() => {
+          setPaywallOpen(false);
+          refreshPremium();
+          if (pendingEdit) {
+            doOpenEditModal(pendingEdit);
+            setPendingEdit(null);
+          }
+        }}
+      />
     </View>
   );
 }

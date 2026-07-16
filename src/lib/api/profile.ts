@@ -57,3 +57,14 @@ export const apiRegisterPushToken = (body: RegisterPushTokenBody) =>
     method: 'POST',
     body: JSON.stringify(body),
   });
+
+// GET /me/subscription — 서버측 구독 상태(RC 웹훅 진실원장)
+export interface SubscriptionStatus {
+  status: string; // 'none' | 'trial' | 'active' | 'cancelled' | 'expired' | 'billing_issue'
+  isPremium: boolean;
+  productId: string | null;
+  expiresAt: string | null;
+}
+
+export const apiGetSubscription = () =>
+  apiJson<SubscriptionStatus>('/me/subscription');
