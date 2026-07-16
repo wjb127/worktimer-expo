@@ -41,10 +41,11 @@ auth.service·schema.prisma·app.module 3개 파일은 내 수정과 **혼합**�
 - [x] #6 Apple revoke — `2dd685c` **로컬만**(배포 X): apple-revoke.ts(ES256 client_secret, 의존성 0) + 로그인 code→refresh token 저장 + 삭제 시 폐기. 앱은 authorizationCode 전달 커밋. **배포하려면 env 3개**(APPLE_TEAM_ID/APPLE_SIGNIN_KEY_ID/APPLE_SIGNIN_PRIVATE_KEY — SIWA 키 필요) 주입
 - 유지 결정: guest-demo 존치, 로컬체험 grandfather 유지
 
-## 2차 감사 + Codex 리뷰 잔여 이슈 (검토만 — 수정 대기)
-- **P1 (다음 백엔드 배포에 묶을 것)**: ①웹훅 원장·상태 **$transaction 묶기**(원장 성공 후 상태 실패 시 재시도가 중복으로 skip돼 영구 미반영) ②세션 start/end **동시성** — `(user_id) WHERE end_time IS NULL` partial unique index + 조건부 updateMany ③**게스트 증폭** — 익명 /auth/guest가 호출당 3행 생성, 게스트 전용 스로틀+TTL 정리 필요(내 #2 수정의 부작용) ④JWT에 appId 없음 — **diary 배포 전 필수**(diary 세션과 함께)
-- **P1 (앱 v1.0.1 전)**: ⑤페이월 "7일 무료 체험" 문구가 체험 비대상자에게도 표시(introEligibility 확인 필요) ⑥자동 로그아웃(refresh 만료) 경로는 푸시캐시 안 지움 ⑦monthly-only 오퍼링이면 CTA 비활성(패키지 폴백 선택 필요)
-- **P2 백로그**: Apple revoke 저장 fire-and-forget 레이스·revoke 실패 무시, 평문 refresh token(암호화), BILLING_ISSUE grace period, 이메일 마스킹 정규식(1~2자), fetch timeout, 페이월 ScrollView, 마크다운 strip 부분 구현, 회귀 테스트 부재
+## 3라운드 — codex·2차감사 동의건 일괄 수정·배포 완료 (07-16 밤)
+- **백엔드 `1e93e4e` 배포됨**: ①웹훅 원장+상태 $transaction + 역순 방어 조건부 updateMany + BILLING_ISSUE grace(expiresAt=grace 끝, allowlist에 billing_issue) + SUBSCRIPTION_EXTENDED ②세션 `(user_id) WHERE end_time IS NULL` partial unique index(마이그레이션 20260716150000, 운영 중복 0 확인 후) + start P2002 재조회 + end 조건부 claim ③/auth/guest 분당 5회 스로틀(라이브 429 확인) + VPS 크론 `/etc/cron.d/guest-cleanup-codeatlas`(무콘텐츠 30일 게스트 주1회 삭제) ④DELETE /me/push-token ⑤이메일 마스킹 전길이 ⑥Apple fetch 5s timeout ⑦회귀 스펙 9개(웹훅 멱등·역순·grace / 세션 멱등·동시성) — **⚠️DB 스펙은 --runInBand**(병렬 워커가 공유 테스트 DB에서 서로 user 지움. maxWorkers 설정은 package.json이 diary WIP라 보류)
+- **앱 `7631114`** (v1.0.1 탑재): 체험 자격(hasTrialEligibility — iOS eligibility API/Android freePhase) 후에만 체험 표기, monthly-only 폴백 선택, ScrollView, 자동 로그아웃 푸시캐시, signOut 서버 토큰해제+RC await, 삭제 오표시 제거, apiFetch 15s timeout, 마크다운 lib 확장+테스트4. jest 47/47
+- **미수정 백로그**: JWT appId(diary 배포 전 필수 — diary 세션과 함께), Apple env 3종 주입(SIWA 키 → revoke ON), refresh token 암호화, Service ID 바인딩, 페이월 restore 버튼, jest maxWorkers
+- 시각화: `docs/hardening-round3-2026-07-16.html` (워크플로우 생성)
 
 ## 같이 보면 좋은 문서
 - `21-session-2026-07-16-monetization-sprint.md` — 같은 날 수익화 스프린트
