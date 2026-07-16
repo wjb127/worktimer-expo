@@ -15,6 +15,7 @@ export type AnalyticsEvent =
   | 'share_card_shared'
   | 'milestone_achieved'
   | 'premium_interest_click'
+  | 'premium_purchase_success'
   | 'onboarding_complete'
   | 'onboarding_skip'
   | 'review_prompt_shown';

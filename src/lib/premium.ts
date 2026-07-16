@@ -24,7 +24,9 @@ export async function getPremiumStatus(): Promise<boolean> {
   }
 }
 
-// "무료 체험 시작" — 결제 오픈 전 로컬 언락. 실패해도 throw하지 않는다.
+// [deprecated] 결제 오픈 전 로컬 언락 — 07-16 스토어 상품/오퍼링 오픈으로 신규 지급 중단.
+// (감사 #3: 오퍼링 조회 실패가 영구 무료 프리미엄이 되는 문제 — PaywallModal에서 호출 제거됨)
+// 기존 플래그 보유자(초기 체험 유저)는 getPremiumStatus가 계속 인정(grandfather).
 export async function startLocalTrial(): Promise<void> {
   try {
     await AsyncStorage.setItem(LOCAL_TRIAL_KEY, '1');

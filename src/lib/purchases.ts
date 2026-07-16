@@ -1,6 +1,10 @@
 import { Platform } from 'react-native';
 import Purchases, { LOG_LEVEL } from 'react-native-purchases';
-import type { CustomerInfo, PurchasesOffering } from 'react-native-purchases';
+import type {
+  CustomerInfo,
+  PurchasesOffering,
+  PurchasesPackage,
+} from 'react-native-purchases';
 
 // RevenueCat 얇은 래퍼 — analytics.ts와 동일한 fail-safe 지연 싱글턴 패턴.
 // 핵심 원칙: API 키가 없거나 초기화/네트워크가 실패해도 앱을 절대 크래시/블로킹하지 않는다.
@@ -94,6 +98,24 @@ export async function getCurrentOffering(): Promise<PurchasesOffering | null> {
   }
 }
 
+// 특정 패키지 구매 시도 → premium entitlement 활성 여부 반환.
+// 유저 취소/실패 전부 false (throw 없음). 페이월 2플랜(월간/연간) 선택 구매용.
+export async function purchasePremiumPackage(
+  pkg: PurchasesPackage,
+): Promise<boolean> {
+  if (!isReady()) return false;
+  try {
+    const { customerInfo } = await Purchases.purchasePackage(pkg);
+    return (
+      typeof customerInfo.entitlements.active[PREMIUM_ENTITLEMENT] !==
+      'undefined'
+    );
+  } catch {
+    // 유저 취소 포함 — 조용히 실패
+    return false;
+  }
+}
+
 // 오퍼링의 첫 패키지 구매 시도 → premium entitlement 활성 여부 반환.
 // 유저 취소/실패/오퍼링 없음 전부 false (throw 없음). 스토어 상품+오퍼링이
 // 구성되는 순간 페이월이 자동으로 실결제 플로우가 된다.
@@ -103,11 +125,7 @@ export async function purchasePremium(): Promise<boolean> {
     const offering = await getCurrentOffering();
     const pkg = offering?.availablePackages?.[0];
     if (!pkg) return false;
-    const { customerInfo } = await Purchases.purchasePackage(pkg);
-    return (
-      typeof customerInfo.entitlements.active[PREMIUM_ENTITLEMENT] !==
-      'undefined'
-    );
+    return purchasePremiumPackage(pkg);
   } catch {
     // 유저 취소 포함 — 조용히 실패
     return false;
