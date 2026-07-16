@@ -42,6 +42,7 @@
 | `19-growth-roadmap.md` | ★ 성장 로드맵 리빙노트(07-15) — 측정→리텐션→수익화(구독)→바이럴→소셜 Phase0~5 + 대원칙(광고X/핵심무료/리텐션후수익화) + 현재자산 체크리스트. **계속 업데이트** |
 | `20-db-migration-vps-postgres.md` | ★ DB 이관(07-16) — Supabase→VPS 로컬 PG16 완료. 접속법·백업크론(KST 04:10, 30일)·복원리허설·migrate deploy 자동화 + 남은것(어드민 경로/R2 오프사이트/Supabase 정리) |
 | `21-session-2026-07-16-monetization-sprint.md` | ★ 세션종합(07-16) — **압축 후 재개 1순위**. 오늘 완료 10건 + 사용자액션 4개 + 다음작업 + 핵심 포인터 |
+| `22-security-audit-fixes.md` | ★ 보안 감사 12건 검수·수정·배포(07-16) — 판정표, 게스트격리/웹훅멱등/AI게이트, 멀티세션 격리배포 레시피, 결정 대기 4건 |
 | `raw/` | 원문 작업 로그(날짜별, 기본 비노출·지시 시에만 열람) |
 | `.private/01-codeatlas-infra.md` | (private) VPS·DB·op 시크릿 참조 |
 
