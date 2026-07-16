@@ -58,7 +58,10 @@ export default function LoginScreen() {
       if (!cred.identityToken) throw new Error('no identityToken');
       const pair = await apiJson<Pair>('/auth/apple', {
         method: 'POST',
-        body: JSON.stringify({ identityToken: cred.identityToken }),
+        body: JSON.stringify({
+          identityToken: cred.identityToken,
+          authorizationCode: cred.authorizationCode ?? undefined,
+        }),
       });
       await signInWithTokens(pair.accessToken, pair.refreshToken);
     } catch (e) {
