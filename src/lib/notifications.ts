@@ -3,7 +3,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
-import { apiRegisterPushToken } from './api/profile';
+import {
+  apiRegisterPushToken,
+  apiUnregisterPushToken,
+} from './api/profile';
 
 // 알림 핸들러 설정
 Notifications.setNotificationHandler({
@@ -386,4 +389,16 @@ export async function clearPushTokenCache(): Promise<void> {
   } catch {
     // 무시
   }
+}
+
+// 명시적 로그아웃용(감사 2R-#7) — 아직 인증이 살아있을 때 서버 행까지 삭제해
+// 로그아웃한 기기에 이전 계정 알림이 가지 않게 한다. 서버 실패해도 캐시는 비운다.
+export async function unregisterPushToken(): Promise<void> {
+  try {
+    const token = await AsyncStorage.getItem(STORAGE_KEYS.LAST_PUSH_TOKEN);
+    if (token) await apiUnregisterPushToken(token);
+  } catch {
+    // 무시 — 오프라인이어도 로그아웃은 계속
+  }
+  await clearPushTokenCache();
 }

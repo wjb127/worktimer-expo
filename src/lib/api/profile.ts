@@ -58,6 +58,13 @@ export const apiRegisterPushToken = (body: RegisterPushTokenBody) =>
     body: JSON.stringify(body),
   });
 
+// 로그아웃 시 기기 토큰 해제 (감사 2R-#7 — 로그아웃한 기기에 이전 계정 알림 방지)
+export const apiUnregisterPushToken = (token: string) =>
+  apiJson<{ ok: boolean }>('/me/push-token', {
+    method: 'DELETE',
+    body: JSON.stringify({ token }),
+  });
+
 // GET /me/subscription — 서버측 구독 상태(RC 웹훅 진실원장)
 export interface SubscriptionStatus {
   status: string; // 'none' | 'trial' | 'active' | 'cancelled' | 'expired' | 'billing_issue'

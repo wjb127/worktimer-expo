@@ -136,16 +136,26 @@ export default function SettingsScreen() {
         text: '삭제',
         style: 'destructive',
         onPress: async () => {
-          // 감사 #6: 서버 삭제가 실제 성공했을 때만 로그아웃 — 실패를 성공처럼 보이지 않게
+          // 감사 #6: 서버 삭제가 실제 성공했을 때만 로그아웃 — 실패를 성공처럼 보이지 않게.
+          // 삭제 성공 후 로컬 정리 실패는 "삭제 실패"로 오표시하지 않는다(codex).
+          let deleted = false;
           try {
             const res = await apiFetch('/auth/account', { method: 'DELETE' });
-            if (!res.ok) throw new Error(`delete failed (${res.status})`);
-            await signOut();
+            deleted = res.ok;
           } catch {
+            deleted = false;
+          }
+          if (!deleted) {
             Alert.alert(
               '삭제 실패',
               '계정 삭제에 실패했어요. 네트워크 확인 후 다시 시도해주세요.',
             );
+            return;
+          }
+          try {
+            await signOut();
+          } catch {
+            // 서버 삭제는 이미 완료 — 로컬 정리 실패는 조용히 넘어감(다음 실행 시 로그인 화면)
           }
         },
       },

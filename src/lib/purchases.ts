@@ -1,5 +1,8 @@
 import { Platform } from 'react-native';
-import Purchases, { LOG_LEVEL } from 'react-native-purchases';
+import Purchases, {
+  INTRO_ELIGIBILITY_STATUS,
+  LOG_LEVEL,
+} from 'react-native-purchases';
 import type {
   CustomerInfo,
   PurchasesOffering,
@@ -95,6 +98,29 @@ export async function getCurrentOffering(): Promise<PurchasesOffering | null> {
     return offerings.current ?? null;
   } catch {
     return null;
+  }
+}
+
+// 연간 패키지의 무료체험 자격 판정 (codex — 비대상자에게 "7일 무료 체험" 표기 방지).
+// 판정 불가/실패 시 false(체험 문구 숨김 = 과금 서프라이즈 없음이 안전한 기본값).
+export async function hasTrialEligibility(
+  pkg: PurchasesPackage,
+): Promise<boolean> {
+  if (!isReady()) return false;
+  try {
+    if (Platform.OS === 'android') {
+      // Play: RC가 자격에 맞는 오퍼를 defaultOption으로 골라줌 — freePhase 존재 = 체험 대상
+      return Boolean(pkg.product.defaultOption?.freePhase);
+    }
+    const res = await Purchases.checkTrialOrIntroductoryPriceEligibility([
+      pkg.product.identifier,
+    ]);
+    return (
+      res[pkg.product.identifier]?.status ===
+      INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE
+    );
+  } catch {
+    return false;
   }
 }
 

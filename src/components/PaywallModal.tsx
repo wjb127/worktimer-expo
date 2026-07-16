@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -12,7 +13,11 @@ import type { PurchasesPackage } from 'react-native-purchases';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { track } from '../lib/analytics';
-import { getCurrentOffering, purchasePremiumPackage } from '../lib/purchases';
+import {
+  getCurrentOffering,
+  hasTrialEligibility,
+  purchasePremiumPackage,
+} from '../lib/purchases';
 
 // 프리미엄 페이월 (재사용) — AI 분석 / 기록 수정 등 프리미엄 기능 진입 게이트.
 // 2플랜(연간 기본선택 + 절약 배지 + 7일 체험 / 월간) 실결제 플로우.
@@ -47,20 +52,27 @@ export default function PaywallModal({
   const [monthlyPkg, setMonthlyPkg] = useState<PurchasesPackage | null>(null);
   const [annualPkg, setAnnualPkg] = useState<PurchasesPackage | null>(null);
   const [selected, setSelected] = useState<Plan>('annual');
+  // 체험 자격 (codex): 비대상자에게 "7일 무료 체험"을 약속하면 즉시 과금 서프라이즈
+  const [trialEligible, setTrialEligible] = useState(false);
 
   const loadOffering = useCallback(() => {
     setLoading(true);
     getCurrentOffering()
-      .then((o) => {
+      .then(async (o) => {
         const pkgs = o?.availablePackages ?? [];
-        setMonthlyPkg(
-          pkgs.find((p) => p.identifier === '$rc_monthly') ?? null,
-        );
-        setAnnualPkg(pkgs.find((p) => p.identifier === '$rc_annual') ?? null);
+        const monthly =
+          pkgs.find((p) => p.identifier === '$rc_monthly') ?? null;
+        const annual = pkgs.find((p) => p.identifier === '$rc_annual') ?? null;
+        setMonthlyPkg(monthly);
+        setAnnualPkg(annual);
+        // 오퍼링 구성이 한쪽뿐이어도 CTA가 살아있도록 폴백 선택 (codex)
+        setSelected(annual ? 'annual' : 'monthly');
+        setTrialEligible(annual ? await hasTrialEligibility(annual) : false);
       })
       .catch(() => {
         setMonthlyPkg(null);
         setAnnualPkg(null);
+        setTrialEligible(false);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -105,9 +117,11 @@ export default function PaywallModal({
         >
           <View style={styles.planHead}>
             <Text style={styles.planName}>연간</Text>
-            <View style={styles.trialBadge}>
-              <Text style={styles.trialBadgeText}>7일 무료 체험</Text>
-            </View>
+            {trialEligible && (
+              <View style={styles.trialBadge}>
+                <Text style={styles.trialBadgeText}>7일 무료 체험</Text>
+              </View>
+            )}
           </View>
           <View style={styles.planPriceRow}>
             <Text style={styles.planPrice}>
@@ -158,6 +172,11 @@ export default function PaywallModal({
             {featureName} 기능은 프리미엄에서 이용할 수 있어요
           </Text>
 
+          <ScrollView
+            style={styles.scrollArea}
+            contentContainerStyle={styles.scrollContent}
+            bounces={false}
+          >
           <View style={styles.benefits}>
             {BENEFITS.map((b) => (
               <View key={b.text} style={styles.benefitRow}>
@@ -173,8 +192,17 @@ export default function PaywallModal({
               style={styles.loading}
             />
           ) : hasPlans ? (
+            renderPlans()
+          ) : (
+            <Text style={styles.errorText}>
+              가격 정보를 불러오지 못했어요.{'\n'}네트워크 확인 후 다시
+              시도해주세요.
+            </Text>
+          )}
+          </ScrollView>
+
+          {loading ? null : hasPlans ? (
             <>
-              {renderPlans()}
               <TouchableOpacity
                 style={styles.cta}
                 onPress={handlePurchase}
@@ -185,30 +213,26 @@ export default function PaywallModal({
                   {starting
                     ? '진행 중…'
                     : selected === 'annual'
-                      ? '7일 무료 체험 시작'
+                      ? trialEligible
+                        ? '7일 무료 체험 시작'
+                        : `연 ${annualPkg?.product.priceString ?? ''}로 시작하기`
                       : `${monthlyPkg?.product.priceString ?? ''}/월로 시작하기`}
                 </Text>
               </TouchableOpacity>
               <Text style={styles.footnote}>
-                {selected === 'annual'
+                {selected === 'annual' && trialEligible
                   ? '체험 종료 후 자동 갱신 · 언제든 해지할 수 있어요'
                   : '언제든 해지할 수 있어요'}
               </Text>
             </>
           ) : (
-            <>
-              <Text style={styles.errorText}>
-                가격 정보를 불러오지 못했어요.{'\n'}네트워크 확인 후 다시
-                시도해주세요.
-              </Text>
-              <TouchableOpacity
-                style={styles.cta}
-                onPress={loadOffering}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.ctaText}>다시 시도</Text>
-              </TouchableOpacity>
-            </>
+            <TouchableOpacity
+              style={styles.cta}
+              onPress={loadOffering}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.ctaText}>다시 시도</Text>
+            </TouchableOpacity>
           )}
 
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -233,7 +257,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 12,
     alignItems: 'center',
+    maxHeight: '88%', // 작은 화면·큰 글자에서 CTA가 잘리지 않게 (codex)
   },
+  scrollArea: { alignSelf: 'stretch', flexGrow: 0 },
+  scrollContent: { alignItems: 'stretch' },
   handle: {
     width: 40,
     height: 4,

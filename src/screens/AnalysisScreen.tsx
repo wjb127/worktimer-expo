@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { track } from '../lib/analytics';
 import { usePremium } from '../lib/premium';
+import { stripMarkdown } from '../lib/markdown';
 import PaywallModal from '../components/PaywallModal';
 import {
   AnalyzeRange,
@@ -31,16 +32,6 @@ import {
 // AI 업무 분석 — GPT식 채팅 (프리미엄).
 // 분석 칩(오늘/이번 주/이번 달) 선택 → 분석이 채팅으로 도착 → 이어서 자유 대화.
 // 세션은 서버 저장 (목록 ↔ 채팅 전환).
-
-// AI 응답 마크다운 제거(감사 #12) — RN Text는 평문 렌더라 **굵게**·## 헤더가 그대로 보임.
-// 기존 저장 메시지와 LLM의 프롬프트 이탈까지 방어하는 표시 직전 정리.
-function stripMarkdown(text: string): string {
-  return text
-    .replace(/\*\*(.+?)\*\*/g, '$1') // **굵게**
-    .replace(/__(.+?)__/g, '$1') // __굵게__
-    .replace(/(^|\n)#{1,4}\s+/g, '$1') // # 헤더
-    .replace(/(^|\n)\s*[-*]\s+/g, '$1· '); // - 리스트 → ·
-}
 
 const RANGES: { key: AnalyzeRange; label: string }[] = [
   { key: 'day', label: '오늘 분석' },

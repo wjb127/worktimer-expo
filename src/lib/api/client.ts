@@ -28,6 +28,21 @@ export function setAuthExpiredHandler(handler: (() => void) | null): void {
 // 정상 유저가 오로그아웃된다 → 한 번만 실행하고 결과를 모두가 공유.
 let refreshInFlight: Promise<boolean> | null = null;
 
+// RN fetch는 타임아웃이 없어 네트워크가 매달리면 로그아웃/삭제 같은 흐름도 같이 매달린다(codex).
+// AbortController 기반 15초 제한 — 초과 시 fetch가 reject되고 호출부의 기존 에러 처리를 탄다.
+const FETCH_TIMEOUT_MS = 15000;
+
+function fetchWithTimeout(
+  url: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  return fetch(url, { ...init, signal: controller.signal }).finally(() =>
+    clearTimeout(timer),
+  );
+}
+
 function refresh(): Promise<boolean> {
   if (refreshInFlight) return refreshInFlight;
   refreshInFlight = doRefresh().finally(() => {
@@ -42,7 +57,7 @@ async function doRefresh(): Promise<boolean> {
     onAuthExpired?.();
     return false;
   }
-  const res = await fetch(`${getBase()}/auth/refresh`, {
+  const res = await fetchWithTimeout(`${getBase()}/auth/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refreshToken: rt }),
@@ -63,7 +78,7 @@ export async function apiFetch(
   _retry = true,
 ): Promise<Response> {
   const token = await getAccessToken();
-  const res = await fetch(`${getBase()}${path}`, {
+  const res = await fetchWithTimeout(`${getBase()}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
