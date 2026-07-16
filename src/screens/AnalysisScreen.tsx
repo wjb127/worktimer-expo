@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  RefreshControl,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -13,140 +17,53 @@ import { colors } from '../theme/colors';
 import { track } from '../lib/analytics';
 import { usePremium } from '../lib/premium';
 import PaywallModal from '../components/PaywallModal';
-import { apiListSessions } from '../lib/api/sessions';
-import { WorkSession } from '../types/session';
-import { getLocalToday } from '../lib/dateUtils';
+import {
+  AnalyzeRange,
+  ChatMessage,
+  ChatSessionSummary,
+  apiCreateChatSession,
+  apiDeleteChatSession,
+  apiGetChatMessages,
+  apiListChatSessions,
+  apiPostChatMessage,
+} from '../lib/api/ai';
 
-// AI 업무 분석 — 프리미엄 기능.
-// v1: 최근 28일 기록 기반 로컬 인사이트(패턴·코칭 룰베이스). LLM 질의는 후속 릴리즈.
+// AI 업무 분석 — GPT식 채팅 (프리미엄).
+// 분석 칩(오늘/이번 주/이번 달) 선택 → 분석이 채팅으로 도착 → 이어서 자유 대화.
+// 세션은 서버 저장 (목록 ↔ 채팅 전환).
 
-const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+const RANGES: { key: AnalyzeRange; label: string }[] = [
+  { key: 'day', label: '오늘 분석' },
+  { key: 'week', label: '이번 주 분석' },
+  { key: 'month', label: '이번 달 분석' },
+];
 
-interface Insights {
-  totalHours: number;
-  activeDays: number;
-  avgSessionMin: number;
-  bestDow: string; // 최강 요일
-  goldenHour: string; // 골든타임 (몰입 최다 시간대)
-  thisWeekH: number;
-  lastWeekH: number;
-  coaching: string[];
-}
-
-// 'YYYY-MM-DD' 로컬 오늘 기준 n일 전
-function daysAgo(n: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  const p = (x: number) => String(x).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-}
-
-function fmtH(sec: number): number {
-  return Math.round((sec / 3600) * 10) / 10;
-}
-
-// 최근 28일 세션 → 인사이트 계산 (전부 로컬, 룰베이스)
-function computeInsights(sessions: WorkSession[], today: string): Insights {
-  const done = sessions.filter((s) => s.end_time && s.duration > 0);
-
-  const totalSec = done.reduce((a, s) => a + s.duration, 0);
-  const dayset = new Set(done.map((s) => s.date));
-
-  // 요일별 합
-  const dowSum = new Array(7).fill(0) as number[];
-  // 시작 시각(시)별 합
-  const hourSum = new Array(24).fill(0) as number[];
-  for (const s of done) {
-    const st = new Date(s.start_time);
-    dowSum[st.getDay()] += s.duration;
-    hourSum[st.getHours()] += s.duration;
-  }
-  const bestDowIdx = dowSum.indexOf(Math.max(...dowSum));
-  const bestHourIdx = hourSum.indexOf(Math.max(...hourSum));
-
-  // 이번 주(월요일 시작) / 지난 주
-  const now = new Date();
-  const dow = now.getDay();
-  const offsetToMonday = dow === 0 ? 6 : dow - 1;
-  const weekStart = daysAgo(offsetToMonday);
-  const lastWeekStart = daysAgo(offsetToMonday + 7);
-  const thisWeekSec = done
-    .filter((s) => s.date >= weekStart && s.date <= today)
-    .reduce((a, s) => a + s.duration, 0);
-  const lastWeekSec = done
-    .filter((s) => s.date >= lastWeekStart && s.date < weekStart)
-    .reduce((a, s) => a + s.duration, 0);
-
-  // 룰베이스 코칭 문구
-  const coaching: string[] = [];
-  if (thisWeekSec > lastWeekSec && lastWeekSec > 0) {
-    const up = Math.round(((thisWeekSec - lastWeekSec) / lastWeekSec) * 100);
-    coaching.push(`이번 주 몰입이 지난주보다 ${up}% 늘었어요. 흐름 유지!`);
-  } else if (lastWeekSec > 0 && thisWeekSec < lastWeekSec * 0.7) {
-    coaching.push(
-      '이번 주는 지난주보다 페이스가 느려요. 짧은 세션 하나로 다시 시동을 걸어보세요.',
-    );
-  }
-  if (totalSec > 0) {
-    coaching.push(
-      `${bestHourIdx}시 시작 세션에서 가장 오래 몰입했어요. 중요한 일은 이 시간대에 배치해보세요.`,
-    );
-    coaching.push(
-      `${DAY_NAMES[bestDowIdx]}요일이 최근 4주 중 가장 강한 요일이에요.`,
-    );
-  }
-  if (dayset.size >= 20) {
-    coaching.push(`최근 28일 중 ${dayset.size}일 기록 — 꾸준함이 무기예요.`);
-  }
-  if (coaching.length === 0) {
-    coaching.push('기록이 쌓이면 패턴 분석이 더 정확해져요. 오늘부터 시작!');
-  }
-
-  return {
-    totalHours: fmtH(totalSec),
-    activeDays: dayset.size,
-    avgSessionMin: done.length
-      ? Math.round(totalSec / done.length / 60)
-      : 0,
-    bestDow: totalSec > 0 ? `${DAY_NAMES[bestDowIdx]}요일` : '-',
-    goldenHour: totalSec > 0 ? `${bestHourIdx}시` : '-',
-    thisWeekH: fmtH(thisWeekSec),
-    lastWeekH: fmtH(lastWeekSec),
-    coaching,
-  };
-}
-
-// ── 프리미엄 잠금 화면 (미구독) ─────────────────────────────────────────────
+// ── 프리미엄 잠금 화면 ──────────────────────────────────────────────────────
 const FEATURES: {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   desc: string;
 }[] = [
   {
-    icon: 'bar-chart',
-    title: '패턴 분석',
-    desc: '시간대·요일별 집중 패턴과 업무 흐름을 자동으로 분석해요.',
+    icon: 'chatbubbles',
+    title: 'AI 채팅 분석',
+    desc: '오늘·이번 주·이번 달 기록을 AI가 채팅으로 분석해줘요.',
   },
   {
     icon: 'bulb',
     title: '맞춤 코칭',
-    desc: '잘한 점과 개선점을 짚고, 내일을 위한 실천 제안을 받아요.',
+    desc: '잘한 점과 개선점을 짚고, 실천 제안을 받아요.',
   },
   {
-    icon: 'trending-up',
-    title: '생산성 리포트',
-    desc: '할 일과 연결된 시간을 토대로 무엇에 시간을 썼는지 한눈에.',
-  },
-  {
-    icon: 'chatbubbles',
-    title: 'AI 질문하기',
-    desc: '"어제보다 오늘 집중이 늘었어?" 처럼 자유롭게 물어보세요. (곧 제공)',
+    icon: 'albums',
+    title: '대화 저장',
+    desc: '분석 대화가 세션으로 저장돼 언제든 다시 볼 수 있어요.',
   },
 ];
 
 function LockedView({ onUpgrade }: { onUpgrade: () => void }) {
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.lockContent}>
       <View style={styles.hero}>
         <View style={styles.iconCircle}>
           <Ionicons name="sparkles" size={34} color={colors.primary} />
@@ -156,7 +73,7 @@ function LockedView({ onUpgrade }: { onUpgrade: () => void }) {
         </View>
         <Text style={styles.heroTitle}>AI 업무 분석</Text>
         <Text style={styles.heroDesc}>
-          쌓인 기록과 할 일을 바탕으로{'\n'}나의 업무 패턴을 분석해줘요.
+          쌓인 기록을 바탕으로 AI와 대화하며{'\n'}나의 업무 패턴을 분석해요.
         </Text>
       </View>
       <View style={styles.featureList}>
@@ -165,7 +82,7 @@ function LockedView({ onUpgrade }: { onUpgrade: () => void }) {
             <View style={styles.featureIcon}>
               <Ionicons name={f.icon} size={22} color={colors.primary} />
             </View>
-            <View style={styles.featureTextCol}>
+            <View style={{ flex: 1 }}>
               <Text style={styles.featureTitle}>{f.title}</Text>
               <Text style={styles.featureDesc}>{f.desc}</Text>
             </View>
@@ -173,50 +90,47 @@ function LockedView({ onUpgrade }: { onUpgrade: () => void }) {
           </View>
         ))}
       </View>
-      <View style={styles.cta}>
-        <TouchableOpacity
-          style={styles.ctaButton}
-          onPress={onUpgrade}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.ctaButtonText}>무료로 시작하기</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity style={styles.ctaButton} onPress={onUpgrade} activeOpacity={0.85}>
+        <Text style={styles.ctaButtonText}>무료로 시작하기</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
 
-// ── 분석 대시보드 (프리미엄) ────────────────────────────────────────────────
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.statCard}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function Dashboard() {
-  const [insights, setInsights] = useState<Insights | null>(null);
+// ── 세션 목록 뷰 ───────────────────────────────────────────────────────────
+function SessionList({
+  onOpen,
+  onNew,
+}: {
+  onOpen: (s: ChatSessionSummary) => void;
+  onNew: () => void;
+}) {
+  const [sessions, setSessions] = useState<ChatSessionSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const today = getLocalToday();
-      const sessions = await apiListSessions(daysAgo(27), today);
-      setInsights(computeInsights(sessions, today));
-    } catch {
-      // 네트워크 실패 — 기존 데이터 유지 (없으면 빈 안내)
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+  const load = useCallback(() => {
+    apiListChatSessions()
+      .then(setSessions)
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useEffect(load, [load]);
+
+  const handleDelete = (s: ChatSessionSummary) => {
+    Alert.alert('대화 삭제', `"${s.title}" 대화를 삭제할까요?`, [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: () => {
+          apiDeleteChatSession(s.id)
+            .then(load)
+            .catch(() => {});
+        },
+      },
+    ]);
+  };
 
   if (loading) {
     return (
@@ -225,94 +139,210 @@ function Dashboard() {
       </View>
     );
   }
-  if (!insights) {
-    return (
-      <View style={[styles.container, styles.center]}>
-        <Text style={styles.featureDesc}>
-          분석 데이터를 불러오지 못했어요. 아래로 당겨 새로고침하세요.
-        </Text>
-      </View>
-    );
-  }
-
-  const diff = insights.thisWeekH - insights.lastWeekH;
-  const diffText =
-    insights.lastWeekH === 0
-      ? ''
-      : diff >= 0
-        ? `지난주보다 +${Math.round(diff * 10) / 10}시간`
-        : `지난주보다 ${Math.round(diff * 10) / 10}시간`;
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => {
-            setRefreshing(true);
-            void load();
-          }}
+    <View style={styles.container}>
+      <TouchableOpacity style={styles.newChatBtn} onPress={onNew} activeOpacity={0.85}>
+        <Ionicons name="add" size={20} color={colors.white} />
+        <Text style={styles.newChatText}>새 분석 대화</Text>
+      </TouchableOpacity>
+      {sessions.length === 0 ? (
+        <View style={styles.center}>
+          <Ionicons name="chatbubbles-outline" size={40} color={colors.line} />
+          <Text style={styles.emptyText}>
+            첫 분석을 시작해보세요.{'\n'}대화는 여기 저장돼요.
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={sessions}
+          keyExtractor={(s) => s.id}
+          contentContainerStyle={{ padding: 16, gap: 8 }}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.sessionRow}
+              onPress={() => onOpen(item)}
+              onLongPress={() => handleDelete(item)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sessionTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <Text style={styles.sessionDate}>
+                  {new Date(item.updatedAt).toLocaleDateString('ko-KR')}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.inkSub} />
+            </TouchableOpacity>
+          )}
         />
-      }
-    >
-      {/* 주간 요약 히어로 */}
-      <View style={styles.summaryHero}>
-        <Text style={styles.summaryLabel}>이번 주 몰입</Text>
-        <Text style={styles.summaryValue}>{insights.thisWeekH}시간</Text>
-        {diffText !== '' && (
-          <View style={[styles.diffChip, diff < 0 && styles.diffChipDown]}>
-            <Ionicons
-              name={diff >= 0 ? 'trending-up' : 'trending-down'}
-              size={14}
-              color={diff >= 0 ? colors.primary : colors.inkSub}
-            />
-            <Text style={[styles.diffText, diff < 0 && styles.diffTextDown]}>
-              {diffText}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* 최근 28일 스탯 */}
-      <Text style={styles.sectionTitle}>최근 28일</Text>
-      <View style={styles.statRow}>
-        <StatCard label="총 몰입" value={`${insights.totalHours}h`} />
-        <StatCard label="기록한 날" value={`${insights.activeDays}일`} />
-        <StatCard label="평균 세션" value={`${insights.avgSessionMin}분`} />
-      </View>
-      <View style={styles.statRow}>
-        <StatCard label="골든타임" value={insights.goldenHour} />
-        <StatCard label="최강 요일" value={insights.bestDow} />
-      </View>
-
-      {/* AI 코칭 */}
-      <Text style={styles.sectionTitle}>AI 코칭</Text>
-      <View style={styles.coachCard}>
-        {insights.coaching.map((c) => (
-          <View key={c} style={styles.coachRow}>
-            <Ionicons name="bulb" size={16} color={colors.primary} />
-            <Text style={styles.coachText}>{c}</Text>
-          </View>
-        ))}
-      </View>
-
-      {/* 후속 기능 예고 */}
-      <View style={styles.upcoming}>
-        <Ionicons name="chatbubbles-outline" size={18} color={colors.inkSub} />
-        <Text style={styles.noticeText}>
-          AI에게 자유롭게 질문하기 — 다음 업데이트에서 만나요.
-        </Text>
-      </View>
-    </ScrollView>
+      )}
+    </View>
   );
 }
 
-// ── 루트: 프리미엄 게이트 ──────────────────────────────────────────────────
+// ── 채팅 뷰 ────────────────────────────────────────────────────────────────
+function ChatView({
+  session,
+  onBack,
+}: {
+  session: ChatSessionSummary;
+  onBack: () => void;
+}) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [input, setInput] = useState('');
+  const [sending, setSending] = useState(false);
+  const listRef = useRef<FlatList<ChatMessage>>(null);
+
+  useEffect(() => {
+    apiGetChatMessages(session.id)
+      .then(setMessages)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [session.id]);
+
+  const scrollToEnd = () =>
+    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
+
+  const send = async (body: { content?: string; analyze?: AnalyzeRange }) => {
+    if (sending) return;
+    setSending(true);
+    try {
+      const res = await apiPostChatMessage(session.id, body);
+      setMessages((prev) => [...prev, res.userMessage, res.assistantMessage]);
+      scrollToEnd();
+    } catch {
+      Alert.alert('전송 실패', '네트워크를 확인하고 다시 시도해 주세요.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleSendText = () => {
+    const t = input.trim();
+    if (!t) return;
+    setInput('');
+    void send({ content: t });
+  };
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
+      {/* 헤더 */}
+      <View style={styles.chatHeader}>
+        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={22} color={colors.ink} />
+        </TouchableOpacity>
+        <Text style={styles.chatTitle} numberOfLines={1}>
+          {session.title}
+        </Text>
+      </View>
+
+      {/* 메시지 */}
+      {loading ? (
+        <View style={[styles.center, { flex: 1 }]}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : (
+        <FlatList
+          ref={listRef}
+          data={messages}
+          keyExtractor={(m) => m.id}
+          contentContainerStyle={styles.msgList}
+          onContentSizeChange={() => scrollToEnd()}
+          ListEmptyComponent={
+            <View style={styles.center}>
+              <Ionicons name="sparkles" size={32} color={colors.primaryFaint} />
+              <Text style={styles.emptyText}>
+                아래 분석 버튼을 누르거나{'\n'}자유롭게 질문해보세요.
+              </Text>
+            </View>
+          }
+          renderItem={({ item }) => (
+            <View
+              style={[
+                styles.bubble,
+                item.role === 'user' ? styles.bubbleUser : styles.bubbleAi,
+              ]}
+            >
+              <Text
+                style={item.role === 'user' ? styles.bubbleUserText : styles.bubbleAiText}
+              >
+                {item.content}
+              </Text>
+            </View>
+          )}
+        />
+      )}
+
+      {/* 분석 칩 */}
+      <View style={styles.chipRow}>
+        {RANGES.map((r) => (
+          <TouchableOpacity
+            key={r.key}
+            style={[styles.chip, sending && styles.chipDisabled]}
+            onPress={() => void send({ analyze: r.key })}
+            disabled={sending}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="analytics" size={14} color={colors.primary} />
+            <Text style={styles.chipText}>{r.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* 입력바 */}
+      <View style={styles.inputBar}>
+        <TextInput
+          style={styles.input}
+          value={input}
+          onChangeText={setInput}
+          placeholder="AI에게 질문하기…"
+          placeholderTextColor={colors.inkSub}
+          multiline
+          editable={!sending}
+        />
+        <TouchableOpacity
+          style={[styles.sendBtn, (sending || !input.trim()) && styles.sendBtnDisabled]}
+          onPress={handleSendText}
+          disabled={sending || !input.trim()}
+        >
+          {sending ? (
+            <ActivityIndicator size="small" color={colors.white} />
+          ) : (
+            <Ionicons name="arrow-up" size={18} color={colors.white} />
+          )}
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+// ── 루트: 프리미엄 게이트 + 목록/채팅 전환 ──────────────────────────────────
 export default function AnalysisScreen() {
   const { isPremium, loading, refresh } = usePremium();
   const [paywallOpen, setPaywallOpen] = useState(false);
+  const [active, setActive] = useState<ChatSessionSummary | null>(null);
+  const [creating, setCreating] = useState(false);
+
+  const handleNew = async () => {
+    if (creating) return;
+    setCreating(true);
+    try {
+      const s = await apiCreateChatSession();
+      setActive(s);
+    } catch {
+      Alert.alert('오류', '대화를 시작하지 못했어요. 네트워크를 확인해 주세요.');
+    } finally {
+      setCreating(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -344,14 +374,18 @@ export default function AnalysisScreen() {
     );
   }
 
-  return <Dashboard />;
+  return active ? (
+    <ChatView session={active} onBack={() => setActive(null)} />
+  ) : (
+    <SessionList onOpen={setActive} onNew={() => void handleNew()} />
+  );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: 20, paddingBottom: 40 },
-  center: { alignItems: 'center', justifyContent: 'center', padding: 24 },
-  // 잠금 화면
+  center: { alignItems: 'center', justifyContent: 'center', padding: 24, gap: 10 },
+  lockContent: { padding: 20, paddingBottom: 40 },
+  // 잠금
   hero: { alignItems: 'center', paddingVertical: 24 },
   iconCircle: {
     width: 76,
@@ -371,12 +405,7 @@ const styles = StyleSheet.create({
   },
   badgeText: { color: colors.white, fontSize: 12, fontWeight: '700' },
   heroTitle: { fontSize: 24, fontWeight: '800', color: colors.ink, marginBottom: 8 },
-  heroDesc: {
-    fontSize: 14,
-    color: colors.inkSub,
-    textAlign: 'center',
-    lineHeight: 21,
-  },
+  heroDesc: { fontSize: 14, color: colors.inkSub, textAlign: 'center', lineHeight: 21 },
   featureList: { gap: 10, marginTop: 8 },
   featureCard: {
     flexDirection: 'row',
@@ -386,6 +415,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: colors.line,
+    gap: 14,
   },
   featureIcon: {
     width: 44,
@@ -394,81 +424,115 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryFaint,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
   },
-  featureTextCol: { flex: 1 },
   featureTitle: { fontSize: 15, fontWeight: '700', color: colors.ink },
   featureDesc: { fontSize: 13, color: colors.inkSub, marginTop: 3, lineHeight: 18 },
-  cta: { marginTop: 20, alignItems: 'center' },
   ctaButton: {
-    width: '100%',
+    marginTop: 20,
     backgroundColor: colors.primary,
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
   },
   ctaButtonText: { color: colors.white, fontSize: 16, fontWeight: '700' },
-  // 대시보드
-  summaryHero: {
-    backgroundColor: colors.card,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.line,
-    alignItems: 'center',
-    paddingVertical: 26,
-    marginBottom: 8,
-  },
-  summaryLabel: { fontSize: 13, color: colors.inkSub, marginBottom: 6 },
-  summaryValue: { fontSize: 34, fontWeight: '800', color: colors.ink },
-  diffChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 10,
-    backgroundColor: colors.primaryFaint,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-  },
-  diffChipDown: { backgroundColor: colors.bg },
-  diffText: { fontSize: 12, fontWeight: '600', color: colors.primary },
-  diffTextDown: { color: colors.inkSub },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.ink,
-    marginTop: 18,
-    marginBottom: 10,
-  },
-  statRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
-  statCard: {
-    flex: 1,
-    backgroundColor: colors.card,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.line,
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  statValue: { fontSize: 18, fontWeight: '800', color: colors.ink },
-  statLabel: { fontSize: 12, color: colors.inkSub, marginTop: 4 },
-  coachCard: {
-    backgroundColor: colors.card,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: 16,
-    gap: 12,
-  },
-  coachRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  coachText: { flex: 1, fontSize: 14, color: colors.ink, lineHeight: 20 },
-  upcoming: {
+  // 세션 목록
+  newChatBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    marginTop: 24,
+    gap: 6,
+    backgroundColor: colors.primary,
+    borderRadius: 14,
     paddingVertical: 14,
+    margin: 16,
+    marginBottom: 4,
   },
-  noticeText: { fontSize: 13, color: colors.inkSub },
+  newChatText: { color: colors.white, fontSize: 15, fontWeight: '700' },
+  emptyText: {
+    fontSize: 14,
+    color: colors.inkSub,
+    textAlign: 'center',
+    lineHeight: 21,
+  },
+  sessionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: 14,
+  },
+  sessionTitle: { fontSize: 14, fontWeight: '600', color: colors.ink },
+  sessionDate: { fontSize: 12, color: colors.inkSub, marginTop: 2 },
+  // 채팅
+  chatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+    backgroundColor: colors.white,
+    gap: 4,
+  },
+  backBtn: { padding: 6 },
+  chatTitle: { flex: 1, fontSize: 15, fontWeight: '700', color: colors.ink },
+  msgList: { padding: 16, gap: 10, flexGrow: 1 },
+  bubble: { maxWidth: '85%', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10 },
+  bubbleUser: { alignSelf: 'flex-end', backgroundColor: colors.primary },
+  bubbleAi: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  bubbleUserText: { color: colors.white, fontSize: 14, lineHeight: 20 },
+  bubbleAiText: { color: colors.ink, fontSize: 14, lineHeight: 21 },
+  chipRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.primaryFaint,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  chipDisabled: { opacity: 0.5 },
+  chipText: { fontSize: 12, fontWeight: '600', color: colors.primary },
+  inputBar: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+    padding: 12,
+    backgroundColor: colors.bg,
+  },
+  input: {
+    flex: 1,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    fontSize: 14,
+    maxHeight: 100,
+    color: colors.ink,
+  },
+  sendBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendBtnDisabled: { opacity: 0.4 },
 });

@@ -93,3 +93,23 @@ export async function getCurrentOffering(): Promise<PurchasesOffering | null> {
     return null;
   }
 }
+
+// 오퍼링의 첫 패키지 구매 시도 → premium entitlement 활성 여부 반환.
+// 유저 취소/실패/오퍼링 없음 전부 false (throw 없음). 스토어 상품+오퍼링이
+// 구성되는 순간 페이월이 자동으로 실결제 플로우가 된다.
+export async function purchasePremium(): Promise<boolean> {
+  if (!isReady()) return false;
+  try {
+    const offering = await getCurrentOffering();
+    const pkg = offering?.availablePackages?.[0];
+    if (!pkg) return false;
+    const { customerInfo } = await Purchases.purchasePackage(pkg);
+    return (
+      typeof customerInfo.entitlements.active[PREMIUM_ENTITLEMENT] !==
+      'undefined'
+    );
+  } catch {
+    // 유저 취소 포함 — 조용히 실패
+    return false;
+  }
+}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Modal,
   StyleSheet,
@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { track } from '../lib/analytics';
 import { startLocalTrial } from '../lib/premium';
+import { getCurrentOffering, purchasePremium } from '../lib/purchases';
 
 // 프리미엄 페이월 (재사용) — AI 분석 / 기록 수정 등 프리미엄 기능 진입 게이트.
 // 현재는 스토어 결제 오픈 전이라 "무료 체험 시작" = 로컬 언락.
@@ -37,11 +38,31 @@ export default function PaywallModal({
 }: Props) {
   const insets = useSafeAreaInsets();
   const [starting, setStarting] = useState(false);
+  // RC 오퍼링(스토어 상품)이 구성돼 있으면 실결제, 아니면 로컬 체험 폴백
+  const [priceLabel, setPriceLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!visible) return;
+    getCurrentOffering()
+      .then((o) => {
+        const pkg = o?.availablePackages?.[0];
+        setPriceLabel(pkg ? pkg.product.priceString : null);
+      })
+      .catch(() => setPriceLabel(null));
+  }, [visible]);
 
   const handleStartTrial = async () => {
     if (starting) return;
     setStarting(true);
     track('premium_interest_click', { feature: featureName });
+    if (priceLabel) {
+      // 실결제 플로우 (구매/복원 성공 시에만 언락)
+      const ok = await purchasePremium();
+      setStarting(false);
+      if (ok) onUnlocked();
+      return;
+    }
+    // 결제 오픈 전 — 로컬 체험 언락
     await startLocalTrial();
     setStarting(false);
     onUnlocked();
@@ -80,10 +101,14 @@ export default function PaywallModal({
             activeOpacity={0.85}
             disabled={starting}
           >
-            <Text style={styles.ctaText}>무료 체험 시작</Text>
+            <Text style={styles.ctaText}>
+              {priceLabel ? `${priceLabel}로 시작하기` : '무료 체험 시작'}
+            </Text>
           </TouchableOpacity>
           <Text style={styles.footnote}>
-            지금은 무료 체험 기간이에요. 정식 구독은 곧 오픈됩니다.
+            {priceLabel
+              ? '언제든 해지할 수 있어요.'
+              : '지금은 무료 체험 기간이에요. 정식 구독은 곧 오픈됩니다.'}
           </Text>
 
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
