@@ -32,7 +32,7 @@
 - **빌드3(`2e36e206`) 최종 검증**: 앱 구동·크래시0 / **위젯 홈화면 실렌더**(다크캔버스+블루 "0분/이번 주 0분") / **RC configure 성공**("no Play Store products... safely ignore" = 오퍼링만 빈 의도된 상태) / headless 에러 재발 없음
 - ★★ **위젯 투명 사고 → new arch 전환으로 해결(`b191bf0`)**: legacy arch + headlessJS 초기화 버그(RN#47592 계열)로 "[runtime not ready] PlatformConstants not found" → 렌더 전 사망. **newArchEnabled: true**(라이브러리 전수 호환확인) + index.ts 최상위 Platform 분기 제거(headless 번들평가 초기 TurboModule 조회 금지)로 해결. 기술부채(RN 신아키텍처) 겸사 해소
 - ★ 실기기 함정: 무선adb는 `adb mdns services`로 자동발견(케이블 인식 불가 시), 기존 dev서명 설치본은 EAS APK와 서명충돌 → uninstall 필요(단 Android 자동백업이 로그인토큰 복원해줌), zsh에서 `ADB="adb -s ..."` 변수실행 불가(word-split)
-- **잔여: Android 푸시 FCM 미설정** — "Default FirebaseApp failed to initialize" → 토큰획득 불가(fail-safe로 무해). Firebase 프로젝트(기존 GCP codeatlas-500015에 추가) + google-services.json + app.json googleServicesFile + EAS FCM V1 자격증명 필요
+- **FCM 세팅 완료(07-16, `060aa5b`)**: Firebase Management API로 GCP `codeatlas-500015`에 Firebase 추가(gcloud 토큰 + `x-goog-user-project` 헤더 필수) → Android 앱 등록(appId `1:1052634480432:android:88e96c...`) → google-services.json 발급. **public repo라 파일은 gitignore** + EAS file env(`GOOGLE_SERVICES_JSON`, secret) + `app.config.js`로 googleServicesFile 동적 오버라이드(app.json은 유지). **발송용 FCM V1 서비스계정 키**(firebase-adminsdk-fbsvc@, `~/.config/eas-submit/worktimer-fcm-v1.json` 600)를 expo.dev 크레덴셜에 playwright로 업로드 완료. **데이터 이관 확인(07-16): 도그푸딩 1,615h/226일 전부 qhv147@gmail.com 소유 — 이관 불필요**("이번주 0분"은 7/14 세션이 1분뿐이라 정확한 표시였음). 빌드4(`b41756f7`)로 푸시토큰 E2E 검증 중
 
 ## Phase 2 — 리텐션 인프라 (여는 습관 만들기)
 "시간추적 앱 사망원인 = 안 켜는 습관" 정면돌파. 마찰↓ + 재방문 훅.
