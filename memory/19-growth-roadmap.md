@@ -45,7 +45,8 @@
 ## Phase 3 — 수익화 (구독, RevenueCat)
 리텐션 확인 후 착수. **광고 아님, 구독.**
 - [~] **RevenueCat SDK 플러밍 완료(2026-07-15, 스위치 OFF)** — `react-native-purchases@10.4.2` 설치 + `src/lib/purchases.ts`(analytics.ts 미러링 fail-safe 래퍼: initPurchases/logInPurchases/logOutPurchases/hasPremium/getCurrentOffering, 키없으면 완전 no-op·hasPremium항상false). App.tsx init 배선 + AuthContext에 logIn/logOut(identifyUser 짝). env `EXPO_PUBLIC_REVENUECAT_IOS_KEY`/`_ANDROID_KEY` 빈값=OFF. entitlement id `"premium"`. tsc0·테스트38(purchases 12신규). **네이티브 빌드는 위젯·푸시와 묶어서 1회**. ★남은 사용자액션: RC계정·API키·구독상품·offering 생성(Phase3 ON 시점)
-- [ ] 구독상품 등록(양 스토어) + RC offering 구성
+- [~] **구독 서버 인프라 완료(2026-07-16)** — 백엔드(codeatlas-platform-api `da09e6f`): `subscriptions`(유저당 상태)+`subscription_events`(웹훅 원장, raw jsonb) 테이블, `POST /webhooks/revenuecat`(env `REVENUECAT_WEBHOOK_AUTH` 정확일치, 미설정=503, VPS `/root/.secrets/rc-webhook-auth`), `GET /me/subscription`(isPremium=active/trial/cancelled&&미만료). E2E 통과(401/200/TRIAL→trial 매핑/원장기록). **어드민 구독 탭 완료**(ss-037 `672a359`): admin.codeatlas.kr 구독 탭 — 요약카드/구독자목록/이벤트원장, 조회전용. ★남은 사용자액션: ①RC 계정·프로젝트 생성+스토어 연결 ②SDK 키 2개(EAS env 주입) ③구독상품 등록(ASC/Play) ④RC 웹훅 URL 등록: `https://api.codeatlas.kr/webhooks/revenuecat` + Authorization 헤더 = VPS `/root/.secrets/rc-webhook-auth` 값 ⑤entitlement `premium`+offering(Phase3 ON 시점)
+- [ ] 구독상품 등록(양 스토어) + RC offering 구성 (↑ 사용자액션)
 - [ ] **프리미엄 = AI분석 + 카드테마/꾸미기 + 상세통계 + 무제한 카테고리 + 위젯 고급형** (공유·기본기록은 무료 유지)
 - [ ] **페이월 위치**: 온보딩 끝 + "당신의 시간패턴 분석중..." 로딩 직후(Day0 80% 노림). + **contextual paywall**(AI분석/프리미엄카드/상세통계 탭할 때 그 자리 업셀 — "막는"게 아니라 "완성"하는 톤)
 - [ ] **가격**: 연간 기본선택 + "월대비 X% 절약" 배지 + 7일 무료체험. 플랜 2~3개만. 한국 **월 3,900~5,900원 / 연 29,000~49,000원** 구간. 관심클릭 데이터 보고 확정. **너무 싸게 잡지 말 것**(고가가 전환 오히려↑).
