@@ -49,3 +49,4 @@ report-mo-*.html
 report-codeatlas-*.html
 .playwright-mcp/
 implementation-notes.html
+google-services.json
