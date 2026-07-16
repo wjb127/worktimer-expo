@@ -43,7 +43,7 @@
 | `20-db-migration-vps-postgres.md` | ★ DB 이관(07-16) — Supabase→VPS 로컬 PG16 완료. 접속법·백업크론(KST 04:10, 30일)·복원리허설·migrate deploy 자동화 + 남은것(어드민 경로/R2 오프사이트/Supabase 정리) |
 | `21-session-2026-07-16-monetization-sprint.md` | ★ 세션종합(07-16) — **압축 후 재개 1순위**. 오늘 완료 10건 + 사용자액션 4개 + 다음작업 + 핵심 포인터 |
 | `22-security-audit-fixes.md` | ★ 보안 감사 12건 검수·수정·배포(07-16) — 판정표, 게스트격리/웹훅멱등/AI게이트, 멀티세션 격리배포 레시피, 결정 대기 4건 |
-| `23-multitenancy-architecture-plan.md` | ★ 멀티테넌시 3자 합의 플랜(07-17) — 불변식 5·Phase 0~4·diary 재개 게이트·실행 소유권 미결 |
+| `23-multitenancy-architecture-plan.md` | ★ 멀티테넌시 합의문 v1.2 전문(07-17) — 불변식 10·신뢰체인·레거시토큰 A안·Phase 0~3·diary 재개 게이트. **위승빈 최종 승인 대기** |
 | `raw/` | 원문 작업 로그(날짜별, 기본 비노출·지시 시에만 열람) |
 | `.private/01-codeatlas-infra.md` | (private) VPS·DB·op 시크릿 참조 |
 
