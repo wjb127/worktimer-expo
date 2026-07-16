@@ -1,9 +1,9 @@
-# 멀티테넌시 아키텍처 플랜 — 3자 합의본 (위승빈·Claude·Codex)
+# 멀티테넌시 아키텍처 플랜 — 3자 합의 v1.0 확정 (위승빈·Claude·Codex)
 
-**최종 갱신**: 2026-07-17
+**최종 갱신**: 2026-07-17 (v1.0 합의문 확정 — 이견 0)
 
-codeatlas 플랫폼에 앱이 추가될 때마다 생기는 격리 영역을 어떻게 통제할지의 합의안.
-펴볼 때: "diary 재개 조건", "새 앱 추가 절차", "테넌시 규칙 어디 있지". **구현 전 — 실행 소유권 미정.**
+codeatlas 플랫폼 격리 통제 합의안. 펴볼 때: "diary 재개 조건", "새 앱 추가 절차", "테넌시 규칙".
+★ v1.0 추가 확정: **AppActor {userId, appId} 객체 전달**(원시 파라미터 2개 대체) / **registry startup validation**(중복 appId·aud·route prefix = 부팅 실패) / **멀티세션 제어 = Phase 0 하드 게이트로 승격** / 교차 **라우트 403·객체 404** 구분 / 실행순서 = WIP checkpoint·인계 → 헌장·Registry → aud 기반 JWT·AppScopeGuard → AppActor·격리테스트(**여기 통과 = diary 재개**) → 기존 DB 증분 강화 / **공유 auth 소유권 = 플랫폼 세션으로 인계 확정**(diary WIP는 checkpoint commit 후)
 
 ## 대원칙 (합의)
 - **문서 = 작업 품질 제어 / 코드·DB·CI = 보안 제어** — 두 축을 분리한다
@@ -35,8 +35,9 @@ codeatlas 플랫폼에 앱이 추가될 때마다 생기는 격리 영역을 어
 - 앱별 스키마/DB/서비스 분리는 예외 승격만: 민감 데이터·계약상 독립성·트래픽 편중·매각 가능성
 
 ## 미결
-- [ ] 실행 소유권: P1~2를 diary 세션(auth WIP 보유)이 하나, 그쪽 WIP 커밋 후 플랫폼 세션이 가져오나
-- [ ] P0 착수 GO 사인
+- [x] 실행 소유권 → **플랫폼 세션(Claude)** — diary WIP checkpoint commit + 인계 선행 (합의문 Phase 0)
+- [ ] P0(WIP 정리·인계) 착수 GO 사인 — diary 세션 쪽 checkpoint가 선행이라 사용자 조율 필요
+- 해석 플래그 해소됨: 기존 worktimer 테이블 복합 FK 소급은 diary 재개 게이트에서 제외(Phase 4) — Codex 명시 동의
 
 ## 같이 보면 좋은 문서
 - `22-security-audit-fixes.md` — 이 플랜의 배경 (JWT appId 구멍·멀티세션 충돌 실사고)
