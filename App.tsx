@@ -21,6 +21,7 @@ import { initAnalytics, track } from './src/lib/analytics';
 import { initPurchases } from './src/lib/purchases';
 import { getOnboardingSeen } from './src/lib/onboarding';
 import { registerForPushNotifications } from './src/lib/notifications';
+import { publishWidgetData } from './src/lib/widget';
 import { initErrorTracking } from './src/lib/errorTracking';
 import * as Sentry from '@sentry/react-native';
 
@@ -108,10 +109,13 @@ function Root() {
     getOnboardingSeen().then(setOnboardingSeen);
   }, []);
 
-  // 로그인 상태가 되면 Expo 푸시 토큰을 백엔드에 등록(주간 리캡 등 원격 발송용).
-  // fire-and-forget 안전 — 권한거부·시뮬레이터·백엔드 미구현 시 조용히 no-op.
+  // 로그인 상태가 되면 Expo 푸시 토큰을 백엔드에 등록(주간 리캡 등 원격 발송용)
+  // + 홈화면 위젯 데이터 최신화. 둘 다 fire-and-forget 안전(실패 시 조용히 no-op).
   useEffect(() => {
-    if (signedIn) registerForPushNotifications();
+    if (signedIn) {
+      registerForPushNotifications();
+      publishWidgetData();
+    }
   }, [signedIn]);
 
   // 인증 로딩 또는 온보딩 플래그 로딩 중이면 스피너

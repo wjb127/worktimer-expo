@@ -27,7 +27,30 @@
       "./plugins/withFmtFix",
       "./plugins/withGoogleModularHeaders",
       "expo-localization",
-      "@sentry/react-native/expo"
+      "@sentry/react-native/expo",
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "Filltime",
+              "label": "필타임",
+              "description": "오늘 채운 시간과 이번 주 누적",
+              "minWidth": "180dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 3,
+              "targetCellHeight": 2,
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
+      ],
+      [
+        "@bacons/apple-targets",
+        {
+          "appleTeamId": "9Q26686S8R"
+        }
+      ]
     ],
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -41,6 +64,11 @@
       "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.kr.codeatlas.worktimer"
+        ]
       }
     },
     "android": {

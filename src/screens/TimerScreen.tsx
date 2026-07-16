@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Svg, { Circle } from 'react-native-svg';
+import { publishWidgetData } from '../lib/widget';
 import {
   getTodayTotal,
   getOngoingSession,
@@ -229,6 +230,8 @@ export default function TimerScreen() {
         // 오늘 총계 다시 로드 (자정 넘김 세션의 정확한 처리)
         const total = await getTodayTotal();
         setTodayTotal(total);
+        // 홈화면 위젯 갱신 (fire-and-forget, 실패 무해)
+        publishWidgetData();
         // 시간별 알림 취소
         await cancelHourlyWorkNotifications();
         // Live Activity 종료
@@ -250,6 +253,8 @@ export default function TimerScreen() {
         await scheduleHourlyWorkNotifications();
         // Live Activity 시작
         await startLiveActivity(new Date(session.start_time), todayTotal);
+        // 홈화면 위젯 갱신 (fire-and-forget, 실패 무해)
+        publishWidgetData();
       }
     }
   };
