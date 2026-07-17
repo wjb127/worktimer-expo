@@ -45,6 +45,7 @@
 | `22-security-audit-fixes.md` | ★ 보안 감사 12건 검수·수정·배포(07-16) — 판정표, 게스트격리/웹훅멱등/AI게이트, 멀티세션 격리배포 레시피, 결정 대기 4건 |
 | `23-multitenancy-architecture-plan.md` | ★ 멀티테넌시 합의문 v1.2 전문(07-17) — 불변식 10·신뢰체인·레거시토큰 A안·Phase 0~3·diary 재개 게이트. **위승빈 최종 승인 대기** |
 | `24-session-2026-07-17-tenancy-landing.md` | ★ 세션종합(07-17) — **압축 후 재개 1순위**. 멀티테넌시v1.2 배포·마이그레이션 드리프트수정·테스트결정성·랜딩 전면개편+404장애복구 + 미푸시/다음작업/배포레시피 |
+| `25-ios-subscription-launch-prep.md` | ★ iOS 구독 배포 준비(07-17) — 페이월 2플랜 UI 완성·검증(테스트16 PASS) + 구독 심사스샷 실기기 캡처 절차(MISSING_METADATA 해소) + v1.0.1 배포 게이트 순서 |
 | `raw/` | 원문 작업 로그(날짜별, 기본 비노출·지시 시에만 열람) |
 | `.private/01-codeatlas-infra.md` | (private) VPS·DB·op 시크릿 참조 |
 
