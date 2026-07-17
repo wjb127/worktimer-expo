@@ -1,7 +1,7 @@
 # codeatlas 플랫폼 멀티테넌시 아키텍처 합의문 v1.2 (전문)
 
 **최종 갱신**: 2026-07-17
-**상태**: **v1.2 Phase 0~3 구현·검수·배포 완료** (backend `cc2aab8`, VPS 라이브 07-17). 라이브 E2E: 게스트 JWT appId·refresh 회전 복원·미등록 appId 401·기존 하위호환·부팅 검증 통과. diary 재개 게이트 충족 → **diary 세션 재개 가능**(checkpoint 브랜치 `diary-wip-checkpoint-20260717`에서 registry 기반 재작성). 미해결 정책 1건: 게스트 body appId(암호학 바인딩 불가 — 토론 대기). ⚠️교훈: python 치환은 assert 필수(라운드2 무산 사고)
+**상태**: **v1.2 전체 배포 완료(07-17)** — 멀티테넌시 + 검수3라운드(fe181f3) + 테스트결정성(cbc920d) + ★마이그레이션 드리프트 근본수정(6b907fa: 과거 db push로 마이그레이션에 없던 5테이블 todos/session_todos/session_meta/login_event/app_banner를 IF NOT EXISTS로 편입 — prod no-op, 새DB 완전스키마). 배포직전 백업 codeatlas-20260717-0359. prod 무손실(users29·todos906·17테이블). diary 재개 게이트 충족 → 재개 가능. 미결: 게스트 body appId 정책, REQUIRE_JWT_APP_ID 전환기 닫기
 구현 요점: registry.ts(SSOT+startup validation) / aud→appId 서버판정 / JWT {sub,appId}+레거시 A안 / @AppScope·TenantGuard·ScopeAnnotationValidator(fail-closed 부팅) / AppActor 전 서비스 / User @@unique([appId,id]) / 교차 테넌트 e2e 8케이스(유닛26+e2e24 통과). diary WIP는 `diary-wip-checkpoint-20260717` 브랜치 격리
 당사자: 위승빈(최종 결정권자) · Claude(플랫폼 구현·리뷰) · Codex(구현·리뷰)
 
