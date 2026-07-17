@@ -10,6 +10,7 @@ describe('mapSession', () => {
       duration: 0,
       date: '2026-06-20',
       createdAt: '2026-06-20T00:00:00Z',
+      meta: { description: 'API 설계' },
     };
     const s = mapSession(api);
     expect(s).toEqual({
@@ -19,6 +20,7 @@ describe('mapSession', () => {
       duration: 0,
       date: '2026-06-20',
       created_at: '2026-06-20T00:00:00Z',
+      description: 'API 설계',
     });
   });
 });

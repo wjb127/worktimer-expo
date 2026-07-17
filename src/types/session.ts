@@ -5,6 +5,7 @@ export interface WorkSession {
   duration: number;
   date: string;
   created_at: string;
+  description: string | null;
 }
 
 export interface SessionInsert {

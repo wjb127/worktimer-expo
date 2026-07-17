@@ -8,6 +8,7 @@ interface ApiSession {
   duration: number;
   date: string;
   createdAt: string;
+  meta?: { description: string | null } | null;
 }
 
 export const mapSession = (s: ApiSession): WorkSession => ({
@@ -17,6 +18,7 @@ export const mapSession = (s: ApiSession): WorkSession => ({
   duration: s.duration,
   date: s.date,
   created_at: s.createdAt,
+  description: s.meta?.description ?? null,
 });
 
 export const apiGetTodayTotal = (date: string) =>

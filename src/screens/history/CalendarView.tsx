@@ -9,6 +9,8 @@ import {
   Modal,
   TextInput,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +20,7 @@ import {
   apiCreateManual,
   apiDelete,
 } from '../../lib/api/sessions';
+import { apiUpdateSessionMeta } from '../../lib/api/todos';
 import { WorkSession } from '../../types/session';
 import { getLocalToday, getMonthStart, getMonthEnd } from '../../lib/dateUtils';
 import { colors, getHeatColor, getHeatTextColor } from '../../theme/colors';
@@ -70,6 +73,7 @@ export default function CalendarView() {
   const [addingHour, setAddingHour] = useState<number | null>(null);
   const [editStartTime, setEditStartTime] = useState('');
   const [editEndTime, setEditEndTime] = useState('');
+  const [editDescription, setEditDescription] = useState('');
   const [monthTotal, setMonthTotal] = useState(0);
   // 모달이 add 모드인지 edit 모드인지
   const isAddMode = addingHour !== null;
@@ -120,6 +124,7 @@ export default function CalendarView() {
   const closeModal = () => {
     setEditingSession(null);
     setAddingHour(null);
+    setEditDescription('');
   };
 
   const openEditModal = (session: WorkSession) => {
@@ -140,6 +145,7 @@ export default function CalendarView() {
     setEditEndTime(
       `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`
     );
+    setEditDescription(session.description ?? '');
     setAddingHour(null);
     setEditingSession(session);
   };
@@ -149,6 +155,7 @@ export default function CalendarView() {
     setEditingSession(null);
     setEditStartTime(`${String(hour).padStart(2, '0')}:00`);
     setEditEndTime(`${String(Math.min(hour + 1, 23)).padStart(2, '0')}:00`);
+    setEditDescription('');
     setAddingHour(hour);
   };
 
@@ -175,17 +182,26 @@ export default function CalendarView() {
 
     try {
       if (isAddMode) {
-        await apiCreateManual(
+        const created = await apiCreateManual(
           newStart.toISOString(),
           newEnd.toISOString(),
           selectedDate,
         );
+        const description = editDescription.trim();
+        if (description) {
+          await apiUpdateSessionMeta(created.id, { description });
+        }
       } else if (editingSession) {
-        await apiEditTimes(
-          editingSession.id,
-          newStart.toISOString(),
-          newEnd.toISOString(),
-        );
+        await Promise.all([
+          apiEditTimes(
+            editingSession.id,
+            newStart.toISOString(),
+            newEnd.toISOString(),
+          ),
+          apiUpdateSessionMeta(editingSession.id, {
+            description: editDescription.trim() || null,
+          }),
+        ]);
       }
     } catch {
       Alert.alert('오류', '저장에 실패했습니다');
@@ -451,11 +467,15 @@ export default function CalendarView() {
         animationType="fade"
         onRequestClose={closeModal}
       >
-        <TouchableOpacity
+        <KeyboardAvoidingView
           style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={closeModal}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={closeModal}
+          />
           <View style={styles.editModal} onStartShouldSetResponder={() => true}>
             <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
               <Ionicons name="close" size={24} color={colors.inkSub} />
@@ -488,6 +508,17 @@ export default function CalendarView() {
               />
             </View>
 
+            <Text style={styles.editDescriptionLabel}>무슨 업무를 했나요?</Text>
+            <TextInput
+              style={styles.editDescriptionInput}
+              placeholder="예: 백엔드 API 설계, 디자인 리뷰..."
+              placeholderTextColor={colors.inkSub}
+              value={editDescription}
+              onChangeText={setEditDescription}
+              multiline
+              textAlignVertical="top"
+            />
+
             <View
               style={[
                 styles.editButtonRow,
@@ -518,7 +549,7 @@ export default function CalendarView() {
               </TouchableOpacity>
             </View>
           </View>
-        </TouchableOpacity>
+        </KeyboardAvoidingView>
       </Modal>
       <PaywallModal
         visible={paywallOpen}
@@ -755,6 +786,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.ink,
     textAlign: 'center',
+  },
+  editDescriptionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.ink,
+    marginBottom: 8,
+  },
+  editDescriptionInput: {
+    minHeight: 80,
+    backgroundColor: colors.bg,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 15,
+    color: colors.ink,
+    borderWidth: 1,
+    borderColor: colors.line,
+    marginBottom: 8,
   },
   editButtonRow: {
     flexDirection: 'row',
