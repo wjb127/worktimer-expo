@@ -15,7 +15,7 @@
 - Apple Team `9Q26686S8R` · Expo owner `@gawall` · EAS projectId `31c0b3a1-6f4a-4b05-ad00-89924a249f68`
 - DB: **VPS 로컬 PostgreSQL 16**(127.0.0.1, 07-16 Supabase에서 이관 → 20번) / 앱은 NestJS API 경유 / 백업 매일 KST 04:10
 - 랜딩: `ss-042-filltime-landing` → filltime.vercel.app (개인정보처리방침/약관, 사업자 코들라스)
-- 진행(2026-07-16): **iOS 승인·READY_FOR_SALE**(판매지역 175개국 함정 해결 → 17번) / Android 심사 대기 / **DB = VPS 로컬 PG16**(Supabase 이관 + R2 백업 + 어드민 VPS 이사 → 20번) / **수익화 풀스택 라이브**: 구독DB·RC웹훅·AI채팅(진짜 Claude ON — work-timer Vercel 키 재활용)·프리미엄 게이트·**가격 확정 월4,900/연29,000+연간7일체험**·ASC/Play 상품·RC offering `default` REST 검증 (→19번 Phase3, 21번) / **위젯 양OS + FCM 풀체인 + 빌드6 폰 설치** / **가입자 현황판 filltime.vercel.app/admin-dashboard-v3** / 잔여: **iOS 대화형 빌드 1회**(위젯 프로비저닝, 사용자), iOS 구독 심사스샷(v1.0.1 때), 페이월 2플랜 UI, 웹 워크타이머 전환(diff 재발 방지), v1.0 승인 후 v1.0.1 양대 제출 / 로드맵 대원칙 = 광고X·핵심무료·리텐션확인후수익화(→19번)
+- 진행(2026-07-17): **멀티테넌시 v1.2 배포**(23) + 마이그레이션 드리프트 근본수정 + 테스트결정성 + **필타임 랜딩 전면개편·배포**(HabitHeat잔디+Forest, filltime.vercel.app 라이브) + **루트app/ 404장애 복구** / 압축재개는 24번 먼저 / 미푸시: wt 21·ss042 2 (승인후 push)
 
 ## 파일 인덱스
 
@@ -44,6 +44,7 @@
 | `21-session-2026-07-16-monetization-sprint.md` | ★ 세션종합(07-16) — **압축 후 재개 1순위**. 오늘 완료 10건 + 사용자액션 4개 + 다음작업 + 핵심 포인터 |
 | `22-security-audit-fixes.md` | ★ 보안 감사 12건 검수·수정·배포(07-16) — 판정표, 게스트격리/웹훅멱등/AI게이트, 멀티세션 격리배포 레시피, 결정 대기 4건 |
 | `23-multitenancy-architecture-plan.md` | ★ 멀티테넌시 합의문 v1.2 전문(07-17) — 불변식 10·신뢰체인·레거시토큰 A안·Phase 0~3·diary 재개 게이트. **위승빈 최종 승인 대기** |
+| `24-session-2026-07-17-tenancy-landing.md` | ★ 세션종합(07-17) — **압축 후 재개 1순위**. 멀티테넌시v1.2 배포·마이그레이션 드리프트수정·테스트결정성·랜딩 전면개편+404장애복구 + 미푸시/다음작업/배포레시피 |
 | `raw/` | 원문 작업 로그(날짜별, 기본 비노출·지시 시에만 열람) |
 | `.private/01-codeatlas-infra.md` | (private) VPS·DB·op 시크릿 참조 |
 
