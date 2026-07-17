@@ -25,7 +25,7 @@ codeatlas DB를 공유 Supabase에서 VPS(45.77.135.225) 로컬 PostgreSQL 16으
 - 크론 `/etc/cron.d/pg-backup-codeatlas` — 매일 19:10 UTC(KST 04:10), 로그 `/var/log/pg-backup-codeatlas.log`
 - 저장: `/var/backups/postgres/codeatlas-*.sql.gz` (첫 백업 61KB)
 - **복원 리허설 통과**: 백업→임시DB 복원→9/1503 카운트 일치 확인 후 임시DB 정리
-- ⚠️ **오프사이트(R2) 미완**: 현재 백업이 VPS 안에만 있음 = 디스크 사망 시 같이 죽음. R2 액세스 키 발급(사용자) 후 스크립트에 업로드 추가 필요
+- **오프사이트 완료**: Cloudflare R2 `codeatlas-backups`에 업로드, 90일 보존. 아래 R2 섹션이 현재 상태.
 
 ## 이관 절차 (재사용 레시피)
 1. `apt install postgresql` (localhost 기본 바인딩 확인 `ss -tlnp | grep 5432`)

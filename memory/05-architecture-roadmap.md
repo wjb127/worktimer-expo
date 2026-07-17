@@ -1,8 +1,8 @@
 # 전체 아키텍처 + 출시 로드맵
 
-**최종 갱신**: 2026-06-20
+**최종 갱신**: 2026-07-16
 
-WorkTimer를 멀티테넌트 모바일 앱으로 출시하기 위한 시스템 전체 그림 + 단계별 로드맵.
+Filltime과 후속 모바일 앱을 공용 CodeAtlas 백엔드에서 운영하기 위한 시스템 전체 그림 + 단계별 로드맵.
 펴볼 때: "지금 어디까지 했지", 다음 마일스톤 시작, 큰 그림 복기할 때.
 
 ## 시스템 아키텍처
@@ -15,17 +15,17 @@ WorkTimer를 멀티테넌트 모바일 앱으로 출시하기 위한 시스템 �
         ▼
 [NestJS 플랫폼 API]  api.codeatlas.kr (VPS 45.77.135.225)
    core / auth / worktimer 모듈 · nginx+TLS · systemd
-        │ Prisma (codeatlas_app role, 세션풀러)
+        │ Prisma (localhost)
         ▼
-[Supabase Postgres]  codeatlas 스키마 (공유 프로젝트 내 격리)
-        ▲ public.* (200+ 라이브 테이블) 은 무관
+[VPS PostgreSQL 16]  codeatlas DB / codeatlas 스키마
+   로컬 30일 백업 + Cloudflare R2 90일
 [Claude API] ← M3에서 AI 코칭(NestJS 경유)
 ```
 
 핵심 원칙:
-- 앱은 **NestJS API만** 호출(Supabase 직접 접근 X). 시크릿 전부 서버.
+- 앱은 **NestJS API만** 호출(DB 직접 접근 X). 시크릿 전부 서버.
 - 멀티앱 백엔드(공용 NestJS 1대 → 여러 앱). 첫 앱 worktimer.
-- DB는 공유 Supabase의 codeatlas 스키마로 격리.
+- DB는 VPS 로컬 PostgreSQL의 codeatlas 스키마, 앱 데이터는 `app_id`로 격리.
 
 ## 확정 결정 (변경 시 여기 갱신)
 
@@ -34,7 +34,7 @@ WorkTimer를 멀티테넌트 모바일 앱으로 출시하기 위한 시스템 �
 | 앱 레포 | worktimer-expo standalone 유지 (모노레포 X) |
 | 백엔드 | NestJS 모듈러 (codeatlas-platform-api 레포) |
 | 인증 | C-2 자체 OAuth(Apple+Google) + 자체 JWT |
-| DB | 공유 Supabase `bzzjkcrbwwrqlumxigag`의 codeatlas 스키마, 전용 role |
+| DB | VPS PostgreSQL 16, `codeatlas` DB/스키마, localhost 전용 |
 | 번들ID | `kr.codeatlas.worktimer` |
 | Apple | Seung Been Wee, Team `9Q26686S8R`, wjb127@nate.com |
 | Expo owner | `@gawall` (Free) |
@@ -42,27 +42,25 @@ WorkTimer를 멀티테넌트 모바일 앱으로 출시하기 위한 시스템 �
 | 수익화 | RevenueCat (M4) |
 | 출시 타겟 | iOS + Android |
 
-## 로드맵 (마일스톤)
+## 로드맵 (2026-07-16 현재)
 
 ```
-M0 백엔드 토대          ✅ 완료·배포 (인증코어+세션/설정 API, codeatlas 격리, api.codeatlas.kr 라이브)
-   D Google OAuth        ✅ /auth/google 라이브 (Web+iOS client ID 설정)
-   E Apple Sign In+삭제   ✅ /auth/apple + DELETE /auth/account 라이브 (App ID 생성됨)
-M1 멀티테넌시 전환       🟡 코드완료(Phase0~5): 로그인/토큰/API클라이언트/session.ts·화면 supabase제거/계정삭제
-                        ⬜ Phase6: EAS dev빌드 + 실기기 로그인 E2E (사용자 기기). 상세 → 06 문서
-M2 기능이식+UIUX         ⬜ 카테고리·일일목표·스트릭·포모도로·세션메모·다크모드·CSV
-M3 AI 코칭              ⬜ NestJS Claude 프록시, 리포트 캐싱, 엔타이틀먼트
-M4 구독(RevenueCat)      ⬜ IAP, 영수증검증/웹훅, 프리미엄 게이팅
-M5 스토어 출시           ⬜ 개인정보처리방침·ATS·Apple/Google 콘솔·EAS submit·심사
+M0 백엔드 토대          ✅ NestJS/JWT/OAuth/API/PG16/백업/어드민 운영
+M1 멀티테넌시 전환       ✅ 모바일 API 전환·SecureStore·실기기 E2E
+M2 기능이식+UIUX         ✅ 타이머·기록·통계·할일·공유·위젯 중심 출시 범위
+M3 AI 코칭              ✅ Claude 백엔드 프록시와 자유채팅 ON (세부 개선은 21번)
+M4 구독(RevenueCat)      ✅ DB·웹훅·어드민·SDK·E2E 인프라, 실제 상품 운영은 19번
+M5 스토어 출시           ✅ iOS 승인/판매 가능 · Android 프로덕션 심사 중
+M6 공용 앱 팩토리        🟡 2번째 앱 전 appId 신뢰경계·OAuth registry 리팩터 필요
 ```
 
-> M0+M1이 "로그인 되는 멀티테넌트 앱 + 배포된 백엔드". 현재 M0 끝, 다음은 D/E(OAuth) 또는 M1(앱 전환).
+> 현재 진행의 진실 소스는 `README.md`, 성장/수익화는 19번, DB/백업은 20번, 당일 세션은 21번이다.
 
-## 외부 콘솔 작업 (사용자 클릭 필요, 미완)
+## 외부 콘솔 상태
 
-- **Google OAuth**: 신규 GCP 프로젝트 `codeatlas`에서 클라이언트(iOS/Android/Web) 발급 → 공개ID는 평문, secret은 op.
-- **Apple Sign In**: Apple Developer에서 App ID에 Sign in with Apple + Services ID + Key(.p8) 발급 → .p8는 op, Key ID/Team ID 평문.
-- 둘 다 D/E 구현 시점에 Claude가 클릭 가이드 제공. 코드/연동/테스트는 Claude.
+- Google OAuth 동의화면 production 게시 및 Android production SHA-1 등록 완료.
+- App Store Connect 앱 생성·메타데이터·심사·승인 완료. Play Console 프로덕션 심사 진행 중.
+- 앱별 bundle/package/OAuth/EAS/스토어 레코드는 후속 앱마다 별도 생성해야 한다.
 
 ## 설계/계획 원본 (이 레포 git 추적)
 

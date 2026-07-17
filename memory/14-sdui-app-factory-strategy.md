@@ -1,5 +1,5 @@
 # SDUI 앱 팩토리 전략 판정
-**최종 갱신**: 2026-07-14
+**최종 갱신**: 2026-07-16
 
 VPS 1대와 공용 백엔드로 여러 앱을 운영하는 기술은 가능하지만, 솔로 개발자의 안전한 사업 모델은 "자기 계정 수백 앱"이 아니라 "소수 자체 앱 + 클라이언트 소유 계정의 화이트라벨"이다.
 
@@ -69,13 +69,14 @@ Cloudflare
 
 NestJS control plane
   -> draft/validate/publish/rollback/audit
-  -> Supabase codeatlas schema(app_id 멀티테넌트)
+  -> VPS PostgreSQL codeatlas schema(app_id 멀티테넌트)
 ```
 
 - 현재 `GET /config/banners`와 어드민 편집 루프를 씨앗으로 재사용한다.
 - 앱 소스의 하드코딩된 `app=worktimer`를 나중에 빌드타임 manifest의 `appId`로 승격한다.
 - 앱마다 bundle ID와 EAS project가 필요하다. 하나의 바이너리로 서로 다른 독립 스토어 앱을 제공할 수는 없다.
-- 단일 `codeatlas` 스키마 + `app_id`는 소규모 수백 tenant에도 적절하다. 모든 unique/FK/index와 Nest 권한 검사에 `app_id`를 포함한다. service role은 RLS를 우회하므로 API guard가 필수다.
+- 단일 `codeatlas` 스키마 + `app_id`는 현재 규모와 소규모 수백 tenant에도 적절하다. 모든 unique/FK/index와 Nest 권한 검사에 `app_id`를 포함한다. DB 직접 접근은 금지하고 API guard를 강제한다.
+- 현재 VPS는 2c/8GB, 2026-07-16 실측 가용 메모리 약 7GB·디스크 92GB다. 초기 앱 여러 개에는 충분하지만 앱별 rate limit/관측/쿼리 예산이 필요하다.
 - config는 canonical JSON(RFC 8785) 후 Ed25519 서명한다. 서명 개인키는 VPS 밖 KMS/HSM 계열에 둔다.
 
 ## 용량과 장애 격리
@@ -117,4 +118,3 @@ NestJS control plane
 - 같은 제품군에서 Apple 4.3 리젝 1회가 나오면 유사 앱 추가 제출을 중단한다.
 - 클라이언트가 자체 개발자 계정을 거부하면 별도 branded app 대신 aggregator/PWA/웹 배포를 제안한다.
 - 앱별 전용 분기와 수동 운영이 누적되면 신규 판매를 멈추고 셸·manifest·심사 자료 자동화부터 고친다.
-

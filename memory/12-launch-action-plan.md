@@ -1,6 +1,6 @@
 # 출시 액션 플랜 — 사용자(위승빈) 액션 아이템
 
-**최종 갱신**: 2026-07-05
+**최종 갱신**: 2026-07-16
 
 수익화 준비 4종(애널리틱스/Sentry/온보딩/인앱리뷰) 코드 완료 후, **사용자가 직접 해야 하는 것들**의 체크리스트.
 펴볼 때: "다음에 내가 뭐 해야 하지", 출시 준비 재개할 때. 기술 상세는 `09-launch-roadmap.md`.
@@ -30,10 +30,10 @@
 - [x] ★ 운영 백엔드 `DEV_LOGIN_ENABLED` OFF — VPS(`root@45.77.135.225`) `/opt/codeatlas-api/.env` 수정 + `systemctl restart codeatlas-api`. 변경 전후 curl 검증(`/auth/dev-login` 201→404), `/health` 정상 확인
 - [x] 어드민 콘솔 비밀번호 변경 — **ENV 마스터(Vercel `ADMIN_PASSWORD`) + DB `codeatlas.admin_users` 해시 둘 다 교체** (하나만 바꾸면 다른 경로로 여전히 뚫림 — 실제로 첫 시도 때 ENV만 바꿔서 구멍 남아있던 걸 발견해 DB도 마저 교체). 새 비번은 macOS Keychain(`ks-cp ss-037-codeatlas-admin/admin-password`)에 저장. `admin123!` 401 확인, 새 비번 200 확인
 - [x] 스토어 빌드에 `EXPO_PUBLIC_E2E` 미설정 확인 — `eas.json` `production` 프로필 비어있음(env 없음), `.env`에도 없음. 이미 안전, 조치 불요
-- [ ] codeatlas RLS 정비 — **보류, 사용자가 직접 검토 예정.** 조사 결과: 테이블 11개 전부 RLS 비활성이지만 `service_role`/`postgres`는 원래 RLS 우회 롤이라 백엔드·어드민은 무관. 진짜 리스크는 "`codeatlas` 스키마가 Supabase PostgREST(anon 키로 접근되는 REST API)에 노출돼 있는가" — 이건 SQL로 확인 안 되고 Supabase 대시보드 Settings→API→Exposed schemas에서만 확인 가능(당시 MCP 연결 끊겨 있어 미확인). `codeatlas`가 노출 목록에 없으면 RLS 켤 필요 시급하지 않음, 있으면 RLS보다 그 목록에서 빼는 게 더 간단한 수정
+- [x] ~~codeatlas RLS/PostgREST 노출 검토~~ — **2026-07-16 VPS 로컬 PostgreSQL 이관으로 구조적으로 종료.** DB는 `127.0.0.1:5432`만 바인딩되고 모바일은 NestJS API만 호출. 구 Supabase는 웹 레거시 관찰 후 정리 예정.
 - [ ] Apple 계정삭제 revoke 구현 (B의 .p8 받은 후 — 심사 리젝 사유)
 - [x] **백엔드 하드닝 2건(2026-07-14, 코덱스 진단 → Claude 수정·검증)**:
-  - **DB TLS 강제+검증**: `DATABASE_URL`이 sslmode 없어 Prisma 기본 `prefer`(평문 fallback 가능)였음 → `?sslmode=require&sslaccept=strict` 적용. Supabase 풀러 인증서(`Supabase Root 2021 CA` 자체서명)를 `/usr/local/share/ca-certificates/supabase-root-2021.crt`로 시스템 신뢰저장소에 설치(update-ca-certificates, openssl verify return 0). ★함정: Prisma `sslcert=<CA번들>` 방식은 "unable to get issuer certificate"로 실패(앱 502 한번 남) → **시스템 store 방식이 정답**. 검증: 10/10 요청 200, 불안정 0. 백업 `.env.bak-20260714`
+  - **DB TLS 강제+검증(역사 기록, 현재 superseded)**: 당시 Supabase 풀러 연결을 strict TLS로 고쳤음. 2026-07-16 DB를 같은 VPS의 `127.0.0.1:5432`로 이관해 네트워크 TLS 자체가 불필요해졌고, 현재 진실 소스는 20번 노트.
   - **NestJS 비root 하드닝**: `User=root`(systemd-analyze 9.6 UNSAFE) → 전용 시스템 유저 `codeatlas`(uid999) + 드롭인 `10-hardening.conf`(NoNewPrivileges/ProtectSystem=strict/ProtectHome/PrivateTmp/CapabilityBoundingSet=/SystemCallFilter=@system-service/UMask=0077, MemoryDenyWriteExecute는 V8 JIT 때문에 미설정). **9.6→1.7 OK**. 앱→`/root/.secrets`(CF토큰) 접근 Permission denied 격리 확인. `.env` 640 root:codeatlas. 백업 `.service.bak-20260714`
   - repo(codeatlas-platform-api) `deploy/codeatlas-api.service`에 하드닝+전제조건 반영 커밋 `4da4552`(로컬, 미푸시)
 - [x] **백엔드/모바일 하드닝 3묶음(2026-07-14, 코덱스 findings 3~7 중 실익분)**:
