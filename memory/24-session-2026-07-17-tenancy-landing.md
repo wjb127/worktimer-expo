@@ -12,17 +12,17 @@
 4. **테스트 결정성**(`cbc920d`,`0c36f60`): jest globalSetup(테스트DB 하드가드+migrate deploy+14테이블 완전성검사) + `pnpm test:reset`. ⚠️환경이 DB파괴 3중차단(쉘훅+Prisma Claude가드) → 리셋은 사람이 `pnpm test:reset`(터미널)
 5. **필타임 랜딩 전면개편+배포**(ss-042 `ed1fa86`,`d2e3cf4`): 플레이스홀더35줄→풀랜딩. HabitHeat 블루잔디 히어로(라이브 컴포넌트, 채워지는 애니)+Forest 구성(문제→3스텝→기능벤토→공유카드→도그푸딩→가격→CTA)+Pretendard. **★루트 app/이 src/app 가리던 404 장애 복구**(랜딩·privacy·terms 전부 죽어있던 것→전라우트 200)
 
-## ★미푸시 (배포는 됐지만 GitHub 동기화 필요 — push 승인 대기)
-- **worktimer-expo: 21커밋** (memory 문서들 + 앱측 보안수정) — 라이브 무관, 기록 동기화용
-- **ss-042-filltime-landing: 2커밋** (랜딩 ed1fa86+d2e3cf4) — Vercel엔 CLI로 배포됨, GitHub만 뒤처짐
-- codeatlas-platform-api: 0 (diary 세션이 푸시함, HEAD `d757a76` 조각일기 브랜드)
+## ✅ GitHub 동기화 완료 (07-17 push)
+- **worktimer-expo**: `df36f90`까지 push 완료 (memory 문서들 + 앱측 보안수정 + DB이관 문서 동기화)
+- **ss-042-filltime-landing**: `d2e3cf4`까지 push 완료 (랜딩 전면개편 + 공유카드 fix)
+- codeatlas-platform-api: 이미 동기화됨 (diary 세션이 푸시, `d757a76` 조각일기 브랜드)
 
 ## 다음 작업 (재개 우선순위)
-1. **git push 3repo** (승인 후) — 특히 ss-042(랜딩)·worktimer-expo(mem)
-2. **diary(조각일기) 재개** — 재개 게이트 충족됨. `diary-wip-checkpoint-20260717` 브랜치에서 registry에 ai-diary 채우고(OAuth클라·audience env·probeRoutes) 모듈 @AppScope 재작성, 신규테이블 day-1 복합FK. ⚠️브랜드명 "조각일기"로 확정됨(appId는 ai-diary 유지)
-3. **랜딩 후속**: Android 승인시 site.ts `android.available:true` / 실제 앱스샷 확보시 교체 / OG 다듬기
-4. **codex 미해결 정책 1건**: 게스트 body appId 암호학 바인딩 불가 — 토론
-5. **REQUIRE_JWT_APP_ID 전환기 닫기** (전 유저 토큰 회전 후 며칠 뒤)
+1. **diary(조각일기) 재개** — 재개 게이트 충족됨. `diary-wip-checkpoint-20260717` 브랜치에서 registry에 ai-diary 채우고(OAuth클라·audience env·probeRoutes) 모듈 @AppScope 재작성, 신규테이블 day-1 복합FK. ⚠️브랜드명 "조각일기"로 확정됨(appId는 ai-diary 유지)
+2. **랜딩 후속**: Android 승인시 site.ts `android.available:true` / 실제 앱스샷 확보시 교체 / OG 다듬기
+3. **codex 미해결 정책 1건**: 게스트 body appId 암호학 바인딩 불가 — 토론
+4. **REQUIRE_JWT_APP_ID 전환기 닫기** (전 유저 토큰 회전 후 며칠 뒤)
+- ~~git push 3repo~~ ✅ 07-17 완료
 
 ## 핵심 포인터
 - 랜딩: ss-042-filltime-landing, filltime.vercel.app(Vercel CLI배포). ★배포는 deploy-guard가 cwd(worktimer-expo) 기준검사 → ss-042의 .claude/deploy-target+.vercel/project.json을 worktimer-expo에 임시복사→`vercel --prod`→`vercel alias set <배포> filltime.vercel.app`→임시파일 제거(settings.local.json 보존). alias 자동이동 안함
