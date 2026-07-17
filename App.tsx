@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import {
   TimerScreen,
@@ -11,7 +12,9 @@ import {
   AnalysisScreen,
   SettingsScreen,
   OnboardingScreen,
+  NotificationsScreen,
 } from './src/screens';
+import type { RootStackParamList } from './src/navigation/types';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/lib/auth/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
@@ -26,75 +29,101 @@ import { initErrorTracking } from './src/lib/errorTracking';
 import * as Sentry from '@sentry/react-native';
 
 const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function MainTabs() {
   const insets = useSafeAreaInsets();
   return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        // 하단 탭바 1.3배 확대 — 아이콘 24→30, 라벨 13, 높이 상향(+안전영역 인셋)
+        tabBarIcon: ({ focused, color }) => {
+          let iconName: keyof typeof Ionicons.glyphMap;
+
+          switch (route.name) {
+            case '타이머':
+              iconName = focused ? 'timer' : 'timer-outline';
+              break;
+            case '기록':
+              iconName = focused ? 'calendar' : 'calendar-outline';
+              break;
+            case '할일':
+              iconName = focused ? 'checkbox' : 'checkbox-outline';
+              break;
+            case 'AI분석':
+              iconName = focused ? 'sparkles' : 'sparkles-outline';
+              break;
+            case '설정':
+              iconName = focused ? 'settings' : 'settings-outline';
+              break;
+            default:
+              iconName = 'ellipse';
+          }
+
+          return <Ionicons name={iconName} size={30} color={color} />;
+        },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.inkSub,
+        tabBarLabelStyle: { fontSize: 13, fontWeight: '600', marginBottom: 4 },
+        tabBarIconStyle: { marginTop: 4 },
+        tabBarStyle: {
+          height: 64 + insets.bottom,
+          paddingTop: 8,
+          paddingBottom: insets.bottom + 8,
+          borderTopWidth: 1,
+          borderTopColor: colors.line,
+        },
+        headerShown: true,
+        // 모든 화면 헤더에 브랜드명 "필타임"을 좌측 정렬, 블루/볼드로 표시
+        headerTitle: '필타임',
+        headerTitleAlign: 'left',
+        headerTitleStyle: {
+          color: colors.primary,
+          fontWeight: '800',
+          fontSize: 22,
+        },
+        // 헤더 우측 공지 종 아이콘
+        headerRight: () => <AnnouncementBell />,
+        headerStyle: {
+          backgroundColor: colors.white,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.line,
+        },
+        headerShadowVisible: false,
+      })}
+    >
+      <Tab.Screen name="타이머" component={TimerScreen} />
+      <Tab.Screen name="기록" component={HistoryScreen} />
+      <Tab.Screen name="할일" component={TodoScreen} />
+      <Tab.Screen name="AI분석" component={AnalysisScreen} />
+      <Tab.Screen name="설정" component={SettingsScreen} />
+    </Tab.Navigator>
+  );
+}
+
+// 루트 스택: 탭(Main) 위에 알림 모음 페이지를 얹는다 (헤더 종 아이콘 → push 이동)
+function AppNavigator() {
+  return (
     <NavigationContainer>
-      <Tab.Navigator
-        screenOptions={({ route }) => ({
-          // 하단 탭바 1.3배 확대 — 아이콘 24→30, 라벨 13, 높이 상향(+안전영역 인셋)
-          tabBarIcon: ({ focused, color }) => {
-            let iconName: keyof typeof Ionicons.glyphMap;
-
-            switch (route.name) {
-              case '타이머':
-                iconName = focused ? 'timer' : 'timer-outline';
-                break;
-              case '기록':
-                iconName = focused ? 'calendar' : 'calendar-outline';
-                break;
-              case '할일':
-                iconName = focused ? 'checkbox' : 'checkbox-outline';
-                break;
-              case 'AI분석':
-                iconName = focused ? 'sparkles' : 'sparkles-outline';
-                break;
-              case '설정':
-                iconName = focused ? 'settings' : 'settings-outline';
-                break;
-              default:
-                iconName = 'ellipse';
-            }
-
-            return <Ionicons name={iconName} size={30} color={color} />;
-          },
-          tabBarActiveTintColor: colors.primary,
-          tabBarInactiveTintColor: colors.inkSub,
-          tabBarLabelStyle: { fontSize: 13, fontWeight: '600', marginBottom: 4 },
-          tabBarIconStyle: { marginTop: 4 },
-          tabBarStyle: {
-            height: 64 + insets.bottom,
-            paddingTop: 8,
-            paddingBottom: insets.bottom + 8,
-            borderTopWidth: 1,
-            borderTopColor: colors.line,
-          },
-          headerShown: true,
-          // 모든 화면 헤더에 브랜드명 "필타임"을 좌측 정렬, 블루/볼드로 표시
-          headerTitle: '필타임',
-          headerTitleAlign: 'left',
-          headerTitleStyle: {
-            color: colors.primary,
-            fontWeight: '800',
-            fontSize: 22,
-          },
-          // 헤더 우측 공지 종 아이콘
-          headerRight: () => <AnnouncementBell />,
-          headerStyle: {
-            backgroundColor: colors.white,
-            borderBottomWidth: 1,
-            borderBottomColor: colors.line,
-          },
-          headerShadowVisible: false,
-        })}
-      >
-        <Tab.Screen name="타이머" component={TimerScreen} />
-        <Tab.Screen name="기록" component={HistoryScreen} />
-        <Tab.Screen name="할일" component={TodoScreen} />
-        <Tab.Screen name="AI분석" component={AnalysisScreen} />
-        <Tab.Screen name="설정" component={SettingsScreen} />
-      </Tab.Navigator>
+      <Stack.Navigator>
+        <Stack.Screen
+          name="Main"
+          component={MainTabs}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="알림"
+          component={NotificationsScreen}
+          options={{
+            title: '알림',
+            headerTintColor: colors.primary,
+            headerTitleStyle: { color: colors.ink, fontWeight: '700' },
+            headerStyle: { backgroundColor: colors.white },
+            headerShadowVisible: false,
+            headerBackButtonDisplayMode: 'minimal',
+          }}
+        />
+      </Stack.Navigator>
       <StatusBar style="auto" />
     </NavigationContainer>
   );
@@ -133,7 +162,7 @@ function Root() {
     }
     return <LoginScreen />;
   }
-  return <MainTabs />;
+  return <AppNavigator />;
 }
 
 // 에러 트래킹은 렌더 이전(모듈 스코프)에 초기화해야 앱 시작·첫 렌더 단계의
