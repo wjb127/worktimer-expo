@@ -5,6 +5,7 @@ export interface Todo {
   id: string;
   title: string;
   status: 'pending' | 'done';
+  priority: 'high' | 'normal'; // 높음은 목록 상단 고정
   sortOrder: number;
   completedAt: string | null;
   createdAt: string;
@@ -28,7 +29,12 @@ export const apiCreateTodo = (title: string) =>
 
 export const apiUpdateTodo = (
   id: string,
-  data: { title?: string; status?: 'pending' | 'done'; sortOrder?: number },
+  data: {
+    title?: string;
+    status?: 'pending' | 'done';
+    priority?: 'high' | 'normal';
+    sortOrder?: number;
+  },
 ) =>
   apiJson<Todo>(`/worktimer/todos/${id}`, {
     method: 'PATCH',
@@ -41,10 +47,11 @@ export const apiDeleteTodo = (id: string) =>
     if (!res.ok) throw new Error(`API ${res.status} DELETE todo`);
   });
 
-export const apiReorderTodos = (items: { id: string; sortOrder: number }[]) =>
+// 배열 순서 = sort_order. 백엔드 계약은 POST + {ids} (기존 PATCH+{items}는 계약 불일치로 400)
+export const apiReorderTodos = (ids: string[]) =>
   apiJson<{ ok: boolean }>('/worktimer/todos/reorder', {
-    method: 'PATCH',
-    body: JSON.stringify({ items }),
+    method: 'POST',
+    body: JSON.stringify({ ids }),
   });
 
 // ===== 세션-할일 연결 / 세션 메타 (백엔드 sessions 컨트롤러에 이미 존재) =====

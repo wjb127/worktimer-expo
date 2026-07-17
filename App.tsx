@@ -15,6 +15,7 @@ import {
   NotificationsScreen,
 } from './src/screens';
 import type { RootStackParamList } from './src/navigation/types';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/lib/auth/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
@@ -180,12 +181,15 @@ function App() {
 
   // SafeAreaProvider: edgeToEdge(안드 시스템바 뒤로 렌더) 하에서 탭바·헤더·모달이
   // 상/하단 시스템바(상태바·내비게이션바)와 겹치지 않도록 인셋 컨텍스트를 공급한다.
+  // GestureHandlerRootView: 할일 드래그 정렬(reorderable-list) 제스처 루트.
   return (
-    <SafeAreaProvider>
-      <AuthProvider>
-        <Root />
-      </AuthProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <Root />
+        </AuthProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,19 +8,36 @@ import {
   FlatList,
   ActivityIndicator,
   Keyboard,
+  Modal,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
+import ReorderableList, {
+  ReorderableListReorderEvent,
+  reorderItems,
+  useReorderableDrag,
+} from 'react-native-reorderable-list';
 import {
   Todo,
   apiListTodos,
   apiCreateTodo,
   apiUpdateTodo,
   apiDeleteTodo,
+  apiReorderTodos,
 } from '../lib/api/todos';
 import { colors } from '../theme/colors';
 
-type Filter = 'pending' | 'done';
+// 할일 탭 — 진행중(삭제 전까지 영구) / 완료(오늘) / 기록(과거 완료 전체) 3분류.
+// 우선순위 높음은 상단 고정, 진행중은 길게 눌러 드래그 정렬, 목록 전체 복사 지원.
+
+type Filter = 'pending' | 'doneToday' | 'history';
+
+const FILTER_LABEL: Record<Filter, string> = {
+  pending: '진행중',
+  doneToday: '완료',
+  history: '기록',
+};
 
 const formatDuration = (seconds: number): string => {
   if (!seconds || seconds <= 0) return '';
@@ -31,12 +48,131 @@ const formatDuration = (seconds: number): string => {
   return `${mins}분`;
 };
 
+const isToday = (iso: string | null): boolean => {
+  if (!iso) return false;
+  const d = new Date(iso);
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+};
+
+const formatDate = (iso: string): string => {
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+};
+
+// 높음(0) < 보통(1) — 높음 상단 고정
+const priRank = (t: Todo) => (t.priority === 'high' ? 0 : 1);
+
+interface RowActions {
+  onToggle: (todo: Todo) => void;
+  onEdit: (todo: Todo) => void;
+  onDelete: (id: string) => void;
+}
+
+// 공통 행 본문 — meta는 탭별로 다르게(진행중/완료: 누적시간, 기록: 완료날짜+시간)
+function RowBody({
+  item,
+  meta,
+  onToggle,
+  onEdit,
+  onDelete,
+}: { item: Todo; meta: string } & RowActions) {
+  const done = item.status === 'done';
+  return (
+    <>
+      <TouchableOpacity
+        style={styles.checkArea}
+        onPress={() => onToggle(item)}
+        activeOpacity={0.7}
+      >
+        <Ionicons
+          name={done ? 'checkmark-circle' : 'ellipse-outline'}
+          size={26}
+          color={done ? colors.primary : colors.line}
+        />
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.todoTextCol}
+        onPress={() => onEdit(item)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.titleRow}>
+          {item.priority === 'high' && (
+            <Ionicons name="flag" size={14} color={colors.danger} />
+          )}
+          <Text
+            style={[styles.todoTitle, done && styles.todoTitleDone]}
+            numberOfLines={2}
+          >
+            {item.title}
+          </Text>
+        </View>
+        {meta ? <Text style={styles.todoMeta}>{meta}</Text> : null}
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => onDelete(item.id)}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        style={styles.deleteBtn}
+      >
+        <Ionicons name="trash-outline" size={18} color={colors.inkSub} />
+      </TouchableOpacity>
+    </>
+  );
+}
+
+// 진행중 행 — 길게 누르면 드래그 정렬 (행 전체 + 핸들 아이콘 둘 다)
+function PendingRow({ item, ...actions }: { item: Todo } & RowActions) {
+  const drag = useReorderableDrag();
+  return (
+    <TouchableOpacity
+      style={styles.todoRow}
+      onLongPress={drag}
+      activeOpacity={0.9}
+    >
+      <RowBody
+        item={item}
+        meta={formatDuration(item.totalDuration ?? 0)}
+        {...actions}
+      />
+      <TouchableOpacity onLongPress={drag} hitSlop={8} style={styles.dragHandle}>
+        <Ionicons name="reorder-two-outline" size={20} color={colors.line} />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+}
+
+// 완료/기록 행 — 드래그 없음
+function DoneRow({
+  item,
+  showDate,
+  ...actions
+}: { item: Todo; showDate: boolean } & RowActions) {
+  const dur = formatDuration(item.totalDuration ?? 0);
+  const date =
+    showDate && item.completedAt ? formatDate(item.completedAt) : '';
+  const meta = [date, dur].filter(Boolean).join(' · ');
+  return (
+    <View style={styles.todoRow}>
+      <RowBody item={item} meta={meta} {...actions} />
+    </View>
+  );
+}
+
 export default function TodoScreen() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>('pending');
   const [input, setInput] = useState('');
   const [adding, setAdding] = useState(false);
+  const [copied, setCopied] = useState(false);
+  // 수정 시트 상태
+  const [editing, setEditing] = useState<Todo | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editPriority, setEditPriority] = useState<'high' | 'normal'>('normal');
 
   const load = useCallback(async () => {
     try {
@@ -54,6 +190,42 @@ export default function TodoScreen() {
       load();
     }, [load])
   );
+
+  // 진행중: 높음 우선 → 수동 정렬 순 (삭제 전까지 영구 유지)
+  const pending = useMemo(
+    () =>
+      todos
+        .filter((t) => t.status === 'pending')
+        .sort(
+          (a, b) =>
+            priRank(a) - priRank(b) ||
+            a.sortOrder - b.sortOrder ||
+            a.createdAt.localeCompare(b.createdAt)
+        ),
+    [todos]
+  );
+  // 기록: 과거 완료 전체 (최근 완료 순)
+  const history = useMemo(
+    () =>
+      todos
+        .filter((t) => t.status === 'done')
+        .sort((a, b) =>
+          (b.completedAt ?? '').localeCompare(a.completedAt ?? '')
+        ),
+    [todos]
+  );
+  // 완료: 오늘 완료한 것만
+  const doneToday = useMemo(
+    () => history.filter((t) => isToday(t.completedAt)),
+    [history]
+  );
+
+  const listByFilter: Record<Filter, Todo[]> = {
+    pending,
+    doneToday,
+    history,
+  };
+  const current = listByFilter[filter];
 
   const handleAdd = async () => {
     const title = input.trim();
@@ -77,7 +249,11 @@ export default function TodoScreen() {
     setTodos((prev) =>
       prev.map((t) =>
         t.id === todo.id
-          ? { ...t, status: next, completedAt: next === 'done' ? new Date().toISOString() : null }
+          ? {
+              ...t,
+              status: next,
+              completedAt: next === 'done' ? new Date().toISOString() : null,
+            }
           : t
       )
     );
@@ -99,49 +275,88 @@ export default function TodoScreen() {
     }
   };
 
-  const filtered = todos.filter((t) => t.status === filter);
-  const pendingCount = todos.filter((t) => t.status === 'pending').length;
-  const doneCount = todos.filter((t) => t.status === 'done').length;
-
-  const renderItem = ({ item }: { item: Todo }) => {
-    const done = item.status === 'done';
-    const dur = formatDuration(item.totalDuration ?? 0);
-    return (
-      <View style={styles.todoRow}>
-        <TouchableOpacity
-          style={styles.checkArea}
-          onPress={() => handleToggle(item)}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={done ? 'checkmark-circle' : 'ellipse-outline'}
-            size={26}
-            color={done ? colors.primary : colors.line}
-          />
-        </TouchableOpacity>
-        <View style={styles.todoTextCol}>
-          <Text
-            style={[styles.todoTitle, done && styles.todoTitleDone]}
-            numberOfLines={2}
-          >
-            {item.title}
-          </Text>
-          {dur ? (
-            <Text style={styles.todoMeta}>
-              <Ionicons name="time-outline" size={12} color={colors.inkSub} /> {dur}
-            </Text>
-          ) : null}
-        </View>
-        <TouchableOpacity
-          onPress={() => handleDelete(item.id)}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          style={styles.deleteBtn}
-        >
-          <Ionicons name="trash-outline" size={18} color={colors.inkSub} />
-        </TouchableOpacity>
-      </View>
+  // 드래그 정렬 (진행중 탭) — 높음 상단 고정 불변식: 그룹 경계를 넘긴 드롭은 경계로 스냅
+  const handleReorder = ({ from, to }: ReorderableListReorderEvent) => {
+    const moved = reorderItems(pending, from, to);
+    const snapped = [
+      ...moved.filter((t) => t.priority === 'high'),
+      ...moved.filter((t) => t.priority !== 'high'),
+    ];
+    // 낙관적 반영: 화면 순서를 sortOrder로 박제
+    const orderMap = new Map(snapped.map((t, i) => [t.id, i]));
+    setTodos((prev) =>
+      prev.map((t) =>
+        orderMap.has(t.id) ? { ...t, sortOrder: orderMap.get(t.id)! } : t
+      )
     );
+    apiReorderTodos(snapped.map((t) => t.id)).catch(() => load());
   };
+
+  // 수정 시트 열기/저장
+  const openEdit = (todo: Todo) => {
+    setEditing(todo);
+    setEditTitle(todo.title);
+    setEditPriority(todo.priority === 'high' ? 'high' : 'normal');
+  };
+
+  const handleSaveEdit = async () => {
+    const title = editTitle.trim();
+    if (!editing || !title) return;
+    const id = editing.id;
+    const priority = editPriority;
+    setTodos((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, title, priority } : t))
+    );
+    setEditing(null);
+    try {
+      await apiUpdateTodo(id, { title, priority });
+    } catch (e) {
+      console.error('edit todo error:', e);
+      load();
+    }
+  };
+
+  // 현재 탭 목록 전체 복사 (텍스트)
+  const handleCopy = async () => {
+    if (current.length === 0) return;
+    const lines = current.map(
+      (t) => `- ${t.priority === 'high' ? '[높음] ' : ''}${t.title}`
+    );
+    await Clipboard.setStringAsync(
+      `필타임 할일 — ${FILTER_LABEL[filter]} (${current.length})\n${lines.join('\n')}`
+    );
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  const rowActions: RowActions = {
+    onToggle: handleToggle,
+    onEdit: openEdit,
+    onDelete: handleDelete,
+  };
+
+  const renderEmpty = () => (
+    <View style={styles.center}>
+      <Ionicons
+        name={
+          filter === 'pending'
+            ? 'checkbox-outline'
+            : filter === 'doneToday'
+              ? 'checkmark-done-outline'
+              : 'archive-outline'
+        }
+        size={48}
+        color={colors.line}
+      />
+      <Text style={styles.emptyText}>
+        {filter === 'pending'
+          ? '할 일이 없어요. 위에서 추가해보세요.'
+          : filter === 'doneToday'
+            ? '오늘 완료한 할 일이 여기 쌓여요.'
+            : '완료한 할 일의 전체 기록이 여기 남아요.'}
+      </Text>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -165,46 +380,153 @@ export default function TodoScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 진행중 / 완료 탭 */}
+      {/* 진행중 / 완료(오늘) / 기록 탭 + 전체 복사 */}
       <View style={styles.filterRow}>
-        {(['pending', 'done'] as Filter[]).map((f) => (
+        {(['pending', 'doneToday', 'history'] as Filter[]).map((f) => (
           <TouchableOpacity
             key={f}
             style={[styles.filterBtn, filter === f && styles.filterBtnActive]}
             onPress={() => setFilter(f)}
           >
-            <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-              {f === 'pending' ? `진행 중 ${pendingCount}` : `완료 ${doneCount}`}
+            <Text
+              style={[styles.filterText, filter === f && styles.filterTextActive]}
+            >
+              {FILTER_LABEL[f]}
+              <Text
+                style={[
+                  styles.filterCount,
+                  filter === f && styles.filterCountActive,
+                ]}
+              >
+                {' '}
+                {listByFilter[f].length}
+              </Text>
             </Text>
           </TouchableOpacity>
         ))}
+        <View style={styles.filterSpacer} />
+        <TouchableOpacity
+          style={styles.copyBtn}
+          onPress={handleCopy}
+          disabled={current.length === 0}
+          hitSlop={8}
+          accessibilityLabel="목록 전체 복사"
+        >
+          <Ionicons
+            name={copied ? 'checkmark' : 'copy-outline'}
+            size={20}
+            color={
+              copied
+                ? colors.primary
+                : current.length === 0
+                  ? colors.line
+                  : colors.inkSub
+            }
+          />
+        </TouchableOpacity>
       </View>
 
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
-      ) : filtered.length === 0 ? (
-        <View style={styles.center}>
-          <Ionicons
-            name={filter === 'pending' ? 'checkbox-outline' : 'checkmark-done-outline'}
-            size={48}
-            color={colors.line}
-          />
-          <Text style={styles.emptyText}>
-            {filter === 'pending'
-              ? '할 일이 없어요. 위에서 추가해보세요.'
-              : '완료한 할 일이 여기 쌓여요.'}
-          </Text>
-        </View>
+      ) : current.length === 0 ? (
+        renderEmpty()
+      ) : filter === 'pending' ? (
+        <ReorderableList
+          data={pending}
+          keyExtractor={(t) => t.id}
+          onReorder={handleReorder}
+          renderItem={({ item }) => <PendingRow item={item} {...rowActions} />}
+          contentContainerStyle={styles.listContent}
+        />
       ) : (
         <FlatList
-          data={filtered}
+          data={current}
           keyExtractor={(t) => t.id}
-          renderItem={renderItem}
+          renderItem={({ item }) => (
+            <DoneRow item={item} showDate={filter === 'history'} {...rowActions} />
+          )}
           contentContainerStyle={styles.listContent}
         />
       )}
+
+      {/* 수정 시트 — 제목 + 우선순위(높음/보통) */}
+      <Modal
+        visible={editing !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditing(null)}
+      >
+        <TouchableOpacity
+          style={styles.editOverlay}
+          activeOpacity={1}
+          onPress={() => setEditing(null)}
+        >
+          <TouchableOpacity activeOpacity={1} style={styles.editSheet}>
+            <Text style={styles.editHeading}>할 일 수정</Text>
+            <TextInput
+              style={styles.editInput}
+              value={editTitle}
+              onChangeText={setEditTitle}
+              placeholder="할 일 제목"
+              placeholderTextColor={colors.inkSub}
+              autoFocus
+            />
+            <Text style={styles.editLabel}>우선순위</Text>
+            <View style={styles.prioRow}>
+              {(
+                [
+                  { v: 'high', label: '높음', icon: 'flag' },
+                  { v: 'normal', label: '보통', icon: 'remove-outline' },
+                ] as const
+              ).map((p) => (
+                <TouchableOpacity
+                  key={p.v}
+                  style={[
+                    styles.prioBtn,
+                    editPriority === p.v && styles.prioBtnActive,
+                  ]}
+                  onPress={() => setEditPriority(p.v)}
+                >
+                  <Ionicons
+                    name={p.icon}
+                    size={15}
+                    color={
+                      p.v === 'high'
+                        ? colors.danger
+                        : editPriority === p.v
+                          ? colors.primary
+                          : colors.inkSub
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.prioText,
+                      editPriority === p.v && styles.prioTextActive,
+                    ]}
+                  >
+                    {p.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity
+              style={[styles.saveBtn, !editTitle.trim() && styles.addBtnDisabled]}
+              onPress={handleSaveEdit}
+              disabled={!editTitle.trim()}
+            >
+              <Text style={styles.saveBtnText}>저장</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              onPress={() => setEditing(null)}
+            >
+              <Text style={styles.cancelBtnText}>취소</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -242,17 +564,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 8,
     marginBottom: 8,
+    alignItems: 'center',
   },
   filterBtn: {
     paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     borderRadius: 999,
     backgroundColor: colors.primaryFaint,
   },
   filterBtnActive: { backgroundColor: colors.primary },
   filterText: { fontSize: 14, fontWeight: '600', color: colors.inkSub },
   filterTextActive: { color: colors.white },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 },
+  filterCount: { fontSize: 12, fontWeight: '500', color: colors.inkSub },
+  filterCountActive: { color: colors.primaryFaint },
+  filterSpacer: { flex: 1 },
+  copyBtn: { padding: 6 },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    gap: 12,
+  },
   emptyText: { fontSize: 14, color: colors.inkSub, textAlign: 'center' },
   listContent: { paddingHorizontal: 16, paddingBottom: 24 },
   todoRow: {
@@ -267,11 +600,74 @@ const styles = StyleSheet.create({
   },
   checkArea: { marginRight: 12 },
   todoTextCol: { flex: 1 },
-  todoTitle: { fontSize: 15, color: colors.ink, fontWeight: '500' },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  todoTitle: { fontSize: 15, color: colors.ink, fontWeight: '500', flexShrink: 1 },
   todoTitleDone: {
     textDecorationLine: 'line-through',
     color: colors.inkSub,
   },
   todoMeta: { fontSize: 12, color: colors.inkSub, marginTop: 4 },
   deleteBtn: { marginLeft: 8, padding: 4 },
+  dragHandle: { marginLeft: 6, padding: 2 },
+  // 수정 시트
+  editOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.45)',
+    justifyContent: 'center',
+    padding: 28,
+  },
+  editSheet: {
+    backgroundColor: colors.card,
+    borderRadius: 18,
+    padding: 22,
+  },
+  editHeading: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: colors.ink,
+    marginBottom: 14,
+  },
+  editInput: {
+    height: 48,
+    backgroundColor: colors.bg,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    color: colors.ink,
+    borderWidth: 1,
+    borderColor: colors.line,
+    marginBottom: 16,
+  },
+  editLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.inkSub,
+    marginBottom: 8,
+  },
+  prioRow: { flexDirection: 'row', gap: 8, marginBottom: 18 },
+  prioBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: colors.line,
+  },
+  prioBtnActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryFaint,
+  },
+  prioText: { fontSize: 14, fontWeight: '600', color: colors.inkSub },
+  prioTextActive: { color: colors.primary },
+  saveBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  saveBtnText: { color: colors.white, fontSize: 15, fontWeight: '700' },
+  cancelBtn: { paddingVertical: 12, alignItems: 'center', marginTop: 2 },
+  cancelBtnText: { fontSize: 14, color: colors.inkSub },
 });
