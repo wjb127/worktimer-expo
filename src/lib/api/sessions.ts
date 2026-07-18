@@ -76,8 +76,10 @@ export const apiListSessions = (from: string, to: string) =>
     `/worktimer/sessions?from=${from}&to=${to}`,
   ).then((arr) => arr.map(mapSession));
 
-export const apiCleanupOrphaned = (today: string) =>
+// excludeId: 현재 진행 중 세션 — 자정 넘겨 계속 돌고 있는 세션을 고아로 오인해
+// 과거로 끊어버리지 않도록 서버에 제외 대상으로 전달한다.
+export const apiCleanupOrphaned = (today: string, excludeId?: string) =>
   apiJson<{ cleaned: number }>('/worktimer/sessions/cleanup-orphaned', {
     method: 'POST',
-    body: JSON.stringify({ today }),
+    body: JSON.stringify({ today, excludeId }),
   }).then((r) => r.cleaned);

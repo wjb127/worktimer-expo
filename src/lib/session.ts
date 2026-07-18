@@ -50,12 +50,13 @@ export const endSession = async (
   }
 };
 
-// excludeId는 서버가 JWT 기준으로 처리하므로 무시(시그니처만 유지)
+// 진행 중 세션 id를 excludeId로 전달 — 자정 넘겨 계속 돌고 있는 세션을
+// 고아로 오인해 과거로 끊어버리는 것을 서버가 막게 한다.
 export const cleanupOrphanedSessions = async (
-  _excludeSessionId?: string,
+  excludeSessionId?: string,
 ): Promise<number> => {
   try {
-    return await apiCleanupOrphaned(getToday());
+    return await apiCleanupOrphaned(getToday(), excludeSessionId);
   } catch (e) {
     console.error('cleanupOrphanedSessions error:', e);
     return 0;
