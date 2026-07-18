@@ -47,6 +47,7 @@
 | `24-session-2026-07-17-tenancy-landing.md` | ★ 세션종합(07-17) — **압축 후 재개 1순위**. 멀티테넌시v1.2 배포·마이그레이션 드리프트수정·테스트결정성·랜딩 전면개편+404장애복구 + 미푸시/다음작업/배포레시피 |
 | `25-ios-subscription-launch-prep.md` | ★ iOS 구독 배포 준비(07-17) — 페이월 2플랜 UI 완성·검증(테스트16 PASS) + 구독 심사스샷 실기기 캡처 절차(MISSING_METADATA 해소) + v1.0.1 배포 게이트 순서 |
 | `26-landing-analytics-marketing.md` | ★ 랜딩 유입추적·광고 세팅(07-18) — PostHog 선정근거·store_click·/go UTM숏링크 사용법 + 백엔드 불구축·부정클릭 단계대응 결정 |
+| `27-aso-app-store-optimization.md` | ★ ASO 딥리서치(07-18) — SEO 개념비교·iOS vs Android 인덱싱차이·애플 키워드필드 100자 규칙·한국어 형태소·평점/PPO·기각된 통설 + 필타임 제목/부제/키워드 체크리스트 |
 | `raw/` | 원문 작업 로그(날짜별, 기본 비노출·지시 시에만 열람) |
 | `.private/01-codeatlas-infra.md` | (private) VPS·DB·op 시크릿 참조 |
 
