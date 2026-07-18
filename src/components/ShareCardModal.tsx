@@ -4,9 +4,11 @@ import {
   Text,
   View,
   Modal,
+  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -75,6 +77,7 @@ export default function ShareCardModal({
   const [loading, setLoading] = useState(false);
   const [sharing, setSharing] = useState(false);
   const insets = useSafeAreaInsets();
+  const { height: screenH } = useWindowDimensions();
 
   // 공유 카드 테마 (앰버 기본) — 저장값 로드, 스위처로 변경 시 즉시 반영 + 저장
   const [themeId, setThemeId] = useState<ShareThemeId>(DEFAULT_SHARE_THEME);
@@ -226,7 +229,17 @@ export default function ShareCardModal({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
+        <View
+          style={[
+            styles.sheet,
+            {
+              paddingBottom: insets.bottom + 16,
+              // 시트가 화면을 넘지 않게 상한 → 닫기(X)가 항상 화면 안에 남는다.
+              maxHeight: screenH - insets.top - 24,
+            },
+          ]}
+        >
+          {/* 헤더(닫기)는 스크롤 밖 상단 고정 */}
           <View style={styles.header}>
             <Text style={styles.title}>{request ? TITLE[request.kind] : ''}</Text>
             <TouchableOpacity
@@ -237,6 +250,12 @@ export default function ShareCardModal({
             </TouchableOpacity>
           </View>
 
+          {/* 카드+스위처+버튼은 스크롤 영역 (작은 화면에서도 전부 도달 가능) */}
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
           <View style={styles.preview}>
             {!ready ? (
               <View style={styles.cardPlaceholder}>
@@ -325,6 +344,7 @@ export default function ShareCardModal({
               )}
             </TouchableOpacity>
           </View>
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -350,10 +370,13 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   title: { fontSize: 18, fontWeight: '800', color: colors.ink },
-  preview: { marginBottom: 20 },
+  // 스크롤 영역 — maxHeight 시트 안에서 줄어들며 스크롤 가능해야 하므로 flexShrink
+  scroll: { width: '100%', flexShrink: 1 },
+  scrollContent: { alignItems: 'center', paddingBottom: 4 },
+  preview: { marginBottom: 14 },
   cardPlaceholder: {
-    width: 320,
-    height: 568,
+    width: 300,
+    height: 533,
     borderRadius: 28,
     backgroundColor: colors.card,
     alignItems: 'center',

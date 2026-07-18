@@ -39,8 +39,8 @@ export type ShareVariant =
   | { kind: 'achievement'; achievement: AchievementShareData }
   | { kind: 'weekly'; weekly: WeeklyData };
 
-const CARD_WIDTH = 320;
-const CARD_HEIGHT = 568; // 9:16
+const CARD_WIDTH = 300;
+const CARD_HEIGHT = 533; // 9:16
 
 const fmtHours = (s: number): string => Math.floor(s / 3600).toLocaleString();
 const fmtHM = (s: number): string => {
