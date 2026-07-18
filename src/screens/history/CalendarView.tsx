@@ -26,6 +26,7 @@ import { getLocalToday, getMonthStart, getMonthEnd } from '../../lib/dateUtils';
 import { colors, getHeatColor, getHeatTextColor } from '../../theme/colors';
 import { usePremium } from '../../lib/premium';
 import PaywallModal from '../../components/PaywallModal';
+import TimeRangeWheel from '../../components/TimeRangeWheel';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -484,29 +485,12 @@ export default function CalendarView() {
               {isAddMode ? '업무 기록 추가' : '업무 시간 수정'}
             </Text>
 
-            <View style={styles.editTimeRow}>
-              <Text style={styles.editTimeLabel}>시작</Text>
-              <TextInput
-                style={styles.editTimeInput}
-                value={editStartTime}
-                onChangeText={setEditStartTime}
-                placeholder="09:00"
-                keyboardType="numbers-and-punctuation"
-                maxLength={5}
-              />
-            </View>
-
-            <View style={styles.editTimeRow}>
-              <Text style={styles.editTimeLabel}>종료</Text>
-              <TextInput
-                style={styles.editTimeInput}
-                value={editEndTime}
-                onChangeText={setEditEndTime}
-                placeholder="18:00"
-                keyboardType="numbers-and-punctuation"
-                maxLength={5}
-              />
-            </View>
+            <TimeRangeWheel
+              start={editStartTime}
+              end={editEndTime}
+              onChangeStart={setEditStartTime}
+              onChangeEnd={setEditEndTime}
+            />
 
             <Text style={styles.editDescriptionLabel}>무슨 업무를 했나요?</Text>
             <TextInput
@@ -767,30 +751,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
   },
-  editTimeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  editTimeLabel: {
-    width: 50,
-    fontSize: 15,
-    color: colors.ink,
-  },
-  editTimeInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: colors.ink,
-    textAlign: 'center',
-  },
   editDescriptionLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: colors.ink,
+    marginTop: 20,
     marginBottom: 8,
   },
   editDescriptionInput: {
