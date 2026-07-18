@@ -24,6 +24,13 @@ import { apiListSessions } from '../lib/api/sessions';
 import { formatDateString } from '../lib/dateUtils';
 import { colors } from '../theme/colors';
 import { track } from '../lib/analytics';
+import {
+  SHARE_THEMES,
+  SHARE_THEME_ORDER,
+  ShareThemeId,
+  DEFAULT_SHARE_THEME,
+} from '../theme/shareThemes';
+import { getShareThemeId, setShareThemeId } from '../lib/shareTheme';
 
 // 공유 요청 — summary는 모달이 직접 로드, 나머지는 데이터 주입받음.
 export type ShareRequest =
@@ -68,6 +75,17 @@ export default function ShareCardModal({
   const [loading, setLoading] = useState(false);
   const [sharing, setSharing] = useState(false);
   const insets = useSafeAreaInsets();
+
+  // 공유 카드 테마 (앰버 기본) — 저장값 로드, 스위처로 변경 시 즉시 반영 + 저장
+  const [themeId, setThemeId] = useState<ShareThemeId>(DEFAULT_SHARE_THEME);
+  const theme = SHARE_THEMES[themeId];
+  useEffect(() => {
+    getShareThemeId().then(setThemeId);
+  }, []);
+  const pickTheme = (id: ShareThemeId) => {
+    setThemeId(id);
+    void setShareThemeId(id);
+  };
 
   useEffect(() => {
     if (!request) {
@@ -225,8 +243,36 @@ export default function ShareCardModal({
                 <ActivityIndicator size="large" color={colors.primary} />
               </View>
             ) : (
-              <ShareCard ref={cardRef} variant={variant} />
+              <ShareCard ref={cardRef} variant={variant} theme={theme} />
             )}
+          </View>
+
+          {/* 테마 스위처 — 탭하면 위 카드에 즉시 반영 + 저장 */}
+          <View style={styles.themeRow}>
+            {SHARE_THEME_ORDER.map((id) => {
+              const t = SHARE_THEMES[id];
+              const active = id === themeId;
+              return (
+                <TouchableOpacity
+                  key={id}
+                  style={[styles.themeChip, active && styles.themeChipActive]}
+                  onPress={() => pickTheme(id)}
+                  activeOpacity={0.8}
+                >
+                  <View
+                    style={[styles.themeDot, { backgroundColor: t.swatch }]}
+                  />
+                  <Text
+                    style={[
+                      styles.themeChipText,
+                      active && styles.themeChipTextActive,
+                    ]}
+                  >
+                    {t.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           <TouchableOpacity
@@ -313,6 +359,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  themeRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  themeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    height: 38,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: colors.line,
+    backgroundColor: colors.card,
+  },
+  themeChipActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryFaint,
+  },
+  themeDot: { width: 14, height: 14, borderRadius: 7 },
+  themeChipText: { fontSize: 14, fontWeight: '700', color: colors.inkSub },
+  themeChipTextActive: { color: colors.primary },
   shareBtn: {
     flexDirection: 'row',
     alignItems: 'center',
