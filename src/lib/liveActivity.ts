@@ -22,6 +22,22 @@ const formatStartTime = (date: Date): string => {
 
 // 15시간 기준 진행률 (최대 1)
 const DAILY_GOAL_SECONDS = 15 * 3600;
+const LIVE_ACTIVITY_IMAGE_NAME = 'filltime-mark';
+const LIVE_ACTIVITY_ISLAND_IMAGE_NAME = 'filltime-mark-island';
+
+type BrandedLiveActivityState = Omit<
+  LiveActivity.LiveActivityState,
+  'imageName' | 'dynamicIslandImageName'
+>;
+
+// 업데이트 상태가 전체 교체돼도 브랜드 마크가 사라지지 않게 항상 함께 전달한다.
+const withBrandImages = (
+  state: BrandedLiveActivityState
+): LiveActivity.LiveActivityState => ({
+  ...state,
+  imageName: LIVE_ACTIVITY_IMAGE_NAME,
+  dynamicIslandImageName: LIVE_ACTIVITY_ISLAND_IMAGE_NAME,
+});
 
 /**
  * Live Activity 시작
@@ -38,20 +54,24 @@ export async function startLiveActivity(
     sessionStartTime = startTime;
     const progress = Math.min(todayTotal / DAILY_GOAL_SECONDS, 1);
 
-    const state = {
+    const state = withBrandImages({
       title: `${formatStartTime(startTime)} 시작`,
       subtitle: `현재 세션: ${formatTime(0)}`,
       progressBar: {
         progress: progress,
       },
-    };
+    });
 
-    const config = {
+    const config: LiveActivity.LiveActivityConfig = {
       backgroundColor: '#1C1C1E',
       titleColor: '#FFFFFF',
       subtitleColor: '#8E8E93',
       progressViewTint: '#34C759',
       timerType: 'digital' as const,
+      imagePosition: 'left',
+      imageAlign: 'center',
+      imageSize: { width: 36, height: 36 },
+      contentFit: 'contain',
     };
 
     const activityId = LiveActivity.startActivity(state, config);
@@ -80,13 +100,13 @@ export async function updateLiveActivity(
     const progress = Math.min(totalSeconds / DAILY_GOAL_SECONDS, 1);
     const startTimeStr = sessionStartTime ? formatStartTime(sessionStartTime) : '--:--';
 
-    const state = {
+    const state = withBrandImages({
       title: `${startTimeStr} 시작`,
       subtitle: `현재 세션: ${formatTime(elapsedSeconds)}`,
       progressBar: {
         progress: progress,
       },
-    };
+    });
 
     LiveActivity.updateActivity(currentActivityId, state);
     return true;
@@ -103,10 +123,10 @@ export async function endLiveActivity(): Promise<boolean> {
   if (Platform.OS !== 'ios' || !currentActivityId) return false;
 
   try {
-    const finalState = {
+    const finalState = withBrandImages({
       title: '업무 종료',
       subtitle: '수고하셨습니다',
-    };
+    });
     LiveActivity.stopActivity(currentActivityId, finalState);
     console.log('Live Activity ended:', currentActivityId);
     currentActivityId = null;
