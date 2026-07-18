@@ -2,7 +2,7 @@
   "expo": {
     "name": "필타임",
     "slug": "worktimer-expo",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -49,6 +49,14 @@
         "@bacons/apple-targets",
         {
           "appleTeamId": "9Q26686S8R"
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "공유 카드를 사진에서 불러올 때 사용합니다.",
+          "savePhotosPermission": "필타임 공유 카드를 사진 앱에 저장합니다.",
+          "isAccessMediaLocationEnabled": false
         }
       ]
     ],

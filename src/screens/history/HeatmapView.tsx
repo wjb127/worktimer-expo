@@ -39,6 +39,10 @@ export default function HeatmapView() {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [showYearPicker, setShowYearPicker] = useState(false);
+  // 스크롤 방향: 세로(2주씩 아래로) / 가로(주=열, 깃허브식 좌우 스크롤)
+  const [orientation, setOrientation] = useState<'vertical' | 'horizontal'>(
+    'vertical',
+  );
   const [yearData, setYearData] = useState<Record<string, number>>({});
   const [totalDuration, setTotalDuration] = useState(0);
   const [totalDays, setTotalDays] = useState(0);
@@ -181,8 +185,24 @@ export default function HeatmapView() {
 
   return (
     <View style={styles.container}>
-      {/* 연도 선택 드롭다운 */}
+      {/* 연도 선택 + 방향 토글 */}
       <View style={styles.yearSelectorContainer}>
+        <TouchableOpacity
+          style={styles.orientBtn}
+          onPress={() =>
+            setOrientation((o) => (o === 'vertical' ? 'horizontal' : 'vertical'))
+          }
+          accessibilityLabel="히트맵 방향 전환"
+        >
+          <Ionicons
+            name={orientation === 'vertical' ? 'swap-horizontal' : 'swap-vertical'}
+            size={18}
+            color={colors.primary}
+          />
+          <Text style={styles.orientText}>
+            {orientation === 'vertical' ? '가로' : '세로'}
+          </Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={styles.yearSelector}
           onPress={() => setShowYearPicker(true)}
@@ -215,44 +235,83 @@ export default function HeatmapView() {
         showsVerticalScrollIndicator={true}
       >
         <View style={styles.heatmapContainer}>
-          {/* 요일 헤더 - 2주분 */}
-          <View style={styles.weekdayHeader}>
-            <View style={styles.monthLabelSpace} />
-            {WEEKDAYS.map((day) => (
-              <Text key={`w1-${day}`} style={styles.weekdayLabel}>
-                {day}
-              </Text>
-            ))}
-            <View style={styles.weekGap} />
-            {WEEKDAYS.map((day) => (
-              <Text key={`w2-${day}`} style={styles.weekdayLabel}>
-                {day}
-              </Text>
-            ))}
-          </View>
+          {orientation === 'vertical' ? (
+            <>
+              {/* 요일 헤더 - 2주분 */}
+              <View style={styles.weekdayHeader}>
+                <View style={styles.monthLabelSpace} />
+                {WEEKDAYS.map((day) => (
+                  <Text key={`w1-${day}`} style={styles.weekdayLabel}>
+                    {day}
+                  </Text>
+                ))}
+                <View style={styles.weekGap} />
+                {WEEKDAYS.map((day) => (
+                  <Text key={`w2-${day}`} style={styles.weekdayLabel}>
+                    {day}
+                  </Text>
+                ))}
+              </View>
 
-          {/* 히트맵 그리드 - 2주씩 */}
-          <View style={styles.heatmapGrid}>
-            {weekPairs.map((pair) => {
-              const week1Index = pair.pairIndex * 2;
-              const week2Index = pair.pairIndex * 2 + 1;
-              const monthLabel1 = monthLabels[week1Index];
-              const monthLabel2 = monthLabels[week2Index];
+              {/* 세로 그리드 - 2주씩 아래로 */}
+              <View style={styles.heatmapGrid}>
+                {weekPairs.map((pair) => {
+                  const week1Index = pair.pairIndex * 2;
+                  const week2Index = pair.pairIndex * 2 + 1;
+                  const monthLabel1 = monthLabels[week1Index];
+                  const monthLabel2 = monthLabels[week2Index];
 
-              return (
-                <View key={`pair-${pair.pairIndex}`} style={styles.weekPairRow}>
-                  <View style={styles.monthLabelContainer}>
-                    <Text style={styles.monthLabel}>
-                      {monthLabel1 || monthLabel2 || ''}
-                    </Text>
-                  </View>
-                  {renderWeek(pair.week1, week1Index)}
-                  <View style={styles.weekGap} />
-                  {renderWeek(pair.week2, week2Index)}
+                  return (
+                    <View key={`pair-${pair.pairIndex}`} style={styles.weekPairRow}>
+                      <View style={styles.monthLabelContainer}>
+                        <Text style={styles.monthLabel}>
+                          {monthLabel1 || monthLabel2 || ''}
+                        </Text>
+                      </View>
+                      {renderWeek(pair.week1, week1Index)}
+                      <View style={styles.weekGap} />
+                      {renderWeek(pair.week2, week2Index)}
+                    </View>
+                  );
+                })}
+              </View>
+            </>
+          ) : (
+            /* 가로 그리드 - 주=열, 좌우 스크롤 (깃허브식) */
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator
+              style={styles.hScroll}
+            >
+              <View>
+                <View style={styles.hMonthRow}>
+                  {weeks.map((_, wi) => (
+                    <View key={`hm-${wi}`} style={styles.hMonthCell}>
+                      <Text style={styles.monthLabel} numberOfLines={1}>
+                        {monthLabels[wi] || ''}
+                      </Text>
+                    </View>
+                  ))}
                 </View>
-              );
-            })}
-          </View>
+                <View style={styles.hGrid}>
+                  {weeks.map((week, wi) => (
+                    <View key={`hc-${wi}`} style={styles.hColumn}>
+                      {week.map((day) => (
+                        <View
+                          key={day.date}
+                          style={[
+                            styles.dayCell,
+                            { backgroundColor: getColor(day.duration) },
+                            day.duration > 0 && styles.dayCellRaised,
+                          ]}
+                        />
+                      ))}
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
+          )}
 
           <View style={styles.legend}>
             <Text style={styles.legendText}>적음</Text>
@@ -330,9 +389,24 @@ const styles = StyleSheet.create({
   },
   yearSelectorContainer: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingTop: 12,
+  },
+  orientBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: colors.primaryFaint,
+    borderRadius: 8,
+  },
+  orientText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.primary,
   },
   yearSelector: {
     flexDirection: 'row',
@@ -419,8 +493,13 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 4,
-    marginHorizontal: 1,
+    margin: 1,
   },
+  hScroll: { marginBottom: 4 },
+  hMonthRow: { flexDirection: 'row', marginBottom: 2 },
+  hMonthCell: { width: 18, overflow: 'visible' },
+  hGrid: { flexDirection: 'row' },
+  hColumn: { flexDirection: 'column' },
   // 떠오른 타일 효과 — 컬러 드롭섀도 + 상단 하이라이트 베벨 (채워진 셀 전용)
   dayCellRaised: {
     shadowColor: '#1E293B',

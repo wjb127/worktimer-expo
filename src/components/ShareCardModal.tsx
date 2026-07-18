@@ -6,11 +6,14 @@ import {
   Modal,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
+import * as Clipboard from 'expo-clipboard';
+import * as MediaLibrary from 'expo-media-library';
 import ShareCard, {
   ShareVariant,
   AchievementShareData,
@@ -50,7 +53,7 @@ function buildWeeks(byDate: Record<string, number>): number[][] {
 const TITLE: Record<ShareRequest['kind'], string> = {
   summary: '기록 공유',
   achievement: '업적 공유',
-  weekly: '주간 리캡 공유',
+  weekly: '리캡 공유',
 };
 
 export default function ShareCardModal({
@@ -120,8 +123,12 @@ export default function ShareCardModal({
     };
   }, [request]);
 
+  // 진행 중 액션(공유/복사/저장) 하나만 — 중복 캡처 방지
+  const [busy, setBusy] = useState<null | 'share' | 'copy' | 'save'>(null);
+
   const handleShare = async () => {
-    if (!cardRef.current || sharing || !variant) return;
+    if (!cardRef.current || busy || !variant) return;
+    setBusy('share');
     setSharing(true);
     try {
       const uri = await captureRef(cardRef, {
@@ -134,13 +141,60 @@ export default function ShareCardModal({
           mimeType: 'image/png',
           dialogTitle: '내 기록 공유하기',
         });
-        // 네이티브 공유 성공 후 계측
         track('share_card_shared', { kind: variant.kind });
       }
     } catch (e) {
       console.error('share error:', e);
     } finally {
       setSharing(false);
+      setBusy(null);
+    }
+  };
+
+  // 이미지 복사 — 카드를 base64 PNG로 캡처해 클립보드에(붙여넣기로 어디든 첨부)
+  const handleCopyImage = async () => {
+    if (!cardRef.current || busy || !variant) return;
+    setBusy('copy');
+    try {
+      const base64 = await captureRef(cardRef, {
+        format: 'png',
+        quality: 1,
+        result: 'base64',
+      });
+      await Clipboard.setImageAsync(base64);
+      track('share_card_copied', { kind: variant.kind });
+      Alert.alert('복사됨', '카드 이미지를 클립보드에 복사했어요.');
+    } catch (e) {
+      console.error('copy image error:', e);
+      Alert.alert('오류', '이미지 복사에 실패했어요.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  // PNG 저장 — 사진 앱에 저장(추가 권한 필요)
+  const handleSaveImage = async () => {
+    if (!cardRef.current || busy || !variant) return;
+    setBusy('save');
+    try {
+      const perm = await MediaLibrary.requestPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert('권한 필요', '사진 저장 권한을 허용해주세요.');
+        return;
+      }
+      const uri = await captureRef(cardRef, {
+        format: 'png',
+        quality: 1,
+        result: 'tmpfile',
+      });
+      await MediaLibrary.saveToLibraryAsync(uri);
+      track('share_card_saved', { kind: variant.kind });
+      Alert.alert('저장됨', '사진 앱에 카드를 저장했어요.');
+    } catch (e) {
+      console.error('save image error:', e);
+      Alert.alert('오류', '이미지 저장에 실패했어요.');
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -178,9 +232,9 @@ export default function ShareCardModal({
           <TouchableOpacity
             style={[styles.shareBtn, !ready && styles.shareBtnDisabled]}
             onPress={handleShare}
-            disabled={!ready || sharing}
+            disabled={!ready || !!busy}
           >
-            {sharing ? (
+            {busy === 'share' ? (
               <ActivityIndicator color={colors.white} />
             ) : (
               <>
@@ -189,6 +243,42 @@ export default function ShareCardModal({
               </>
             )}
           </TouchableOpacity>
+
+          {/* 이미지 복사 / PNG 저장 */}
+          <View style={styles.secondaryRow}>
+            <TouchableOpacity
+              style={[styles.secondaryBtn, !ready && styles.shareBtnDisabled]}
+              onPress={handleCopyImage}
+              disabled={!ready || !!busy}
+            >
+              {busy === 'copy' ? (
+                <ActivityIndicator color={colors.primary} />
+              ) : (
+                <>
+                  <Ionicons name="copy-outline" size={18} color={colors.primary} />
+                  <Text style={styles.secondaryText}>이미지 복사</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.secondaryBtn, !ready && styles.shareBtnDisabled]}
+              onPress={handleSaveImage}
+              disabled={!ready || !!busy}
+            >
+              {busy === 'save' ? (
+                <ActivityIndicator color={colors.primary} />
+              ) : (
+                <>
+                  <Ionicons
+                    name="download-outline"
+                    size={18}
+                    color={colors.primary}
+                  />
+                  <Text style={styles.secondaryText}>PNG 저장</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Modal>
@@ -233,6 +323,24 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: colors.primary,
   },
-  shareBtnDisabled: { backgroundColor: colors.primaryLight },
+  shareBtnDisabled: { backgroundColor: colors.primaryLight, opacity: 0.6 },
   shareText: { color: colors.white, fontSize: 16, fontWeight: '700' },
+  secondaryRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+  },
+  secondaryBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 46,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: colors.primaryFaint,
+    backgroundColor: colors.primaryFaint,
+  },
+  secondaryText: { color: colors.primary, fontSize: 14, fontWeight: '700' },
 });

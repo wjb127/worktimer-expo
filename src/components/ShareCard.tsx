@@ -21,13 +21,17 @@ export interface AchievementShareData {
   categoryLabel: string;
 }
 
+// 기간 리캡(일별/주별/월별 공용) — 통계 탭에서 선택한 기간에 따라 카드가 바뀐다.
 export interface WeeklyData {
-  weekLabel: string; // "6/22 ~ 6/28"
+  weekLabel: string; // 범위 라벨 (예: "최근 7일" / "6/22 ~ 6/28")
+  modeLabel?: string; // 히어로 접두 (예: "일별"/"주별"/"월별"). 없으면 "이번 주"
   totalSeconds: number;
   avgSeconds: number;
-  sessionCount: number;
-  topDayLabel: string; // "수요일"
-  days: { label: string; seconds: number }[]; // 7일
+  activeCount: number; // 기록 있는 버킷 수
+  activeUnit: string; // '일'/'주'/'달'
+  topLabel: string; // 가장 몰입한 버킷 라벨
+  topUnit: string; // '날'/'주'/'달'
+  days: { label: string; seconds: number }[]; // 버킷 막대
 }
 
 export type ShareVariant =
@@ -132,7 +136,9 @@ function WeeklyBody({ data }: { data: WeeklyData }) {
   return (
     <>
       <View style={styles.heroBlock}>
-        <Text style={styles.heroLabel}>이번 주 · {data.weekLabel}</Text>
+        <Text style={styles.heroLabel}>
+          {data.modeLabel ?? '이번 주'} · {data.weekLabel}
+        </Text>
         <View style={styles.heroValueRow}>
           <Text style={styles.heroValue}>{fmtHours(data.totalSeconds)}</Text>
           <Text style={styles.heroUnit}>시간</Text>
@@ -141,12 +147,15 @@ function WeeklyBody({ data }: { data: WeeklyData }) {
       <View style={styles.statRow}>
         <View style={styles.statItem}>
           <Text style={styles.statValue}>{fmtHM(data.avgSeconds)}</Text>
-          <Text style={styles.statLabel}>일 평균</Text>
+          <Text style={styles.statLabel}>평균</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{data.sessionCount}회</Text>
-          <Text style={styles.statLabel}>세션</Text>
+          <Text style={styles.statValue}>
+            {data.activeCount}
+            {data.activeUnit}
+          </Text>
+          <Text style={styles.statLabel}>기록</Text>
         </View>
       </View>
       {/* 요일별 막대 */}
@@ -165,7 +174,9 @@ function WeeklyBody({ data }: { data: WeeklyData }) {
           </View>
         ))}
       </View>
-      <Text style={styles.weeklyTop}>가장 몰입한 날 · {data.topDayLabel}</Text>
+      <Text style={styles.weeklyTop}>
+        가장 몰입한 {data.topUnit} · {data.topLabel}
+      </Text>
     </>
   );
 }

@@ -30,6 +30,7 @@ import {
 } from '../lib/notifications';
 import { useAuth } from '../lib/auth/AuthContext';
 import { apiFetch } from '../lib/api/client';
+import { getVersionInfo } from '../lib/appVersion';
 import {
   apiGetMe,
   apiGetStats,
@@ -163,6 +164,7 @@ export default function SettingsScreen() {
   };
 
   // ── 프로필 섹션 상태 ──
+  const versionInfo = getVersionInfo();
   const [me, setMe] = useState<MeResponse | null>(null);
   const [stats, setStats] = useState<MeStats | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -666,7 +668,13 @@ export default function SettingsScreen() {
         <Text style={styles.sectionTitle}>정보</Text>
         <View style={styles.settingItem}>
           <Text style={styles.settingLabel}>버전</Text>
-          <Text style={styles.versionText}>1.0.0</Text>
+          <Text style={styles.versionText}>
+            {versionInfo.version} ({versionInfo.build})
+          </Text>
+        </View>
+        <View style={styles.settingItem}>
+          <Text style={styles.settingLabel}>최근 업데이트</Text>
+          <Text style={styles.versionText}>{versionInfo.updatedLabel}</Text>
         </View>
       </View>
 

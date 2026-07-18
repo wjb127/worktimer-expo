@@ -53,60 +53,50 @@ export default function StatsScreen() {
   const [shareReq, setShareReq] = useState<ShareRequest | null>(null);
   const [recapLoading, setRecapLoading] = useState(false);
 
-  // 이번 주(일~토) 세션 집계 → 주간 리캡 카드 데이터
-  const buildWeeklyRecap = async (): Promise<WeeklyData> => {
-    const today = new Date();
-    const sun = new Date(today);
-    sun.setDate(today.getDate() - today.getDay());
-    const sat = new Date(sun);
-    sat.setDate(sun.getDate() + 6);
+  // 리캡 카드 데이터 — 현재 보고 있는 기간(일/주/월)의 차트 버킷을 그대로 반영.
+  // 통계 탭에서 일별/주별/월별을 바꾸면 공유 카드도 그 기간으로 바뀐다.
+  const MODE_META: Record<
+    ViewMode,
+    { label: string; topUnit: string; activeUnit: string }
+  > = {
+    daily: { label: '일별', topUnit: '날', activeUnit: '일' },
+    weekly: { label: '주별', topUnit: '주', activeUnit: '주' },
+    monthly: { label: '월별', topUnit: '달', activeUnit: '개월' },
+  };
 
-    const sessions = (
-      await apiListSessions(formatDateString(sun), formatDateString(sat))
-    ).filter((s) => s.end_time !== null);
-
-    const byDate: Record<string, number> = {};
-    for (const s of sessions) {
-      byDate[s.date] = (byDate[s.date] ?? 0) + (s.duration || 0);
-    }
-
-    const labels = ['일', '월', '화', '수', '목', '금', '토'];
-    const days = labels.map((label, i) => {
-      const d = new Date(sun);
-      d.setDate(sun.getDate() + i);
-      return { label, seconds: byDate[formatDateString(d)] ?? 0 };
-    });
-
-    const total = days.reduce((a, d) => a + d.seconds, 0);
-    const activeDays = days.filter((d) => d.seconds > 0).length;
-    const avg = activeDays > 0 ? Math.floor(total / activeDays) : 0;
+  const buildRecap = (): WeeklyData => {
+    const bars = chartData.map((c) => ({ label: c.label, seconds: c.value }));
+    const total = bars.reduce((a, b) => a + b.seconds, 0);
+    const active = bars.filter((b) => b.seconds > 0).length;
+    const avg = active > 0 ? Math.floor(total / active) : 0;
     let topIdx = 0;
-    days.forEach((d, i) => {
-      if (d.seconds > days[topIdx].seconds) topIdx = i;
+    bars.forEach((b, i) => {
+      if (b.seconds > (bars[topIdx]?.seconds ?? 0)) topIdx = i;
     });
-    const topDayLabel = days[topIdx].seconds > 0 ? `${labels[topIdx]}요일` : '아직 없음';
-    const weekLabel = `${sun.getMonth() + 1}/${sun.getDate()} ~ ${sat.getMonth() + 1}/${sat.getDate()}`;
-
+    const m = MODE_META[viewMode];
+    const range =
+      bars.length > 0
+        ? `${bars[0].label} ~ ${bars[bars.length - 1].label}`
+        : '기록 없음';
     return {
-      weekLabel,
+      weekLabel: range,
+      modeLabel: m.label,
       totalSeconds: total,
       avgSeconds: avg,
-      sessionCount: sessions.length,
-      topDayLabel,
-      days,
+      activeCount: active,
+      activeUnit: m.activeUnit,
+      topLabel: bars.length > 0 && bars[topIdx].seconds > 0 ? bars[topIdx].label : '아직 없음',
+      topUnit: m.topUnit,
+      days: bars,
     };
   };
 
-  const handleRecap = async () => {
-    if (recapLoading) return;
-    setRecapLoading(true);
+  const handleRecap = () => {
+    if (recapLoading || chartData.length === 0) return;
     try {
-      const weekly = await buildWeeklyRecap();
-      setShareReq({ kind: 'weekly', weekly });
+      setShareReq({ kind: 'weekly', weekly: buildRecap() });
     } catch (e) {
-      console.error('weekly recap error:', e);
-    } finally {
-      setRecapLoading(false);
+      console.error('recap error:', e);
     }
   };
 
@@ -313,7 +303,9 @@ export default function StatsScreen() {
       >
         <Ionicons name="share-social" size={16} color={colors.white} />
         <Text style={styles.recapButtonText}>
-          {recapLoading ? '준비 중...' : '이번주 리캡 공유'}
+          {recapLoading
+            ? '준비 중...'
+            : `${MODE_META[viewMode].label} 리캡 공유`}
         </Text>
       </TouchableOpacity>
 

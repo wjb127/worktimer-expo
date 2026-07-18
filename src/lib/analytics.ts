@@ -13,6 +13,8 @@ export type AnalyticsEvent =
   | 'session_end'
   | 'share_card_open'
   | 'share_card_shared'
+  | 'share_card_copied'
+  | 'share_card_saved'
   | 'milestone_achieved'
   | 'premium_interest_click'
   | 'premium_purchase_success'
