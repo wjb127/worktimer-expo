@@ -44,6 +44,17 @@
 4. **v1.0.1 App Store 제출**: production 프로필 빌드(preview는 ad-hoc라 제출불가) + 구독 심사스샷(25번) → 인앱구매 심사 동반
 5. diary(조각일기) 재개 — 별도 세션 권장
 
+## 자정 넘긴 세션 버그 수정 (07-19) — ✅ 배포됨
+증상: 22:25 시작해 자정 넘긴 세션이 **시작일에 통째 귀속** → 캘린더 타임라인이
+`getHours()*60+분`으로 블록 위치잡는데 end(00:30)분<start(22:25)분이라 **어느 슬롯에도 안 그려져 블록 소실**,
+요약은 "22:25-00:30" 뒤집힘, **오늘 0**. + `cleanupOrphaned`가 excludeId 무시 → 자정 넘겨 도는 세션 오종료.
+수정(옛 `~/Project/work-timer` 백엔드 `packages/web/lib/date-overlap.ts` 접근 이식):
+- 백엔드 `436c760`: `src/worktimer/date-overlap.ts`(KST 경계 `splitByKstMidnight` — 세션을 날짜별 분할, 각 세션 하루 안에. 자정클립 23:59:59, end=00:00이면 또 소실되므로) + `end()` 자정 넘으면 시작일 구간 종료+이후날 신규생성 + `cleanupOrphaned(excludeId)` 진행중 오종료 방지 & **레거시 크로스미드나잇 종료행 앱 열 때 자가치유(최근35일)**
+- 앱 `60f72c1`: `apiCleanupOrphaned(today, excludeId)` + session.ts가 ongoing.id 실제 전달
+- ★핵심원칙: **이 앱은 "세션=하루 안" 전제**(캘린더 렌더·편집이 selectedDate+HH:MM로 재구성, end<=start 검증). 그래서 overlap 가상분할(옛 웹앱 방식)이 아니라 **물리적 분할**로 각 세션이 하루에 들어오게. DB 스키마 변경 없음.
+- 검증 유닛8·e2e4(end분할·치유·excludeId)·기존세션 회귀없음. prod 배포+OTA(runtime c694be81). 기존 깨진세션은 앱 열면 자동복구.
+- ★멀티세션 배포 레시피: diary 세션이 백엔드 워킹트리에 대량 WIP → stash 대신 **git worktree(clean HEAD)로 배포**해 그 세션 무손상(km-216 진화판). `git worktree add /tmp/x <sha>` + node_modules 심링크 + deploy.sh → worktree remove
+
 ## 커밋 상태
 - worktimer-expo: `4cce8ad`까지 푸시됨(master 동기화). memory 23·26·27·28·29 포함
 - ss-042: `de30261`까지 푸시·배포됨
