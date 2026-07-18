@@ -15,7 +15,7 @@
 - Apple Team `9Q26686S8R` · Expo owner `@gawall` · EAS projectId `31c0b3a1-6f4a-4b05-ad00-89924a249f68`
 - DB: **VPS 로컬 PostgreSQL 16**(127.0.0.1, 07-16 Supabase에서 이관 → 20번) / 앱은 NestJS API 경유 / 백업 매일 KST 04:10
 - 랜딩: `ss-042-filltime-landing` → filltime.vercel.app (개인정보처리방침/약관, 사업자 코들라스)
-- 진행(2026-07-18): **UI 스프린트 대량**(알림페이지·할일3탭·롤링피커·명예의전당·잔디입체감·공유복사저장·히트맵가로세로·통계리캡기간·버전자동) + **OTA(EAS Update) 설정** + **Live Activity 잠금화면 마크** + **브랜드색 밝은스카이(A)** + **ASO메타 API반영** / **압축재개는 29번 먼저** / 빌드 `6442ede2` 설치·검증 대기 / 다음=동적배지URL
+- 진행(2026-07-18): **UI 스프린트 대량**(알림페이지·할일3탭·롤링피커·명예의전당·잔디입체감·공유복사저장·히트맵가로세로·통계리캡기간·버전자동) + **OTA(EAS Update) 설정** + **Live Activity 잠금화면 마크** + **브랜드색 밝은스카이(A)** + **ASO메타 API반영** + **✅동적 배지 URL 배포**(백엔드 e9bffc3 GET /badge/:handle SVG·PATCH /me/profile opt-in 라이브 + 앱 a82479f 설정 공개배지섹션 OTA) / **압축재개는 29번 먼저** / 빌드 `6442ede2` 설치·검증 대기(배지UI는 OTA수신)
 - 진행(2026-07-17): 멀티테넌시 v1.2 배포(23) + 랜딩 전면개편·배포 + 루트app/ 404복구 / 24번
 
 ## 파일 인덱스

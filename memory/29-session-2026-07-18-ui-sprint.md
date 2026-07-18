@@ -38,8 +38,8 @@
 - 빌드 명령(비대화형, 크레덴셜 캐시됨): `export EXPO_ASC_API_KEY_PATH=$HOME/.config/eas-submit/AuthKey_NWM428GNG4.p8; export EXPO_ASC_KEY_ID=NWM428GNG4; export EXPO_ASC_ISSUER_ID=f8a8b51b-e563-4cc0-a0e7-91f387396c25; export EXPO_APPLE_TEAM_TYPE=INDIVIDUAL; npx eas-cli build -p ios --profile preview` (★export로 각줄, inline `\`줄바꿈은 붙여넣기 깨짐)
 
 ## 다음 작업 (재개 우선순위)
-1. **`6442ede2` 실기기 설치 + 검증**(사용자): 베스트탭·히트맵토글·잔디입체감·공유복사저장·통계리캡기간·버전표시·Live Activity마크·다이나믹아일랜드(실기기)
-2. **동적 배지 URL**(다음 바이럴 증분, 커뮤니티 논의 결론): codeatlas API `GET /badge/:handle` SVG렌더 + 공개프로필 옵트인. 개발자타겟 GitHub README 수동확산. 백엔드 별도배치
+1. **`6442ede2` 실기기 설치 + 검증**(사용자): 베스트탭·히트맵토글·잔디입체감·공유복사저장·통계리캡기간·버전표시·Live Activity마크·다이나믹아일랜드(실기기) **+ 공개배지(설정탭, OTA수신)**
+2. ~~**동적 배지 URL**~~ ✅ **완료·배포(07-18)**: 백엔드 `e9bffc3`(GET /badge/:handle SVG + PATCH /me/profile opt-in, users.handle/public_profile 컬럼, 마이그레이션 20260718150000 prod적용, @SharedScope 공개컨트롤러, PII미노출, 5분캐시, 미존재/비공개 200 placeholder) + 앱 `a82479f`(설정 공개배지 섹션: 핸들·공개토글·URL/README복사, OTA preview 배포 runtime c694be81). 검증 유닛8·e2e10, 라이브 curl 확인. 배지 URL=`api.codeatlas.kr/badge/<handle>`. **테스트: 앱 설정>공개배지>핸들저장>공개토글>URL열기**. ★다음: 브랜디드 URL(filltime.app/badge/x 리라이트)·앱내 배지 미리보기·명예의전당에 배지연동
 3. **커뮤니티/순위는 보류**: 리텐션(D7) 확인 후 → 친구스트릭 → 범위좁은순위(친구/코호트, 전세계X). 명예의전당이 지금의 자기순위 대체
 4. **v1.0.1 App Store 제출**: production 프로필 빌드(preview는 ad-hoc라 제출불가) + 구독 심사스샷(25번) → 인앱구매 심사 동반
 5. diary(조각일기) 재개 — 별도 세션 권장
