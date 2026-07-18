@@ -6,15 +6,20 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { apiGetBanners } from '../lib/api/config';
 import { colors } from '../theme/colors';
 import { isBannerRead, subscribeReadChange } from '../lib/announcements';
+import {
+  getInboxUnreadCount,
+  subscribeInboxChange,
+} from '../lib/notificationInbox';
 import type { RootStackParamList } from '../navigation/types';
 
 // 헤더 우측 공지 종(bell) 아이콘 — 탭하면 알림 모음 페이지로 이동(상세 모달 → 페이지 전환).
-// 미확인 공지가 하나라도 있으면 빨간 점 배지. 읽음 상태는 announcements.ts가 공유.
+// 미확인 공지 또는 수신 알림이 하나라도 있으면 빨간 점 배지.
 
 export default function AnnouncementBell() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [bannerIds, setBannerIds] = useState<string[]>([]);
+  const [inboxUnread, setInboxUnread] = useState(0);
   // 알림 페이지에서 읽음 처리되면 리렌더해 배지를 다시 계산
   const [, setReadTick] = useState(0);
 
@@ -25,14 +30,23 @@ export default function AnnouncementBell() {
         if (alive) setBannerIds(list.map((b) => b.id));
       })
       .catch(() => {});
+    const refreshInbox = () => {
+      getInboxUnreadCount().then((n) => {
+        if (alive) setInboxUnread(n);
+      });
+    };
+    refreshInbox();
     const unsubscribe = subscribeReadChange(() => setReadTick((n) => n + 1));
+    const unsubInbox = subscribeInboxChange(refreshInbox);
     return () => {
       alive = false;
       unsubscribe();
+      unsubInbox();
     };
   }, []);
 
-  const showDot = bannerIds.some((id) => !isBannerRead(id));
+  const showDot =
+    inboxUnread > 0 || bannerIds.some((id) => !isBannerRead(id));
 
   return (
     <TouchableOpacity

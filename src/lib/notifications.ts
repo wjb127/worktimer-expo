@@ -7,6 +7,7 @@ import {
   apiRegisterPushToken,
   apiUnregisterPushToken,
 } from './api/profile';
+import { addToInbox } from './notificationInbox';
 
 // 알림 핸들러 설정
 Notifications.setNotificationHandler({
@@ -401,4 +402,46 @@ export async function unregisterPushToken(): Promise<void> {
     // 무시 — 오프라인이어도 로그아웃은 계속
   }
   await clearPushTokenCache();
+}
+
+// ── 수신 알림 인박스 연동 ──
+// 발생한 알림을 알림탭에 누적하기 위한 리스너/동기화. App.tsx에서 1회 설정.
+
+function contentOf(req: Notifications.NotificationRequest) {
+  const c = req.content;
+  return {
+    id: req.identifier,
+    title: c.title ?? '알림',
+    body: c.body ?? '',
+  };
+}
+
+// 포그라운드 수신 + 탭(응답) 리스너 설정. cleanup 반환.
+export function setupNotificationInbox(): () => void {
+  const recSub = Notifications.addNotificationReceivedListener((n) => {
+    void addToInbox({ ...contentOf(n.request), receivedAt: Date.now() });
+  });
+  const respSub = Notifications.addNotificationResponseReceivedListener((r) => {
+    void addToInbox({
+      ...contentOf(r.notification.request),
+      receivedAt: Date.now(),
+    });
+  });
+  return () => {
+    recSub.remove();
+    respSub.remove();
+  };
+}
+
+// 트레이(표시 중)에 남은 알림을 인박스에 반영 — 백그라운드/종료 중 울린 것 포착.
+// 앱 켜질 때/포그라운드 복귀 때 호출. 중복 id는 인박스가 무시.
+export async function syncPresentedToInbox(): Promise<void> {
+  try {
+    const presented = await Notifications.getPresentedNotificationsAsync();
+    for (const n of presented) {
+      await addToInbox({ ...contentOf(n.request), receivedAt: Date.now() });
+    }
+  } catch {
+    // 무시
+  }
 }

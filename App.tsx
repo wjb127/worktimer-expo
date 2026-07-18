@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, AppState, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -13,6 +13,7 @@ import {
   SettingsScreen,
   OnboardingScreen,
   NotificationsScreen,
+  DashboardScreen,
 } from './src/screens';
 import type { RootStackParamList } from './src/navigation/types';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -24,7 +25,12 @@ import { colors } from './src/theme/colors';
 import { initAnalytics, track } from './src/lib/analytics';
 import { initPurchases } from './src/lib/purchases';
 import { getOnboardingSeen } from './src/lib/onboarding';
-import { registerForPushNotifications } from './src/lib/notifications';
+import {
+  registerForPushNotifications,
+  setupNotificationInbox,
+  syncPresentedToInbox,
+} from './src/lib/notifications';
+import { checkAndApplyUpdate } from './src/lib/otaUpdates';
 import { publishWidgetData } from './src/lib/widget';
 import { initErrorTracking } from './src/lib/errorTracking';
 import * as Sentry from '@sentry/react-native';
@@ -124,6 +130,18 @@ function AppNavigator() {
             headerBackButtonDisplayMode: 'minimal',
           }}
         />
+        <Stack.Screen
+          name="대시보드"
+          component={DashboardScreen}
+          options={{
+            title: '상세 분석',
+            headerTintColor: colors.primary,
+            headerTitleStyle: { color: colors.ink, fontWeight: '700' },
+            headerStyle: { backgroundColor: colors.white },
+            headerShadowVisible: false,
+            headerBackButtonDisplayMode: 'minimal',
+          }}
+        />
       </Stack.Navigator>
       <StatusBar style="auto" />
     </NavigationContainer>
@@ -177,6 +195,26 @@ function App() {
     initAnalytics();
     initPurchases();
     track('app_open');
+  }, []);
+
+  // OTA 자동 적용 + 수신 알림 인박스 누적
+  useEffect(() => {
+    // 콜드런치: 최신 OTA 확인·적용 + 트레이 알림 인박스 반영
+    checkAndApplyUpdate();
+    syncPresentedToInbox();
+    // 포그라운드 수신·탭 알림을 인박스에 누적
+    const cleanupInbox = setupNotificationInbox();
+    // 포그라운드 복귀마다 OTA 재확인 + 트레이 동기화
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        checkAndApplyUpdate();
+        syncPresentedToInbox();
+      }
+    });
+    return () => {
+      cleanupInbox();
+      sub.remove();
+    };
   }, []);
 
   // SafeAreaProvider: edgeToEdge(안드 시스템바 뒤로 렌더) 하에서 탭바·헤더·모달이

@@ -3,4 +3,5 @@
 export type RootStackParamList = {
   Main: undefined;
   알림: undefined;
+  대시보드: undefined;
 };

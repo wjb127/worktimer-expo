@@ -11,10 +11,53 @@ import { Ionicons } from '@expo/vector-icons';
 import { apiGetBanners, Banner } from '../lib/api/config';
 import { colors } from '../theme/colors';
 import { isBannerRead, markBannersRead, openActionUrl } from '../lib/announcements';
+import {
+  getInbox,
+  markInboxRead,
+  InboxItem,
+} from '../lib/notificationInbox';
 
-// 알림 모음 페이지 — 헤더 종 아이콘에서 진입(모달 → 페이지 전환).
-// 활성 공지 전체를 리스트로 보여주고, 진입 시 전부 읽음 처리(종 배지 해제).
-// 진입 시점에 안 읽었던 항목은 NEW 배지로 구분.
+// 알림 모음 페이지 — 헤더 종 아이콘에서 진입.
+// 수신한 로컬 알림(인박스)을 최신순으로 쌓아 보여주고, 그 아래에 서버 공지(배너)를 표시.
+// 진입 시 전부 읽음 처리(종 배지 해제). 진입 시점에 안 읽었던 항목은 NEW 배지로 구분.
+
+// 수신 시각 → 상대시간 표기
+function relTime(ms: number): string {
+  const diff = Date.now() - ms;
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return '방금';
+  if (m < 60) return `${m}분 전`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}시간 전`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}일 전`;
+  const dt = new Date(ms);
+  return `${dt.getMonth() + 1}월 ${dt.getDate()}일`;
+}
+
+// 수신 알림 카드
+function NotifCard({ item, isNew }: { item: InboxItem; isNew: boolean }) {
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <View style={styles.kindBadge}>
+          <Ionicons name="notifications" size={14} color={colors.primary} />
+          <Text style={styles.kindBadgeText}>알림</Text>
+        </View>
+        <View style={styles.rightMeta}>
+          {isNew && (
+            <View style={styles.newBadge}>
+              <Text style={styles.newBadgeText}>NEW</Text>
+            </View>
+          )}
+          <Text style={styles.timeText}>{relTime(item.receivedAt)}</Text>
+        </View>
+      </View>
+      <Text style={styles.cardTitle}>{item.title}</Text>
+      {item.body ? <Text style={styles.cardBody}>{item.body}</Text> : null}
+    </View>
+  );
+}
 
 const KIND_ICON: Record<Banner['kind'], keyof typeof Ionicons.glyphMap> = {
   notice: 'megaphone',
@@ -60,31 +103,46 @@ function BannerCard({ banner, isNew }: { banner: Banner; isNew: boolean }) {
   );
 }
 
+// 병합 리스트 행 — 수신 알림(위) + 서버 공지(아래)
+type Row =
+  | { type: 'notif'; item: InboxItem; isNew: boolean }
+  | { type: 'banner'; banner: Banner; isNew: boolean };
+
 export default function NotificationsScreen() {
-  const [banners, setBanners] = useState<Banner[] | null>(null); // null = 로딩 중
-  // 진입 시점 기준 미확인 id — 읽음 처리 전에 캡처해 NEW 배지로 표시
-  const [newIds, setNewIds] = useState<Set<string>>(new Set());
+  const [rows, setRows] = useState<Row[] | null>(null); // null = 로딩 중
 
   useEffect(() => {
     let alive = true;
-    apiGetBanners()
-      .then((list) => {
-        if (!alive) return;
-        const sorted = [...list].sort((a, b) => b.priority - a.priority);
-        setNewIds(new Set(sorted.filter((b) => !isBannerRead(b.id)).map((b) => b.id)));
-        setBanners(sorted);
-        // 목록을 본 순간 전부 읽음 처리 → 헤더 종 배지 해제
-        markBannersRead(sorted.map((b) => b.id));
-      })
-      .catch(() => {
-        if (alive) setBanners([]);
-      });
+    (async () => {
+      // 인박스(수신 알림) + 서버 배너를 함께 로드
+      const [inbox, banners] = await Promise.all([
+        getInbox(),
+        apiGetBanners().catch(() => [] as Banner[]),
+      ]);
+      if (!alive) return;
+      const sortedBanners = [...banners].sort((a, b) => b.priority - a.priority);
+      // 진입 시점 NEW 판정 (읽음 처리 전에 캡처)
+      const notifRows: Row[] = inbox.map((item) => ({
+        type: 'notif',
+        item,
+        isNew: !item.read,
+      }));
+      const bannerRows: Row[] = sortedBanners.map((banner) => ({
+        type: 'banner',
+        banner,
+        isNew: !isBannerRead(banner.id),
+      }));
+      setRows([...notifRows, ...bannerRows]); // 수신 알림 최신순 위, 공지 아래
+      // 본 순간 전부 읽음 처리 → 헤더 종 배지 해제
+      markBannersRead(sortedBanners.map((b) => b.id));
+      void markInboxRead();
+    })();
     return () => {
       alive = false;
     };
   }, []);
 
-  if (banners === null) {
+  if (rows === null) {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={colors.primary} />
@@ -92,7 +150,7 @@ export default function NotificationsScreen() {
     );
   }
 
-  if (banners.length === 0) {
+  if (rows.length === 0) {
     return (
       <View style={styles.center}>
         <Ionicons
@@ -102,7 +160,7 @@ export default function NotificationsScreen() {
         />
         <Text style={styles.emptyTitle}>새로운 알림이 없어요</Text>
         <Text style={styles.emptySub}>
-          공지·이벤트가 올라오면 여기에 모아드릴게요
+          알림·공지가 오면 여기에 모아드릴게요
         </Text>
       </View>
     );
@@ -111,12 +169,18 @@ export default function NotificationsScreen() {
   return (
     <FlatList
       style={styles.list}
-      data={banners}
-      keyExtractor={(b) => b.id}
+      data={rows}
+      keyExtractor={(r, i) =>
+        r.type === 'notif' ? `n-${r.item.id}-${i}` : `b-${r.banner.id}`
+      }
       contentContainerStyle={styles.listContent}
-      renderItem={({ item }) => (
-        <BannerCard banner={item} isNew={newIds.has(item.id)} />
-      )}
+      renderItem={({ item: row }) =>
+        row.type === 'notif' ? (
+          <NotifCard item={row.item} isNew={row.isNew} />
+        ) : (
+          <BannerCard banner={row.banner} isNew={row.isNew} />
+        )
+      }
     />
   );
 }
@@ -177,6 +241,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   newBadgeText: { color: colors.white, fontSize: 10, fontWeight: '800' },
+  rightMeta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  timeText: { color: colors.inkSub, fontSize: 12 },
   cardTitle: {
     fontSize: 17,
     fontWeight: '800',

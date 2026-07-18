@@ -10,7 +10,9 @@ import {
   Modal,
   Alert,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import {
@@ -128,6 +130,8 @@ function StatCard({
 
 export default function SettingsScreen() {
   const { signOut } = useAuth();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const handleLogout = () => {
     Alert.alert('로그아웃', '로그아웃하시겠어요?', [
@@ -544,6 +548,24 @@ export default function SettingsScreen() {
             프로필 정보를 불러오지 못했어요.
           </Text>
         )}
+
+        {/* 상세 분석 대시보드 진입 (DoD/WoW/MoM/YoY) */}
+        <TouchableOpacity
+          style={styles.dashboardEntry}
+          onPress={() => navigation.navigate('대시보드')}
+          activeOpacity={0.85}
+        >
+          <View style={styles.dashboardEntryLeft}>
+            <Ionicons name="analytics-outline" size={20} color={colors.primary} />
+            <View>
+              <Text style={styles.dashboardEntryTitle}>상세 분석 대시보드</Text>
+              <Text style={styles.dashboardEntrySub}>
+                일간·주간·월간·연간 변화 추이
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.inkSub} />
+        </TouchableOpacity>
 
         {/* 내 기록 공유 (바이럴 — 잔디/누적/스트릭 카드 생성) */}
         <TouchableOpacity
@@ -1064,26 +1086,44 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
   },
+  // 2열 × 3행 그리드 — 카드를 크게 해 화면을 채운다
   statCard: {
-    width: '31.5%',
+    width: '48.3%',
     backgroundColor: colors.card,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.line,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
+    paddingVertical: 20,
+    paddingHorizontal: 14,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 88,
   },
   statValue: {
-    fontSize: 18,
+    fontSize: 26,
     fontWeight: '800',
     color: colors.primary,
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 13,
     color: colors.inkSub,
-    marginTop: 6,
+    marginTop: 8,
   },
+  dashboardEntry: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginTop: 12,
+  },
+  dashboardEntryLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  dashboardEntryTitle: { fontSize: 15, fontWeight: '700', color: colors.ink },
+  dashboardEntrySub: { fontSize: 12, color: colors.inkSub, marginTop: 2 },
   shareButton: {
     flexDirection: 'row',
     alignItems: 'center',
