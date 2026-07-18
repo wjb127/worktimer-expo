@@ -1,6 +1,7 @@
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import CalendarView from './history/CalendarView';
 import HeatmapView from './history/HeatmapView';
+import BestView from './history/BestView';
 import StatsScreen from './StatsScreen';
 import { colors } from '../theme/colors';
 
@@ -30,6 +31,7 @@ export default function HistoryScreen() {
     >
       <TopTab.Screen name="달력" component={CalendarView} />
       <TopTab.Screen name="히트맵" component={HeatmapView} />
+      <TopTab.Screen name="베스트" component={BestView} />
       <TopTab.Screen name="통계" component={StatsScreen} />
     </TopTab.Navigator>
   );

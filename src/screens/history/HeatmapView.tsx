@@ -164,6 +164,8 @@ export default function HeatmapView() {
             style={[
               styles.dayCell,
               { backgroundColor: getColor(day.duration) },
+              // 입체감: 채워진 날만 살짝 떠오르게(그림자+상단 하이라이트), 빈칸은 평면
+              day.duration > 0 && styles.dayCellRaised,
             ]}
           />
         ))}
@@ -416,8 +418,18 @@ const styles = StyleSheet.create({
   dayCell: {
     width: 16,
     height: 16,
-    borderRadius: 3,
+    borderRadius: 4,
     marginHorizontal: 1,
+  },
+  // 떠오른 타일 효과 — 컬러 드롭섀도 + 상단 하이라이트 베벨 (채워진 셀 전용)
+  dayCellRaised: {
+    shadowColor: '#1E293B',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.2,
+    elevation: 1.5,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255,255,255,0.45)',
   },
   emptyCell: {
     width: 16,
