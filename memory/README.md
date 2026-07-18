@@ -15,7 +15,8 @@
 - Apple Team `9Q26686S8R` · Expo owner `@gawall` · EAS projectId `31c0b3a1-6f4a-4b05-ad00-89924a249f68`
 - DB: **VPS 로컬 PostgreSQL 16**(127.0.0.1, 07-16 Supabase에서 이관 → 20번) / 앱은 NestJS API 경유 / 백업 매일 KST 04:10
 - 랜딩: `ss-042-filltime-landing` → filltime.vercel.app (개인정보처리방침/약관, 사업자 코들라스)
-- 진행(2026-07-17): **멀티테넌시 v1.2 배포**(23) + 마이그레이션 드리프트 근본수정 + 테스트결정성 + **필타임 랜딩 전면개편·배포**(HabitHeat잔디+Forest, filltime.vercel.app 라이브) + **루트app/ 404장애 복구** / 압축재개는 24번 먼저 / 미푸시: wt 21·ss042 2 (승인후 push)
+- 진행(2026-07-18): **UI 스프린트 대량**(알림페이지·할일3탭·롤링피커·명예의전당·잔디입체감·공유복사저장·히트맵가로세로·통계리캡기간·버전자동) + **OTA(EAS Update) 설정** + **Live Activity 잠금화면 마크** + **브랜드색 밝은스카이(A)** + **ASO메타 API반영** / **압축재개는 29번 먼저** / 빌드 `6442ede2` 설치·검증 대기 / 다음=동적배지URL
+- 진행(2026-07-17): 멀티테넌시 v1.2 배포(23) + 랜딩 전면개편·배포 + 루트app/ 404복구 / 24번
 
 ## 파일 인덱스
 
@@ -49,6 +50,7 @@
 | `26-landing-analytics-marketing.md` | ★ 랜딩 유입추적·광고 세팅(07-18) — PostHog 선정근거·store_click·/go UTM숏링크 사용법 + 백엔드 불구축·부정클릭 단계대응 결정 |
 | `27-aso-app-store-optimization.md` | ★ ASO 딥리서치(07-18) — SEO 개념비교·iOS vs Android 인덱싱차이·애플 키워드필드 100자 규칙·한국어 형태소·평점/PPO·기각된 통설 + 필타임 제목/부제/키워드 체크리스트 |
 | `28-design-ref-ai-token-monitor.md` | 디자인 레퍼런스(07-18) — AI Token Monitor 앱에서 빼올 것: 잔디 셀 입체감(depth) 기법·리더보드 레이아웃·히트맵 기간토글·색 절제(밝은스카이 이미 반영) |
+| `29-session-2026-07-18-ui-sprint.md` | ★ 세션종합(07-18) — **압축 후 재개 1순위**. UI스프린트(알림페이지·할일3탭·롤링피커·명예의전당·잔디입체감·공유복사저장·히트맵토글·통계리캡·버전자동)+OTA설정+Live Activity마크+브랜드색A+ASO메타 / 빌드6442ede2 설치·검증 / 다음=동적배지URL |
 | `raw/` | 원문 작업 로그(날짜별, 기본 비노출·지시 시에만 열람) |
 | `.private/01-codeatlas-infra.md` | (private) VPS·DB·op 시크릿 참조 |
 
