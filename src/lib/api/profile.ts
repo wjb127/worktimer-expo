@@ -7,6 +7,9 @@ export interface MeResponse {
   provider: string;
   appId: string;
   createdAt: string;
+  // 공개 배지 프로필 (opt-in) — handle이 배지 URL 식별자
+  handle: string | null;
+  publicProfile: boolean;
   settings: {
     dailyGoalSeconds: number;
     theme: string;
@@ -47,6 +50,21 @@ export const apiGetStats = () => apiJson<MeStats>('/me/stats');
 
 export const apiUpdateSettings = (body: UpdateSettingsBody) =>
   apiJson<SettingsResponse>('/me/settings', {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+
+// PATCH /me/profile — 공개 배지 프로필(핸들·공개여부)
+export interface UpdateProfileBody {
+  handle?: string;
+  publicProfile?: boolean;
+}
+export interface ProfileResponse {
+  handle: string | null;
+  publicProfile: boolean;
+}
+export const apiUpdateProfile = (body: UpdateProfileBody) =>
+  apiJson<ProfileResponse>('/me/profile', {
     method: 'PATCH',
     body: JSON.stringify(body),
   });

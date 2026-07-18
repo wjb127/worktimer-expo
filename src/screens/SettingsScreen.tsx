@@ -5,12 +5,14 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
+  TextInput,
   Switch,
   Modal,
   Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import {
   WorkReminderSettings,
   WorkIntervalSettings,
@@ -35,6 +37,7 @@ import {
   apiGetMe,
   apiGetStats,
   apiUpdateSettings,
+  apiUpdateProfile,
   MeResponse,
   MeStats,
 } from '../lib/api/profile';
@@ -44,6 +47,9 @@ import { getOngoingSession } from '../lib/session';
 import { colors } from '../theme/colors';
 
 const WEEKDAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+
+// 공개 배지 URL 베이스 (API 도메인 + /badge). 예: https://api.codeatlas.kr/badge/<handle>
+const BADGE_BASE = `${(process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/$/, '')}/badge`;
 
 // 일일 목표 스텝 (30분 단위, 0~24h)
 const GOAL_STEP_SECONDS = 30 * 60;
@@ -172,6 +178,83 @@ export default function SettingsScreen() {
   const [shareReq, setShareReq] = useState<ShareRequest | null>(null);
   const [goalSeconds, setGoalSeconds] = useState<number | null>(null);
   const [savingGoal, setSavingGoal] = useState(false);
+
+  // ── 공개 배지 상태 ──
+  const [handleInput, setHandleInput] = useState('');
+  const [publicProfile, setPublicProfile] = useState(false);
+  const [savedHandle, setSavedHandle] = useState<string | null>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  // me 로드되면 배지 필드 동기화
+  useEffect(() => {
+    if (me) {
+      setHandleInput(me.handle ?? '');
+      setSavedHandle(me.handle ?? null);
+      setPublicProfile(me.publicProfile ?? false);
+    }
+  }, [me]);
+
+  const badgeUrl = savedHandle ? `${BADGE_BASE}/${savedHandle}` : null;
+
+  // 핸들 저장 (형식 검증은 서버가 최종 판단, 여기선 기초 정규화만)
+  const saveHandle = async () => {
+    const h = handleInput.trim().toLowerCase();
+    if (!/^[a-z0-9_]{3,20}$/.test(h)) {
+      Alert.alert('핸들 형식', '영문 소문자·숫자·언더스코어(_) 3~20자로 정해주세요.');
+      return;
+    }
+    setSavingProfile(true);
+    try {
+      const res = await apiUpdateProfile({ handle: h });
+      setSavedHandle(res.handle);
+      setHandleInput(res.handle ?? h);
+      setPublicProfile(res.publicProfile);
+      Alert.alert('저장됨', '배지 핸들이 설정됐어요.');
+    } catch (e: unknown) {
+      const msg = String((e as Error)?.message ?? '');
+      if (msg.includes('409') || /taken|reserved/i.test(msg)) {
+        Alert.alert('사용 불가', '이미 쓰이거나 예약된 핸들이에요. 다른 걸 시도해주세요.');
+      } else {
+        Alert.alert('오류', '핸들 저장에 실패했어요. 잠시 후 다시 시도해주세요.');
+      }
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  // 공개 토글 (낙관적)
+  const togglePublic = async (next: boolean) => {
+    if (next && !savedHandle) {
+      Alert.alert('핸들 먼저', '배지를 공개하려면 먼저 핸들을 정해주세요.');
+      return;
+    }
+    const prev = publicProfile;
+    setPublicProfile(next);
+    setSavingProfile(true);
+    try {
+      const res = await apiUpdateProfile({ publicProfile: next });
+      setPublicProfile(res.publicProfile);
+    } catch {
+      setPublicProfile(prev);
+      Alert.alert('오류', '공개 설정 변경에 실패했어요.');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const copyBadgeUrl = async () => {
+    if (!badgeUrl) return;
+    await Clipboard.setStringAsync(badgeUrl);
+    Alert.alert('복사됨', '배지 URL을 클립보드에 복사했어요.');
+  };
+
+  // GitHub README용 마크다운 스니펫 복사
+  const copyBadgeMarkdown = async () => {
+    if (!badgeUrl) return;
+    const md = `[![필타임 배지](${badgeUrl})](https://filltime.app)`;
+    await Clipboard.setStringAsync(md);
+    Alert.alert('복사됨', 'README용 마크다운을 복사했어요.');
+  };
 
   useEffect(() => {
     let alive = true;
@@ -663,6 +746,86 @@ export default function SettingsScreen() {
         )}
       </View>
 
+      {/* 공개 배지 섹션 — 핸들 설정 + 공개 토글 + 배지 URL 복사 */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>공개 배지</Text>
+        <Text style={styles.badgeIntro}>
+          내 몰입 기록을 GitHub·블로그에 붙일 수 있는 배지예요. 핸들을 정하고 공개하면
+          이미지 주소가 만들어집니다.
+        </Text>
+
+        {/* 핸들 입력 */}
+        <View style={styles.settingItem}>
+          <View style={styles.settingInfo}>
+            <Text style={styles.settingLabel}>핸들</Text>
+            <Text style={styles.settingDescription}>영문 소문자·숫자·_ 3~20자</Text>
+          </View>
+        </View>
+        <View style={styles.handleRow}>
+          <View style={styles.handlePrefixBox}>
+            <Text style={styles.handlePrefix}>@</Text>
+            <TextInput
+              style={styles.handleInput}
+              value={handleInput}
+              onChangeText={setHandleInput}
+              placeholder="seungbeen"
+              placeholderTextColor={colors.inkSub}
+              autoCapitalize="none"
+              autoCorrect={false}
+              maxLength={20}
+            />
+          </View>
+          <TouchableOpacity
+            style={[styles.handleSaveBtn, savingProfile && styles.btnDisabled]}
+            onPress={saveHandle}
+            disabled={savingProfile}
+          >
+            <Text style={styles.handleSaveText}>저장</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* 공개 토글 */}
+        <View style={styles.settingItem}>
+          <View style={styles.settingInfo}>
+            <Text style={styles.settingLabel}>배지 공개</Text>
+            <Text style={styles.settingDescription}>
+              켜야 배지에 실제 기록이 표시됩니다 (끄면 비공개)
+            </Text>
+          </View>
+          <Switch
+            value={publicProfile}
+            onValueChange={togglePublic}
+            trackColor={{ false: colors.line, true: colors.primary }}
+            thumbColor={colors.white}
+          />
+        </View>
+
+        {/* 배지 URL + 복사 (핸들 있고 공개일 때) */}
+        {badgeUrl && publicProfile && (
+          <View style={styles.badgeUrlWrap}>
+            <View style={styles.badgeUrlBox}>
+              <Ionicons name="link-outline" size={16} color={colors.primary} />
+              <Text style={styles.badgeUrlText} numberOfLines={1}>
+                {badgeUrl}
+              </Text>
+            </View>
+            <View style={styles.badgeActions}>
+              <TouchableOpacity style={styles.badgeActionBtn} onPress={copyBadgeUrl}>
+                <Ionicons name="copy-outline" size={16} color={colors.primary} />
+                <Text style={styles.badgeActionText}>URL 복사</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.badgeActionBtn}
+                onPress={copyBadgeMarkdown}
+              >
+                <Ionicons name="logo-markdown" size={16} color={colors.primary} />
+                <Text style={styles.badgeActionText}>README 복사</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </View>
+
       {/* 정보 섹션 */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>정보</Text>
@@ -1104,6 +1267,91 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.inkSub,
   },
+  // ── 공개 배지 ──
+  badgeIntro: {
+    fontSize: 13,
+    color: colors.inkSub,
+    lineHeight: 19,
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 6,
+  },
+  handleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  handlePrefixBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 44,
+  },
+  handlePrefix: {
+    fontSize: 16,
+    color: colors.inkSub,
+    marginRight: 2,
+  },
+  handleInput: {
+    flex: 1,
+    fontSize: 16,
+    color: colors.ink,
+    paddingVertical: 0,
+  },
+  handleSaveBtn: {
+    height: 44,
+    paddingHorizontal: 18,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  btnDisabled: { opacity: 0.5 },
+  handleSaveText: { color: colors.white, fontSize: 15, fontWeight: '700' },
+  badgeUrlWrap: {
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    gap: 10,
+  },
+  badgeUrlBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primaryFaint,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 42,
+  },
+  badgeUrlText: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.primaryDark,
+    fontWeight: '600',
+  },
+  badgeActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  badgeActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 42,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: colors.primaryFaint,
+    backgroundColor: colors.primaryFaint,
+  },
+  badgeActionText: { color: colors.primary, fontSize: 14, fontWeight: '700' },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
