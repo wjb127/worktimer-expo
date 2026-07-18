@@ -1,9 +1,32 @@
-# iOS 구독 배포 준비 — 페이월 검증 + 구독 심사 스샷 절차
+# iOS 구독 배포 준비 — 페이월 검증 + 구독 심사 스샷 + OTA
 
-**최종 갱신**: 2026-07-17
+**최종 갱신**: 2026-07-18
 
-iOS에 구독(프리미엄)을 태워 v1.0.1 재제출하기 위한 준비 상태·절차.
-펴볼 때: "구독 배포 어디까지 했지", "구독 심사 스샷 어떻게 찍지", "MISSING_METADATA 왜".
+iOS에 구독(프리미엄)을 태워 v1.0.1 재제출하기 위한 준비 상태·절차 + EAS Update(OTA) 운영.
+펴볼 때: "구독 배포 어디까지 했지", "구독 심사 스샷 어떻게 찍지", "MISSING_METADATA 왜",
+"앱 원격 업데이트(OTA) 어떻게", "폰에 어떻게 설치".
+
+## ★ OTA (EAS Update) — 설치·원격 업데이트 (07-18 세팅 완료)
+
+- **세팅**(커밋 `bd50553`): `expo-updates ~29.0.19` + `app.json` updates.url(`u.expo.dev/<projectId>`)
+  + `runtimeVersion: {policy: fingerprint}` + `eas.json` preview/e2e→채널 `preview`, production→채널 `production`.
+  fingerprint 정책 = 네이티브 지문 일치 빌드에만 OTA 수신(네이티브 불일치 사고 방지).
+- **v1.0.1 preview 빌드 완료**(07-18, `d7937014-76f5-4a7d-a2c7-af6adf4d3254`):
+  profile=preview / distribution=internal(ad-hoc) / **channel=preview** / runtimeVersion=`c03a1714…`(지문).
+  = expo-updates 구워짐 + OTA 활성. **설치 링크**(아이폰에서 열기/QR):
+  `https://expo.dev/accounts/gawall/projects/worktimer-expo/builds/d7937014-76f5-4a7d-a2c7-af6adf4d3254`
+  ⚠️ 맥 아닌 **아이폰 사파리로** 열어야 설치. 설치 후 설정>일반>VPN및기기관리>개발자앱 신뢰 1회.
+- **원격 업데이트(JS/에셋만)**: `cd ~/Project/worktimer-expo && npx eas-cli update --branch preview -m "요약"`.
+  앱 **완전 종료 후 재실행** 시 수신. 스토어/리빌드 없음.
+- **경계**: 색상·카피·롤링피커 등 JS 변경 = OTA / **네이티브 추가(라이브러리·Live Activity 자산 등) = 새 빌드**.
+  지문 바뀌면 `eas update`가 옛 빌드엔 못 보낸다고 자동 차단(안전장치).
+- ⚠️ 이 preview 빌드는 **실기기 테스트·OTA·구독 스샷 캡처용**(ad-hoc). App Store 제출은 **production 프로필** 빌드 별도 필요.
+
+## ★ ASC v1.0.1 메타 반영 완료 (07-18, API PATCH — 상세 27번)
+ASC에 준비버전 v1.0.1(PREPARE_FOR_SUBMISSION) 생성 + 아래 저장(라이브 1.0은 불변):
+- name `필타임: 업무시간 기록 타임트래커` / subtitle `몰입·집중을 잔디로 쌓는 습관 기록`(기존 비어있던 것 채움)
+- keywords `시간관리,생산성,딥워크,포모도로,스트릭,프리랜서,재택근무,루틴,타임로그,플래너,집중력,열품타,투두,할일,근무기록,시간기록,작업시간`
+- 실제 스토어 반영은 v1.0.1 심사 통과 시.
 
 ## 현재 상태 (07-17 검증)
 
@@ -40,15 +63,16 @@ iOS에 구독(프리미엄)을 태워 v1.0.1 재제출하기 위한 준비 상�
 
 ## v1.0.1 배포 게이트 (전체 순서)
 
-1. **[선행] iOS 대화형 빌드 1회** (FilltimeWidget 프로비저닝, 21번 blocker):
-   `cd ~/Project/worktimer-expo && EXPO_ASC_API_KEY_PATH=~/.config/eas-submit/AuthKey_NWM428GNG4.p8 \
-   EXPO_ASC_KEY_ID=NWM428GNG4 EXPO_ASC_ISSUER_ID=f8a8b51b-e563-4cc0-a0e7-91f387396c25 \
-   npx eas-cli build -p ios --profile production` (전부 Yes)
-2. 빌드 실기기 설치 → 페이월 눈확인(코드→화면 렌더 확인 원칙) + 위 스샷 캡처
-3. ASC 구독 2개에 심사 스샷 업로드 → MISSING_METADATA 해소
-4. v1.0.1 빌드 ASC 업로드(`eas submit`) + 메타데이터 그대로
-5. 앱 심사 제출 시 구독도 함께 심사(첫 유료화라 인앱구매 심사 동반)
-6. 승인 → 구독 판매 라이브
+- [x] **1. iOS 대화형 빌드 1회 ✅ 완료(07-18, preview `d7937014`)** — FilltimeWidget 프로비저닝 통과.
+  ★함정: inline env(`VAR=x \` 줄바꿈)가 터미널 붙여넣기에서 안 먹어 `.p8` 프롬프트 뜸 → **`export`로 각 줄 완결**해야 eas-cli 자식까지 상속:
+  `export EXPO_ASC_API_KEY_PATH=$HOME/.config/eas-submit/AuthKey_NWM428GNG4.p8` / `export EXPO_ASC_KEY_ID=NWM428GNG4` / `export EXPO_ASC_ISSUER_ID=f8a8b51b-e563-4cc0-a0e7-91f387396c25` / `export EXPO_APPLE_TEAM_TYPE=INDIVIDUAL` → `npx eas-cli build -p ios --profile preview`. Team ID 물으면 `9Q26686S8R`, 타겟3개 프로파일 y.
+- [ ] **2. 빌드 실기기 설치**(위 링크) → 페이월 눈확인(코드→화면 렌더) + 구독 스샷 캡처(샌드박스)
+- [ ] **3. ASC 구독 2개에 심사 스샷 업로드** → MISSING_METADATA 해소
+- [ ] **4. production 프로필 빌드** (App Store 제출용, preview는 ad-hoc라 제출 불가) → `eas submit -p ios --profile production --latest`
+- [ ] **5. v1.0.1 심사 제출** — 구독 동반(첫 유료화 인앱구매 심사) + 메타(name/subtitle/keywords 이미 반영됨)
+- [ ] **6. 승인 → 구독 판매 라이브**
+
+> 💡 이후 JS 변경은 4~6 없이 OTA(`eas update --branch preview`)로 실기기 즉시 반영(위 OTA 섹션).
 
 ## 관련 식별자·경로
 
