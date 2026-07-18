@@ -89,6 +89,13 @@
         "projectId": "31c0b3a1-6f4a-4b05-ad00-89924a249f68"
       }
     },
-    "owner": "gawall"
+    "owner": "gawall",
+    "updates": {
+      "url": "https://u.expo.dev/31c0b3a1-6f4a-4b05-ad00-89924a249f68",
+      "fallbackToCacheTimeout": 0
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    }
   }
 }

@@ -12,11 +12,13 @@
       }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "channel": "preview"
     },
     "e2e": {
       "extends": "preview",
       "distribution": "internal",
+      "channel": "preview",
       "env": {
         "EXPO_PUBLIC_E2E": "1"
       },
@@ -25,7 +27,8 @@
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "channel": "production"
     }
   },
   "submit": {
