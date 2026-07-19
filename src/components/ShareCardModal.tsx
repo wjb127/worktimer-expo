@@ -198,7 +198,9 @@ export default function ShareCardModal({
     if (!cardRef.current || busy || !variant) return;
     setBusy('save');
     try {
-      const perm = await MediaLibrary.requestPermissionsAsync();
+      // 저장 전용(writeOnly) 권한만 요청 — 사진 라이브러리 읽기는 하지 않음.
+      // (Android 광범위 사진 읽기 권한 미요청 → Play '사진·동영상 권한 선언' 불필요)
+      const perm = await MediaLibrary.requestPermissionsAsync(true);
       if (!perm.granted) {
         Alert.alert('권한 필요', '사진 저장 권한을 허용해주세요.');
         return;

@@ -58,7 +58,8 @@
           "savePhotosPermission": "필타임 공유 카드를 사진 앱에 저장합니다.",
           "isAccessMediaLocationEnabled": false
         }
-      ]
+      ],
+      "./plugins/withMediaWriteOnly"
     ],
     "splash": {
       "image": "./assets/splash-icon.png",
