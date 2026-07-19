@@ -25,10 +25,12 @@ import {
 // 영구 무료 프리미엄으로 바뀌는 문제 제거). 기존 로컬 체험 플래그 보유자는
 // premium.ts가 계속 인정(grandfather).
 
+// 실제 프리미엄 게이트 기능만 나열 (premium.ts 게이트 = AI분석 + 기록수정).
+// ※ 공유 카드 테마 3종은 이미 출시·무료라 프리미엄 혜택 아님 → 목록에서 제외.
+//   추후 테마를 유료로 게이팅하면 그때 정확한 문구로 다시 추가.
 const BENEFITS: { icon: keyof typeof Ionicons.glyphMap; text: string }[] = [
   { icon: 'sparkles', text: 'AI 업무 분석 — 패턴·코칭·리포트' },
   { icon: 'create', text: '기록 수정 — 지난 세션 시간 편집' },
-  { icon: 'color-palette', text: '공유 카드 테마 (준비 중)' },
 ];
 
 type Plan = 'annual' | 'monthly';
