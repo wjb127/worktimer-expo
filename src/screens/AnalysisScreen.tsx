@@ -21,12 +21,14 @@ import PaywallModal from '../components/PaywallModal';
 import {
   AnalyzeRange,
   ChatMessage,
+  ChatMessageBody,
   ChatSessionSummary,
   apiCreateChatSession,
   apiDeleteChatSession,
   apiGetChatMessages,
   apiListChatSessions,
   apiPostChatMessage,
+  streamChatMessage,
 } from '../lib/api/ai';
 
 // AI 업무 분석 — GPT식 채팅 (프리미엄).
@@ -38,6 +40,15 @@ const RANGES: { key: AnalyzeRange; label: string }[] = [
   { key: 'week', label: '이번 주 분석' },
   { key: 'month', label: '이번 달 분석' },
 ];
+
+const RANGE_USER_TEXT: Record<AnalyzeRange, string> = {
+  day: '오늘 업무 분석해줘',
+  week: '이번 주 업무 분석해줘',
+  month: '이번 달 업무 분석해줘',
+};
+
+const makeClientMessageId = () =>
+  `client-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 
 // ── 프리미엄 잠금 화면 ──────────────────────────────────────────────────────
 const FEATURES: {
@@ -196,6 +207,12 @@ function ChatView({
   const [loading, setLoading] = useState(true);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [streamingAssistantId, setStreamingAssistantId] = useState<
+    string | null
+  >(null);
+  const [failedAssistantId, setFailedAssistantId] = useState<string | null>(
+    null,
+  );
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
   useEffect(() => {
@@ -208,16 +225,81 @@ function ChatView({
   const scrollToEnd = () =>
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
 
-  const send = async (body: { content?: string; analyze?: AnalyzeRange }) => {
+  const send = async (body: ChatMessageBody) => {
     if (sending) return;
     setSending(true);
+    setFailedAssistantId(null);
+    const clientMessageId = makeClientMessageId();
+    const assistantTempId = `${clientMessageId}:pending`;
+    const createdAt = new Date().toISOString();
+    const userText = body.analyze
+      ? RANGE_USER_TEXT[body.analyze]
+      : (body.content ?? '').trim();
+    const requestBody = { ...body, clientMessageId };
+    setStreamingAssistantId(assistantTempId);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: clientMessageId,
+        role: 'user',
+        content: userText,
+        createdAt,
+      },
+      {
+        id: assistantTempId,
+        role: 'assistant',
+        content: '',
+        createdAt,
+      },
+    ]);
+    scrollToEnd();
+
     try {
-      const res = await apiPostChatMessage(session.id, body);
-      setMessages((prev) => [...prev, res.userMessage, res.assistantMessage]);
-      scrollToEnd();
+      await streamChatMessage(session.id, requestBody, {
+        onToken: (text, replace) => {
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === assistantTempId
+                ? {
+                    ...message,
+                    content: replace ? text : message.content + text,
+                  }
+                : message,
+            ),
+          );
+          scrollToEnd();
+        },
+        onDone: ({ userMessageId, assistantMessageId }) => {
+          setMessages((prev) =>
+            prev.map((message) => {
+              if (message.id === clientMessageId)
+                return { ...message, id: userMessageId };
+              if (message.id === assistantTempId)
+                return { ...message, id: assistantMessageId };
+              return message;
+            }),
+          );
+          setStreamingAssistantId(null);
+        },
+        onError: () => {},
+      });
     } catch {
-      Alert.alert('전송 실패', '네트워크를 확인하고 다시 시도해 주세요.');
+      // 동일 clientMessageId를 보내므로 서버에서 user/assistant가 중복 저장되지 않는다.
+      try {
+        const res = await apiPostChatMessage(session.id, requestBody);
+        setMessages((prev) =>
+          prev.map((message) => {
+            if (message.id === clientMessageId) return res.userMessage;
+            if (message.id === assistantTempId) return res.assistantMessage;
+            return message;
+          }),
+        );
+      } catch {
+        setFailedAssistantId(assistantTempId);
+        Alert.alert('전송 실패', '네트워크를 확인하고 다시 시도해 주세요.');
+      }
     } finally {
+      setStreamingAssistantId(null);
       setSending(false);
     }
   };
@@ -266,19 +348,36 @@ function ChatView({
             </View>
           }
           renderItem={({ item }) => (
-            <View
-              style={[
-                styles.bubble,
-                item.role === 'user' ? styles.bubbleUser : styles.bubbleAi,
-              ]}
-            >
-              <Text
-                style={item.role === 'user' ? styles.bubbleUserText : styles.bubbleAiText}
+            <View style={styles.messageGroup}>
+              <View
+                style={[
+                  styles.bubble,
+                  item.role === 'user' ? styles.bubbleUser : styles.bubbleAi,
+                ]}
               >
-                {item.role === 'assistant'
-                  ? stripMarkdown(item.content)
-                  : item.content}
-              </Text>
+                {item.role === 'assistant' &&
+                item.id === streamingAssistantId &&
+                !item.content ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Text
+                    style={
+                      item.role === 'user'
+                        ? styles.bubbleUserText
+                        : styles.bubbleAiText
+                    }
+                  >
+                    {item.role === 'assistant'
+                      ? stripMarkdown(item.content)
+                      : item.content}
+                  </Text>
+                )}
+              </View>
+              {item.id === failedAssistantId ? (
+                <Text style={styles.streamErrorText}>
+                  응답이 중단됐어요. 다시 전송해 주세요.
+                </Text>
+              ) : null}
             </View>
           )}
         />
@@ -484,6 +583,7 @@ const styles = StyleSheet.create({
   chatTitle: { flex: 1, fontSize: 15, fontWeight: '700', color: colors.ink },
   msgList: { padding: 16, gap: 10, flexGrow: 1 },
   bubble: { maxWidth: '85%', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10 },
+  messageGroup: { gap: 4 },
   bubbleUser: { alignSelf: 'flex-end', backgroundColor: colors.primary },
   bubbleAi: {
     alignSelf: 'flex-start',
@@ -493,6 +593,7 @@ const styles = StyleSheet.create({
   },
   bubbleUserText: { color: colors.white, fontSize: 14, lineHeight: 20 },
   bubbleAiText: { color: colors.ink, fontSize: 14, lineHeight: 21 },
+  streamErrorText: { color: colors.danger, fontSize: 11 },
   chipRow: {
     flexDirection: 'row',
     gap: 8,

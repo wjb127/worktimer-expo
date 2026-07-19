@@ -8,7 +8,7 @@ jest.mock('../auth/tokenStore', () => ({
 // client는 EXPO_PUBLIC_API_URL을 fail-fast로 요구 → 테스트 환경에 주입
 process.env.EXPO_PUBLIC_API_URL = 'http://test.local';
 
-import { apiFetch, setAuthExpiredHandler } from './client';
+import { apiFetch, apiFetchWith, setAuthExpiredHandler } from './client';
 import * as store from '../auth/tokenStore';
 
 const mockFetch = (responses: Array<{ status: number; body: unknown }>) => {
@@ -46,6 +46,32 @@ describe('apiFetch', () => {
     ]);
     const res = await apiFetch('/worktimer/sessions/ongoing');
     expect(res.ok).toBe(true);
+    expect(store.saveTokens).toHaveBeenCalledWith('new', 'r2');
+  });
+
+  it('스트리밍 fetch 구현에도 Bearer와 401 refresh를 동일하게 적용한다', async () => {
+    (store.getAccessToken as jest.Mock)
+      .mockResolvedValueOnce('old')
+      .mockResolvedValue('new');
+    (store.getRefreshToken as jest.Mock).mockResolvedValue('ref');
+    mockFetch([
+      { status: 201, body: { accessToken: 'new', refreshToken: 'r2' } },
+    ]);
+    const streamFetch = jest
+      .fn<Promise<Response>, [string, RequestInit?]>()
+      .mockResolvedValueOnce({ status: 401, ok: false } as Response)
+      .mockResolvedValueOnce({ status: 200, ok: true } as Response);
+
+    const res = await apiFetchWith('/ai/stream', {}, streamFetch);
+
+    expect(res.ok).toBe(true);
+    expect(streamFetch).toHaveBeenCalledTimes(2);
+    expect(streamFetch.mock.calls[0][1]?.headers).toMatchObject({
+      Authorization: 'Bearer old',
+    });
+    expect(streamFetch.mock.calls[1][1]?.headers).toMatchObject({
+      Authorization: 'Bearer new',
+    });
     expect(store.saveTokens).toHaveBeenCalledWith('new', 'r2');
   });
 

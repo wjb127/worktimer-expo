@@ -16,6 +16,11 @@ function getBase(): string {
   return base;
 }
 
+export type ApiFetcher = (
+  url: string,
+  init?: RequestInit,
+) => Promise<Response>;
+
 // refresh 토큰까지 만료/무효일 때 호출 — AuthContext가 등록해 앱 전체 signedOut 전파.
 // (없으면 무한 401 + 빈화면 상태에 갇힘)
 let onAuthExpired: (() => void) | null = null;
@@ -77,8 +82,19 @@ export async function apiFetch(
   init: RequestInit = {},
   _retry = true,
 ): Promise<Response> {
+  return apiFetchWith(path, init, fetchWithTimeout, _retry);
+}
+
+// expo/fetch처럼 Response 스트리밍을 지원하는 fetch 구현에도 동일한
+// Bearer 주입·single-flight refresh 정책을 적용한다.
+export async function apiFetchWith(
+  path: string,
+  init: RequestInit,
+  fetcher: ApiFetcher,
+  _retry = true,
+): Promise<Response> {
   const token = await getAccessToken();
-  const res = await fetchWithTimeout(`${getBase()}${path}`, {
+  const res = await fetcher(`${getBase()}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
@@ -87,7 +103,7 @@ export async function apiFetch(
     },
   });
   if (res.status === 401 && _retry) {
-    if (await refresh()) return apiFetch(path, init, false);
+    if (await refresh()) return apiFetchWith(path, init, fetcher, false);
   }
   return res;
 }
