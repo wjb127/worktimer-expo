@@ -58,6 +58,15 @@
 - **최종 목표**: AARRR 퍼널 추적 대시보드 → ✅ **1단계(PostHog) 완료** (위 "완료" 섹션). playwright 브라우저 세션쿠키+CSRF로 REST API 호출해 대시보드 1871502 + 인사이트 7개 자동생성.
 - **남은 것**: ① 결제/매출(MRR·이탈)은 admin.codeatlas.kr stats 확장(subscriptions 집계) ② 리텐션 자체대시보드는 login_event 쿼리(PostHog 리텐션으로 이미 커버되니 우선순위 낮음) ③ store_click 실발화·리텐션 데이터 축적 대기
 
+## 사용법 검증 보고서 (st 파이프라인, 07-19)
+- **산출물**: `report-usage-filltime-aarrr-20260719.html`(repo 루트, 미커밋) + 증거 `out/ship-evidence/20260719/`(미커밋). 대시보드 7개 사용 시나리오(개요/드릴인/퍼널전환율/리텐션코호트/브레이크다운/날짜범위/공유구독)를 playwright로 실조작·캡처한 검증갤러리 + 사용법 가이드. 카운트게이트 7=7=7 MATCH, 독립감사 PASS.
+- **PostHog UI 사용법 요약**(보고서 캡션 원천): 인사이트 드릴인=타일 제목 클릭→`/project/497680/insights/<short_id>`. 퍼널=단계바 아래 전환%·이탈·중앙소요시간, 상단 Total conversion rate. 리텐션=행 코호트×열 주차, Week0=100%. 브레이크다운=하단 'Detailed results' 표(UTM SOURCE 행별). 날짜범위=상단 'No date range override'→프리셋(전체 타일 일괄). 공유=Share→'Share dashboard publicly' 토글(공개링크)/Subscribe=정기 이메일·Slack.
+- **재사용 교훈 (st를 '코드변경 없는 사용법/검증 보고서'에 적용)**:
+  - beforeState:"none"(신규 시연) 타입으로 각 시나리오=1요구사항=after 1장. deploy는 라이브 URL, build/e2e는 PASS로 표기(실빌드 없음).
+  - **playwright MCP는 file:// 차단** → 보고서 렌더검증은 `python3 -m http.server <port>`로 띄워 http로 열고 naturalWidth 체크 후 `report-render-check.json` 기록(playwright npm 없으면 이게 validate 통과 조건).
+  - 인사이트 short_id: 유입 ZNscKmkY·스토어 yXGkOSTs·웹퍼널 dNV9Tx5h·앱활성화 gumLh8gF·리텐션 0TkkdLf1·공유 QM8ItmZb·결제 x4MyRIW7.
+  - 캡션은 **프레임 안 내용만** 단정(감사가 R05 프레임밖 컨트롤 언급 잡음 → 정정). 스크롤 상태면 캡션에 명시.
+
 ## 같이 보면 좋은 문서
 - `26-landing-analytics-marketing.md` — PostHog 선정·store_click·UTM 숏링크
 - `19-growth-roadmap.md` — 측정→리텐션→수익화→바이럴 Phase, 대원칙
