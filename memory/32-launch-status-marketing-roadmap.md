@@ -33,7 +33,8 @@ v1.0.1 재배포+구독 심사 제출 완료 시점의 전체 현황과 "심사 
 ### ⚠️ Android 갭 (07-20 브라우저+API 실측 확정)
 - ✅ **RC 정상** — 코덱스 "RC 오퍼링 0패키지"는 오진. 대시보드 Android 상품 2개 Published + `default` 오퍼링 연결 + REST가 Android로 2패키지(`$rc_monthly`/`$rc_annual`→`filltime_premium`) 반환. **RC 고칠 것 없음.**
 - ✅ **Play 상품/트랙 있음** — 구독 ACTIVE, production 트랙 vc2(completed)+internal vc1. 공개 404 = 첫앱 구글심사 대기.
-- ★ **진짜 갭 = production Android 빌드에 RC/페이월 미포함**: production vc2는 RC 설정(07-16) 前(~07-15) 빌드. RC 있는 Android 빌드는 전부 preview(내부)뿐. **→ 현재 HEAD로 fresh Android production 빌드(RC+롤링수정+2플랜페이월) → Play 제출**(iOS v1.0.1처럼). 그래야 승인 후 안드 페이월·구독 동작.
+- ✅ **해결(07-20)**: production vc2(RC 前 빌드)를 **vc4(1.0.1, RC+롤링수정+2플랜페이월)로 덮어써서 제출** — production 트랙 vc4 completed, 구글 재심사중. 승인되면 안드 페이월·구독 동작.
+  - ★ **Play 권한 함정**: vc3 제출이 `photo and video permissions 선언` 정책으로 실패 — expo-media-library가 공유카드 저장기능에 READ_MEDIA_IMAGES/VIDEO(광범위 읽기)를 자동추가. 앱은 저장만 함(saveToLibraryAsync). **fix**: `plugins/withMediaWriteOnly.js`(withBlockedPermissions로 READ_MEDIA_*·READ_EXTERNAL_STORAGE 차단, tools:node=remove) + ShareCardModal `requestPermissionsAsync(true)` writeOnly. prebuild로 매니페스트 검증. 커밋 4894490 → vc4.
 - Android ASO — 긴 설명(4000자) 키워드 자연반복 + 짧은설명 80자 (27번). 새 빌드 제출 때 등록정보 갱신.
 
 ## "마케팅 시작" = 구체적으로 뭐냐
@@ -48,7 +49,7 @@ v1.0.1 재배포+구독 심사 제출 완료 시점의 전체 현황과 "심사 
 지금은 유입 부어서 대시보드 바늘을 움직일 사람을 데려오는 단계.
 
 ## 다음 액션 (사용자 선택 대기)
-- [ ] **Android fresh production 빌드(RC+페이월 포함) → Play 제출** (production vc2가 RC 前 빌드라 필수. RC/상품/트랙은 이미 정상)
+- [x] **Android production 빌드 vc4(RC+페이월+권한fix) → Play 제출 완료(07-20)** — production 트랙 vc4, 구글 재심사중. 승인 대기.
 - [ ] 마케팅 계획 수립 (채널 우선순위 + 첫 2주 액션 + 예산 유무별 분기) — 승인 대기 중 병행
 - [ ] iOS 승인 후: 랜딩 스토어링크 라이브 확인 + store_click 발화 테스트
 
