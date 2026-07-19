@@ -477,7 +477,7 @@ export default function CalendarView() {
             activeOpacity={1}
             onPress={closeModal}
           />
-          <View style={styles.editModal} onStartShouldSetResponder={() => true}>
+          <View style={styles.editModal}>
             <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
               <Ionicons name="close" size={24} color={colors.inkSub} />
             </TouchableOpacity>

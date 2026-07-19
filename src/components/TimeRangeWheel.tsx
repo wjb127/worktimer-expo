@@ -18,6 +18,7 @@ const ITEM_H = 40;
 const VISIBLE = 5; // 홀수 — 가운데 강조 밴드
 const PAD = (VISIBLE - 1) / 2;
 const WHEEL_H = ITEM_H * VISIBLE;
+const SETTLE_DELAY_MS = 100;
 
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
 const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
@@ -41,28 +42,56 @@ function Wheel({
 }) {
   const ref = useRef<ScrollView>(null);
   const dragging = useRef(false);
+  const indexRef = useRef(index);
+  const latestIndex = useRef(index);
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [active, setActive] = useState(index);
 
   // 외부에서 index가 바뀌면(세그먼트 토글 등) 스크롤 동기화 — 사용자가 굴리는 중엔 skip
   useEffect(() => {
+    indexRef.current = index;
+    latestIndex.current = index;
     setActive(index);
     if (!dragging.current) {
       ref.current?.scrollTo({ y: index * ITEM_H, animated: false });
     }
   }, [index]);
 
-  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const i = Math.round(e.nativeEvent.contentOffset.y / ITEM_H);
-    const clamped = Math.max(0, Math.min(items.length - 1, i));
-    if (clamped !== active) setActive(clamped); // 스크롤 중 가운데 항목 실시간 강조
+  useEffect(
+    () => () => {
+      if (settleTimer.current) clearTimeout(settleTimer.current);
+    },
+    [],
+  );
+
+  const clearSettleTimer = () => {
+    if (!settleTimer.current) return;
+    clearTimeout(settleTimer.current);
+    settleTimer.current = null;
   };
 
-  const onEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+  const getIndex = (offsetY: number) => {
+    const i = Math.round(offsetY / ITEM_H);
+    return Math.max(0, Math.min(items.length - 1, i));
+  };
+
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const clamped = getIndex(e.nativeEvent.contentOffset.y);
+    latestIndex.current = clamped;
+    setActive((current) => (clamped === current ? current : clamped));
+  };
+
+  const settle = (clamped: number) => {
     dragging.current = false;
-    const i = Math.round(e.nativeEvent.contentOffset.y / ITEM_H);
-    const clamped = Math.max(0, Math.min(items.length - 1, i));
-    if (clamped !== index) onIndexChange(clamped);
+    if (clamped !== indexRef.current) onIndexChange(clamped);
     else ref.current?.scrollTo({ y: clamped * ITEM_H, animated: true });
+  };
+
+  const onMomentumEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    clearSettleTimer();
+    const clamped = getIndex(e.nativeEvent.contentOffset.y);
+    latestIndex.current = clamped;
+    settle(clamped);
   };
 
   return (
@@ -75,9 +104,20 @@ function Wheel({
       scrollEventThrottle={16}
       onScroll={onScroll}
       onScrollBeginDrag={() => {
+        clearSettleTimer();
         dragging.current = true;
       }}
-      onMomentumScrollEnd={onEnd}
+      onScrollEndDrag={(e) => {
+        latestIndex.current = getIndex(e.nativeEvent.contentOffset.y);
+        clearSettleTimer();
+        // 관성이 시작되면 취소되고, 관성이 없으면 이 경로에서 값을 확정한다.
+        settleTimer.current = setTimeout(() => {
+          settleTimer.current = null;
+          settle(latestIndex.current);
+        }, SETTLE_DELAY_MS);
+      }}
+      onMomentumScrollBegin={clearSettleTimer}
+      onMomentumScrollEnd={onMomentumEnd}
       contentContainerStyle={{ paddingVertical: ITEM_H * PAD }}
     >
       {items.map((it, i) => (
