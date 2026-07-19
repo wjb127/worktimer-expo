@@ -15,6 +15,7 @@
 - Apple Team `9Q26686S8R` · Expo owner `@gawall` · EAS projectId `31c0b3a1-6f4a-4b05-ad00-89924a249f68`
 - DB: **VPS 로컬 PostgreSQL 16**(127.0.0.1, 07-16 Supabase에서 이관 → 20번) / 앱은 NestJS API 경유 / 백업 매일 KST 04:10
 - 랜딩: `ss-042-filltime-landing` → filltime.vercel.app (개인정보처리방침/약관, 사업자 코들라스)
+- 진행(2026-07-19b): **AI분석 SSE 스트리밍**(코덱스 구현·검토통과, 앱 c10304d·백엔드 246ef76, expo/fetch OTA·페이월유지·clientMessageId멱등·IDOR차단) + **OTA자동리로드/알림인박스/누적요약2x3/대시보드**(daa4ead) + **연속기록 KST버그 수정**(1602a7f) + **AARRR/PostHog 계획**(30번, 새 테이블 X·admin+PostHog 활용)
 - 진행(2026-07-19): **자정 넘긴 세션 버그 수정·배포**(백엔드 436c760 date-overlap KST 분할+end분할+cleanupOrphaned excludeId·자가치유, 앱 60f72c1 excludeId 전달) — 옛 work-timer date-overlap 이식, git worktree로 diary WIP 무손상 배포. 상세 29번
 - 진행(2026-07-18): **UI 스프린트 대량**(알림페이지·할일3탭·롤링피커·명예의전당·잔디입체감·공유복사저장·히트맵가로세로·통계리캡기간·버전자동) + **OTA(EAS Update) 설정** + **Live Activity 잠금화면 마크** + **브랜드색 밝은스카이(A)** + **ASO메타 API반영** + **✅동적 배지 URL 배포**(백엔드 e9bffc3 GET /badge/:handle SVG·PATCH /me/profile opt-in 라이브 + 앱 a82479f 설정 공개배지섹션 OTA) / **압축재개는 29번 먼저** / 빌드 `6442ede2` 설치·검증 대기(배지UI는 OTA수신)
 - 진행(2026-07-17): 멀티테넌시 v1.2 배포(23) + 랜딩 전면개편·배포 + 루트app/ 404복구 / 24번
@@ -51,6 +52,7 @@
 | `26-landing-analytics-marketing.md` | ★ 랜딩 유입추적·광고 세팅(07-18) — PostHog 선정근거·store_click·/go UTM숏링크 사용법 + 백엔드 불구축·부정클릭 단계대응 결정 |
 | `27-aso-app-store-optimization.md` | ★ ASO 딥리서치(07-18) — SEO 개념비교·iOS vs Android 인덱싱차이·애플 키워드필드 100자 규칙·한국어 형태소·평점/PPO·기각된 통설 + 필타임 제목/부제/키워드 체크리스트 |
 | `28-design-ref-ai-token-monitor.md` | 디자인 레퍼런스(07-18) — AI Token Monitor 앱에서 빼올 것: 잔디 셀 입체감(depth) 기법·리더보드 레이아웃·히트맵 기간토글·색 절제(밝은스카이 이미 반영) |
+| `30-aarrr-posthog-analytics-plan.md` | ★ AARRR 퍼널·PostHog 계획(07-19) — 결제자/사용자수/리텐션은 admin+PostHog+codeatlas Postgres에 이미 있음(새 테이블 X). AARRR 이벤트 매핑·대시보드 7인사이트 스펙·세팅경로·크로스디바이스 한계 |
 | `29-session-2026-07-18-ui-sprint.md` | ★ 세션종합(07-18) — **압축 후 재개 1순위**. UI스프린트(알림페이지·할일3탭·롤링피커·명예의전당·잔디입체감·공유복사저장·히트맵토글·통계리캡·버전자동)+OTA설정+Live Activity마크+브랜드색A+ASO메타 / 빌드6442ede2 설치·검증 / 다음=동적배지URL |
 | `raw/` | 원문 작업 로그(날짜별, 기본 비노출·지시 시에만 열람) |
 | `.private/01-codeatlas-infra.md` | (private) VPS·DB·op 시크릿 참조 |
