@@ -5,6 +5,16 @@
 필타임 비즈니스 지표(결제자·사용자수·리텐션·AARRR 퍼널) 추적 계획.
 펴볼 때: "리텐션/퍼널 어떻게 보지", "PostHog 대시보드", "결제자·매출 관리", "AARRR".
 
+## ★★ 완료 (2026-07-19) — AARRR 대시보드 구축됨
+- **PostHog 대시보드 라이브**: `AARRR 퍼널 — 필타임` (pinned). ID `1871502`.
+  URL: `https://us.posthog.com/project/497680/dashboard/1871502`
+- **프로젝트**: `497680` (Default project). api_token = 앱/랜딩 키 `phc_AcPQ...`와 일치 확인.
+- **인사이트 7개**(전부 실데이터 렌더 검증): ①[A]유입 $pageview×utm_source ②[A]스토어클릭 store_click×store ③[웹퍼널] pageview→store_click ④[앱활성화퍼널] app_open→login_success→onboarding_complete→session_start ⑤[R]주간리텐션 session_start(retention_first_time,8주) ⑥[R]공유바이럴 shared+copied+saved ⑦[$]결제퍼널 session_start→premium_interest_click→premium_purchase_success
+- **검증된 이벤트 유입**(07-19 기준): app_open·login_success·session_start·session_end·premium_interest_click·$pageview·share_card_*·onboarding_complete/skip 다 도착중
+- **아직 0건(정상, 미발화)**: `store_click`(랜딩 다운로드 클릭 아직 없음)·`premium_purchase_success`(구매 전)·`milestone_achieved`. → ②③⑦ 마지막 스텝은 이벤트 쌓이면 자동 채워짐. 리텐션⑤도 앱 출시 ~1주라 코호트 몇 개뿐(시간 지나면 의미생김)
+- **★ 재사용 기법 (personal API key 불필요)**: playwright로 us.posthog.com 로그인(구글 qhv147 세션 이미 브라우저에 있음) → `browser_evaluate`에서 `fetch('/api/projects/497680/...', {credentials:'include', headers:{'X-CSRFToken': document.cookie의 posthog_csrftoken}})`로 내부 REST API 직접 호출. 대시보드/인사이트 생성 전부 이 방식(POST insights + `dashboards:[id]`로 타일 자동생성). UI 클릭 노가다 완전 회피. insight query는 `{kind:'InsightVizNode', source:{kind:'TrendsQuery'|'FunnelsQuery'|'RetentionQuery', ...}}` 스키마.
+- **다음(선택)**: store_click 발화 확인(랜딩 실클릭)·리텐션 데이터 축적 대기·결제/매출은 admin.codeatlas.kr 확장(아래 참조)
+
 ## ★ 핵심 결론
 **대부분 이미 있음 — 새 테이블·새 랜딩백엔드 만들지 말 것(중복·분산).**
 비즈니스 데이터는 codeatlas Postgres + PostHog에 있고, 어드민(admin.codeatlas.kr)이 이미 유저·구독 관리 중.
@@ -45,10 +55,8 @@
 - 랜딩→앱 퍼널: PostHog distinct_id 스티칭(근사)
 
 ## 진행 순서 (사용자 결정)
-- **최종 목표**: AARRR 퍼널 추적 대시보드
-- **먼저 1번(PostHog 리텐션·퍼널)부터** — 코드 거의 X. 이벤트 도착 확인 → 세팅 경로 택1:
-  ① personal API key 주면 내가 PostHog API로 대시보드 자동생성(추천) ② PostHog 로그인 브라우저 → computer-use 클릭세팅 ③ 위 스펙대로 수동클릭
-- 그다음: 결제/매출은 admin 확장, 리텐션 자체대시보드는 login_event 쿼리
+- **최종 목표**: AARRR 퍼널 추적 대시보드 → ✅ **1단계(PostHog) 완료** (위 "완료" 섹션). playwright 브라우저 세션쿠키+CSRF로 REST API 호출해 대시보드 1871502 + 인사이트 7개 자동생성.
+- **남은 것**: ① 결제/매출(MRR·이탈)은 admin.codeatlas.kr stats 확장(subscriptions 집계) ② 리텐션 자체대시보드는 login_event 쿼리(PostHog 리텐션으로 이미 커버되니 우선순위 낮음) ③ store_click 실발화·리텐션 데이터 축적 대기
 
 ## 같이 보면 좋은 문서
 - `26-landing-analytics-marketing.md` — PostHog 선정·store_click·UTM 숏링크
