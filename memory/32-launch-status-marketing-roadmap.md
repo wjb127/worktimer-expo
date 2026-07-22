@@ -5,9 +5,12 @@
 v1.0.1 재배포+구독 심사 제출 완료 시점의 전체 현황과 "심사 후 마케팅" 로드맵.
 펴볼 때: "지금 어디까지 왔지", "마케팅 언제·뭐부터", "심사 상태", "안드 수익화 갭".
 
-## ★★ 심사 상태 (07-22 09:30 API 실측) — 양쪽 다 막힘, 액션 필요
-- **iOS v1.0.1 = REJECTED** ⚠️ — reviewSubmission `UNRESOLVED_ISSUES`(07-19 12:27 제출건). 구독 2개는 `IN_REVIEW` 유지.
-  **반려 사유는 API로 안 나옴 → ASC 웹 Resolution Center에서 원문 확인 필요**(미확인). 사유 보고 수정→재제출.
+## ★★ 심사 상태 (07-22 21:55 KST) — iOS 재제출 완료 ✅ / Android 확인 대기
+- **iOS v1.0.1 = 재제출됨(WAITING_FOR_REVIEW, 07-22 12:53 UTC)**. 구독 2개 IN_REVIEW 유지.
+  - **반려 원문(07-20)**: `3.1.2 Business: Payments - Subscriptions` — "auto-renewable subscriptions but does not include a functional link to the **Terms of Use (EULA) in the app's metadata**. 표준 Apple EULA면 App Description에 링크 추가."
+  - **해결**: 바이너리 문제 아님(재빌드 불필요). App Description(ko) 하단에 구독 안내 + **표준 Apple EULA 링크**(apple.com/legal/.../stdeula) + 개인정보처리방침 링크 추가(API PATCH, 589자) → 버전페이지 "심사 업데이트"→계속 → 제출상세 "앱 심사에 다시 제출" 클릭. 같은 제출건(ad1b2d2d) 재제출.
+  - ★ 다음 iOS 앱도 구독 있으면 **설명에 EULA 링크 처음부터 넣을 것** (3.1.2 단골). 페이월 안 ToU/프라이버시 링크+복원버튼도 다음 빌드에 추가 권장(이번엔 메타만 지적됐지만 풀 요건).
+  - ★ 반려 원문 읽기: ASC API론 불가(resolutionCenterThreads 404) → 웹 필요. **gstack headed 브라우저($B connect, 별도 창)에 사용자 로그인 1회** → 이후 조작 전부 자동(cu처럼 사용자 화면 안 뺏음). playwright 잠기면 이 경로.
 - **Android vc4 = production 트랙 completed인데 미게시**(공개 404, vc1 draft 찌꺼기도 있음). 유력 원인 2개:
   ① **신규 개인 개발자 계정(2023-11-13 이후 생성) 비공개 테스트 의무** — 12명 테스터×14일 연속 opt-in 후 "프로덕션 액세스 신청" 통과해야 게시 가능. Play Console 대시보드에 요건 배너 뜨는지로 판별(조직계정/구계정이면 면제).
   ② 아니면 그냥 신규계정 연장심사(7일+) — 상태 문구 "검토 중" vs "게시 대기(관리형 게시=수동 게시 버튼)" 구분 필요.
