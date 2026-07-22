@@ -15,6 +15,7 @@
 - Apple Team `9Q26686S8R` · Expo owner `@gawall` · EAS projectId `31c0b3a1-6f4a-4b05-ad00-89924a249f68`
 - DB: **VPS 로컬 PostgreSQL 16**(127.0.0.1, 07-16 Supabase에서 이관 → 20번) / 앱은 NestJS API 경유 / 백업 매일 KST 04:10
 - 랜딩: `ss-042-filltime-landing` → filltime.vercel.app (개인정보처리방침/약관, 사업자 코들라스)
+- 진행(2026-07-22): **⚠️ iOS v1.0.1 REJECTED**(사유 미확인 — ASC Resolution Center 봐야 함) + **Android vc4 미게시**(유력: 신규계정 12테스터×14일 비공개테스트 의무 or 연장심사. Play 대시보드 배너로 판별). 상세·다음액션 = 32번 최상단
 - 진행(2026-07-19 밤): **압축재개는 32번 먼저.** ✅ **iOS v1.0.1 재배포+구독 심사 제출 완료** — 버전(build5, 롤링수정 c8bbdef + ASO) + 구독 연간/월간 = 4개 함께 WAITING_FOR_REVIEW. 폰(WiPhone) build5 설치. 뚫은 것: expect 대화형빌드·인증서불일치수정(stale LiveActivity 프로파일 삭제)·구독스샷 magick재인코딩·IAP 웹제출(playwright). 다음=마케팅(게이트: iOS+Android 승인). ⚠️Android 구독세팅 미확인. 상세 32(로드맵)·25(실전교훈)
 - 진행(2026-07-19): AI분석 SSE 스트리밍(코덱스 앱c10304d/백246ef76) + OTA자동리로드/알림인박스/대시보드(daa4ead) + 연속기록 KST수정(1602a7f) + 자정세션·테마 수정 + AARRR/PostHog 대시보드 구축(30번). 백엔드 prod=246ef76
 - 진행(2026-07-19): **자정 넘긴 세션 버그 수정·배포**(백엔드 436c760 date-overlap KST 분할+end분할+cleanupOrphaned excludeId·자가치유, 앱 60f72c1 excludeId 전달) — 옛 work-timer date-overlap 이식, git worktree로 diary WIP 무손상 배포. 상세 29번
