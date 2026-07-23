@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Linking,
   Modal,
   ScrollView,
   StyleSheet,
@@ -17,7 +19,14 @@ import {
   getCurrentOffering,
   hasTrialEligibility,
   purchasePremiumPackage,
+  restorePurchases,
 } from '../lib/purchases';
+
+// App Review 3.1.2(c): 페이월(앱 내)에 이용약관(EULA)·개인정보처리방침 링크 필수.
+// 앱 설명(메타데이터)과 동일한 표준 Apple EULA를 사용한다.
+const TERMS_URL =
+  'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
+const PRIVACY_URL = 'https://filltime.vercel.app/privacy';
 
 // 프리미엄 페이월 (재사용) — AI 분석 / 기록 수정 등 프리미엄 기능 진입 게이트.
 // 2플랜(연간 기본선택 + 절약 배지 + 7일 체험 / 월간) 실결제 플로우.
@@ -50,6 +59,7 @@ export default function PaywallModal({
 }: Props) {
   const insets = useSafeAreaInsets();
   const [starting, setStarting] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const [loading, setLoading] = useState(true);
   const [monthlyPkg, setMonthlyPkg] = useState<PurchasesPackage | null>(null);
   const [annualPkg, setAnnualPkg] = useState<PurchasesPackage | null>(null);
@@ -95,6 +105,20 @@ export default function PaywallModal({
             100,
         )
       : null;
+
+  // App Review 3.1.1: 명시적 "구매 복원" 버튼 — 이전 구매(기기 변경·재설치) 복원.
+  const handleRestore = async () => {
+    if (starting || restoring) return;
+    setRestoring(true);
+    const ok = await restorePurchases();
+    setRestoring(false);
+    if (ok) {
+      Alert.alert('복원 완료', '프리미엄 구독이 복원되었어요.');
+      onUnlocked();
+    } else {
+      Alert.alert('복원할 구매 없음', '이 계정으로 복원할 구독을 찾지 못했어요.');
+    }
+  };
 
   const handlePurchase = async () => {
     if (starting || !selectedPkg) return;
@@ -237,6 +261,23 @@ export default function PaywallModal({
             </TouchableOpacity>
           )}
 
+          {/* App Review 3.1.1 + 3.1.2(c): 구매 복원 버튼 · 이용약관(EULA) · 개인정보처리방침 */}
+          <View style={styles.legalRow}>
+            <TouchableOpacity onPress={handleRestore} disabled={restoring}>
+              <Text style={styles.legalLink}>
+                {restoring ? '복원 중…' : '구매 복원'}
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.legalDot}>·</Text>
+            <TouchableOpacity onPress={() => Linking.openURL(TERMS_URL)}>
+              <Text style={styles.legalLink}>이용약관</Text>
+            </TouchableOpacity>
+            <Text style={styles.legalDot}>·</Text>
+            <TouchableOpacity onPress={() => Linking.openURL(PRIVACY_URL)}>
+              <Text style={styles.legalLink}>개인정보 처리방침</Text>
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
             <Text style={styles.closeText}>다음에 할게요</Text>
           </TouchableOpacity>
@@ -343,4 +384,16 @@ const styles = StyleSheet.create({
   footnote: { fontSize: 12, color: colors.inkSub, marginTop: 10 },
   closeBtn: { paddingVertical: 14, marginTop: 2 },
   closeText: { fontSize: 14, color: colors.inkSub },
+  legalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+  },
+  legalLink: {
+    fontSize: 12,
+    color: colors.inkSub,
+    textDecorationLine: 'underline',
+  },
+  legalDot: { fontSize: 12, color: colors.inkSub },
 });

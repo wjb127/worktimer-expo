@@ -124,6 +124,18 @@ export async function hasTrialEligibility(
   }
 }
 
+// 구매 복원 — App Review 3.1.1 필수(명시적 "구매 복원" 버튼에서 호출).
+// 복원 후 premium entitlement 활성 여부 반환. 실패/복원할 것 없음 전부 false (throw 없음).
+export async function restorePurchases(): Promise<boolean> {
+  if (!isReady()) return false;
+  try {
+    const info: CustomerInfo = await Purchases.restorePurchases();
+    return typeof info.entitlements.active[PREMIUM_ENTITLEMENT] !== 'undefined';
+  } catch {
+    return false;
+  }
+}
+
 // 특정 패키지 구매 시도 → premium entitlement 활성 여부 반환.
 // 유저 취소/실패 전부 false (throw 없음). 페이월 2플랜(월간/연간) 선택 구매용.
 export async function purchasePremiumPackage(
