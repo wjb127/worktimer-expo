@@ -5,6 +5,13 @@
 v1.0.1 재배포+구독 심사 제출 완료 시점의 전체 현황과 "심사 후 마케팅" 로드맵.
 펴볼 때: "지금 어디까지 왔지", "마케팅 언제·뭐부터", "심사 상태", "안드 수익화 갭".
 
+## ★★★ 2차 반려 대응 (07-24) — build 6 + 코덱스 감사 반영
+- **2차 반려 원문(07-22 22:44, 실기기)**: ①3.1.2(c) 페이월(앱내)에 EULA·프라이버시 링크 없음 ②3.1.1 "구매 복원" 버튼 없음. 구독 2개 REJECTED는 앱 반려 연쇄(자동 반환).
+- **대응(daf0a4a)**: PaywallModal 하단 legalRow(구매 복원·이용약관(표준EULA)·개인정보처리방침) + purchases.restorePurchases(). tsc·55tests PASS. **build 6** 재빌드→재제출.
+- **코덱스(GPT) 독립감사 반영**: ①랜딩 방침에 Anthropic·RevenueCat 위탁 + 접속기록 5년 보관 명시(ss-042 f949004 푸시) ②**ASC 프라이버시 라벨 7종으로 갱신·게시**(+기타 사용자 콘텐츠, 구입 내역 — 각 앱기능/신원연결/추적없음). ⚠️gstack JS 라디오 클릭이 '예'로 잘못 저장된 것 id 기반(`CONFIRM_TRACKING_*_radioButton_false`)으로 정정 — **ASC 설문 라디오는 반드시 id로 클릭+checked 재검증**.
+- **백로그**(다음 업데이트): 체험 문구에 "종료 후 {가격} 자동갱신" 명시 / Android 설정에 구독관리 링크 / 복원 에러 구분(restored·none·error) / AI 데이터 동의 화면 / 계정삭제 시 로그 익명화.
+- ★ node_modules 깨짐 재발(앱·랜딩 둘 다, top-level만 소실) → mv로 치우고 클린 재설치. 앱은 npm(훅이 막으면 `npx --yes npm@11 install`), 랜딩은 pnpm.
+
 ## ★★ 심사 상태 (07-22 21:55 KST) — iOS 재제출 완료 ✅ / Android 확인 대기
 - **iOS v1.0.1 = 재제출됨(WAITING_FOR_REVIEW, 07-22 12:53 UTC)**. 구독 2개 IN_REVIEW 유지.
   - **반려 원문(07-20)**: `3.1.2 Business: Payments - Subscriptions` — "auto-renewable subscriptions but does not include a functional link to the **Terms of Use (EULA) in the app's metadata**. 표준 Apple EULA면 App Description에 링크 추가."
