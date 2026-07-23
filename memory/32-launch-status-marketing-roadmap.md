@@ -5,7 +5,12 @@
 v1.0.1 재배포+구독 심사 제출 완료 시점의 전체 현황과 "심사 후 마케팅" 로드맵.
 펴볼 때: "지금 어디까지 왔지", "마케팅 언제·뭐부터", "심사 상태", "안드 수익화 갭".
 
-## ⏸ 재개 지점 (07-24 02:44) — build 6 애플 인제스트 대기중
+## ✅ 3차 제출 완료 (07-24 03:52 KST) — build 6, 심사 대기중
+- 버전 1.0.1(build 6)+구독 2개 전부 WAITING_FOR_REVIEW. 3.1.1(복원버튼)·3.1.2c(페이월 링크) 해소본.
+- ★재제출 함정: 앱 반려로 자동 반환된 구독(REJECTED)은 **각 구독 페이지의 "심사 업데이트"**를 눌러야 "심사 준비됨"으로 복귀 → 그래야 제출건의 "다시 제출" 활성화.
+- ★eas submit "Something went wrong"이어도 업로드는 성공일 수 있음(altool duplicate로 판별). PROCESSING 빌드는 preReleaseVersions로만 조회됨.
+
+## (해소됨) ⏸ 재개 지점 (07-24 02:44) — build 6 애플 인제스트 대기중
 - **남은 것 딱 2개**: ①build 6이 ASC에서 `PROCESSING`→`VALID` 되면 **버전에 첨부**(아래 원커맨드) ②gstack headed로 ASC 로그인 후 "심사 업데이트→계속" + 제출상세 "앱 심사에 다시 제출" 클릭.
 - build 6 업로드는 **성공 확정**(altool 재시도가 duplicate 에러 = 애플 수신됨). eas submit 출력이 비어 실패로 오인했었음.
 - ★함정: `GET /v1/builds`엔 PROCESSING 빌드가 **안 나옴** → `GET /v1/preReleaseVersions/{id}/builds`로 조회해야 보임.
