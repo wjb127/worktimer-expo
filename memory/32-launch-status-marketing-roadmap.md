@@ -5,6 +5,12 @@
 v1.0.1 재배포+구독 심사 제출 완료 시점의 전체 현황과 "심사 후 마케팅" 로드맵.
 펴볼 때: "지금 어디까지 왔지", "마케팅 언제·뭐부터", "심사 상태", "안드 수익화 갭".
 
+## ⏸ 재개 지점 (07-24 02:44) — build 6 애플 인제스트 대기중
+- **남은 것 딱 2개**: ①build 6이 ASC에서 `PROCESSING`→`VALID` 되면 **버전에 첨부**(아래 원커맨드) ②gstack headed로 ASC 로그인 후 "심사 업데이트→계속" + 제출상세 "앱 심사에 다시 제출" 클릭.
+- build 6 업로드는 **성공 확정**(altool 재시도가 duplicate 에러 = 애플 수신됨). eas submit 출력이 비어 실패로 오인했었음.
+- ★함정: `GET /v1/builds`엔 PROCESSING 빌드가 **안 나옴** → `GET /v1/preReleaseVersions/{id}/builds`로 조회해야 보임.
+- 상태확인+첨부 원커맨드: 이 파일 커밋 직전 세션의 `/tmp/...b7ifrtmtu` 패턴 — preReleaseVersions에서 build6 VALID 확인 후 `PATCH /v1/appStoreVersions/591149f9.../relationships/build`.
+
 ## ★★★ 2차 반려 대응 (07-24) — build 6 + 코덱스 감사 반영
 - **2차 반려 원문(07-22 22:44, 실기기)**: ①3.1.2(c) 페이월(앱내)에 EULA·프라이버시 링크 없음 ②3.1.1 "구매 복원" 버튼 없음. 구독 2개 REJECTED는 앱 반려 연쇄(자동 반환).
 - **대응(daf0a4a)**: PaywallModal 하단 legalRow(구매 복원·이용약관(표준EULA)·개인정보처리방침) + purchases.restorePurchases(). tsc·55tests PASS. **build 6** 재빌드→재제출.
