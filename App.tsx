@@ -157,7 +157,8 @@ function Root() {
     getOnboardingSeen().then(setOnboardingSeen);
   }, []);
 
-  // 로그인 상태가 되면 Expo 푸시 토큰을 백엔드에 등록(주간 리캡 등 원격 발송용)
+  // 로그인 상태가 되면 이미 허용된 Expo 푸시 토큰만 백엔드에 등록한다.
+  // 권한 팝업은 첫 타이머 시작 시점에만 요청한다.
   // + 홈화면 위젯 데이터 최신화. 둘 다 fire-and-forget 안전(실패 시 조용히 no-op).
   useEffect(() => {
     if (signedIn) {

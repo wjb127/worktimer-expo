@@ -5,6 +5,7 @@ import {
   View,
   TouchableOpacity,
   ActivityIndicator,
+  AppState,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Svg, { Circle } from 'react-native-svg';
@@ -21,6 +22,7 @@ import {
   scheduleHourlyWorkNotifications,
   cancelHourlyWorkNotifications,
   requestNotificationPermissions,
+  registerForPushNotifications,
 } from '../lib/notifications';
 import {
   startLiveActivity,
@@ -41,6 +43,7 @@ import {
 import { track } from '../lib/analytics';
 import { captureException } from '../lib/errorTracking';
 import { maybeRequestReview } from '../lib/reviewPrompt';
+import { elapsedSecondsSince } from '../lib/timerElapsed';
 
 const formatTime = (seconds: number): string => {
   const hrs = Math.floor(seconds / 3600);
@@ -94,14 +97,23 @@ export default function TimerScreen() {
   const startStopBusy = useRef(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialLoad = useRef(true);
+  const currentSessionRef = useRef<WorkSession | null>(null);
+
+  useEffect(() => {
+    currentSessionRef.current = currentSession;
+  }, [currentSession]);
 
   // 백그라운드 작업 (알림, Live Activity) - fire and forget
   const runBackgroundTasks = (ongoing: WorkSession | null, total: number, elapsed: number) => {
     if (ongoing) {
-      // 알림 스케줄 (await 없이 실행)
-      requestNotificationPermissions().then(() => {
-        scheduleHourlyWorkNotifications(elapsed);
-      });
+      // 알림 스케줄 (await 없이 실행, 실패는 타이머 흐름과 분리)
+      void requestNotificationPermissions()
+        .then((granted) => {
+          if (!granted) return;
+          void scheduleHourlyWorkNotifications(elapsed);
+          void registerForPushNotifications();
+        })
+        .catch(() => {});
       // Live Activity 업데이트
       isLiveActivityRunning().then((running) => {
         if (!running) {
@@ -111,8 +123,8 @@ export default function TimerScreen() {
       });
     } else {
       // 알림 취소 및 Live Activity 종료
-      cancelHourlyWorkNotifications();
-      endLiveActivity();
+      void cancelHourlyWorkNotifications();
+      void endLiveActivity();
     }
   };
 
@@ -139,9 +151,7 @@ export default function TimerScreen() {
         setIsRunning(true);
 
         // 경과 시간 계산 (타임스탬프 기반으로 정확하게)
-        const startTime = new Date(ongoing.start_time).getTime();
-        const now = Date.now();
-        elapsed = Math.floor((now - startTime) / 1000);
+        elapsed = elapsedSecondsSince(ongoing.start_time);
         setElapsedSeconds(elapsed);
       } else {
         setCurrentSession(null);
@@ -197,6 +207,19 @@ export default function TimerScreen() {
     };
   }, [isRunning]);
 
+  // JS 타이머는 백그라운드에서 정지·throttle될 수 있으므로 포그라운드 복귀 시
+  // 증가 횟수가 아니라 서버 세션의 절대 시작 시각으로 다시 계산한다.
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') return;
+      const ongoing = currentSessionRef.current;
+      if (!ongoing) return;
+      setElapsedSeconds(elapsedSecondsSince(ongoing.start_time));
+      void getTodayTotal().then(setTodayTotal).catch(() => {});
+    });
+    return () => subscription.remove();
+  }, []);
+
   // Live Activity 업데이트 (10초마다)
   useEffect(() => {
     if (isRunning && elapsedSeconds % 10 === 0) {
@@ -249,8 +272,11 @@ export default function TimerScreen() {
         setIsRunning(true);
         setElapsedSeconds(0);
         // 알림 권한 요청 및 시간별 알림 스케줄
-        await requestNotificationPermissions();
-        await scheduleHourlyWorkNotifications();
+        const notificationGranted = await requestNotificationPermissions();
+        if (notificationGranted) {
+          void scheduleHourlyWorkNotifications().catch(() => {});
+          void registerForPushNotifications();
+        }
         // Live Activity 시작
         await startLiveActivity(new Date(session.start_time), todayTotal);
         // 홈화면 위젯 갱신 (fire-and-forget, 실패 무해)

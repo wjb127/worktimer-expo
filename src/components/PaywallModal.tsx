@@ -91,8 +91,9 @@ export default function PaywallModal({
 
   useEffect(() => {
     if (!visible) return;
+    track('paywall_view', { feature: featureName });
     loadOffering();
-  }, [visible, loadOffering]);
+  }, [visible, featureName, loadOffering]);
 
   const selectedPkg = selected === 'annual' ? annualPkg : monthlyPkg;
   const hasPlans = Boolean(annualPkg ?? monthlyPkg);
@@ -113,9 +114,11 @@ export default function PaywallModal({
     const ok = await restorePurchases();
     setRestoring(false);
     if (ok) {
+      track('restore_success', { feature: featureName });
       Alert.alert('복원 완료', '프리미엄 구독이 복원되었어요.');
       onUnlocked();
     } else {
+      track('restore_none', { feature: featureName });
       Alert.alert('복원할 구매 없음', '이 계정으로 복원할 구독을 찾지 못했어요.');
     }
   };
@@ -124,11 +127,15 @@ export default function PaywallModal({
     if (starting || !selectedPkg) return;
     setStarting(true);
     track('premium_interest_click', { feature: featureName, plan: selected });
+    track('purchase_start', { feature: featureName, plan: selected });
     // 실결제 — 구매/복원 성공 시에만 언락 (실패·취소 시 아무것도 지급하지 않음)
     const ok = await purchasePremiumPackage(selectedPkg);
     setStarting(false);
     if (ok) {
       track('premium_purchase_success', { plan: selected });
+      if (selected === 'annual' && trialEligible) {
+        track('trial_started', { plan: selected });
+      }
       onUnlocked();
     }
   };

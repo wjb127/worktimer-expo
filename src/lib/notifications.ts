@@ -224,7 +224,20 @@ export async function sendTestNotification(): Promise<void> {
 
 // 업무 진행 중 알림 ID prefix
 const INTERVAL_NOTIFICATION_PREFIX = 'interval-work-';
-const MAX_NOTIFICATIONS = 100; // iOS에서 스케줄 가능한 최대 알림 수 제한
+const IOS_PENDING_NOTIFICATION_LIMIT = 64;
+const MAX_INTERVAL_NOTIFICATIONS = 60;
+
+// 스케줄/취소를 직렬화하고 새 작업이 시작되면 이전 스케줄 루프를 무효화한다.
+let intervalGeneration = 0;
+let intervalOperation: Promise<void> = Promise.resolve();
+
+function enqueueIntervalOperation(
+  operation: () => Promise<void>,
+): Promise<void> {
+  const next = intervalOperation.then(operation, operation);
+  intervalOperation = next.catch(() => {});
+  return next;
+}
 
 // 경과 시간을 읽기 쉬운 형식으로 변환
 const formatElapsedTime = (minutes: number): string => {
@@ -264,59 +277,70 @@ export async function scheduleIntervalWorkNotifications(
   elapsedSeconds: number = 0,
   settings?: WorkIntervalSettings
 ): Promise<void> {
-  // 기존 알림 취소
-  await cancelIntervalWorkNotifications();
+  const generation = ++intervalGeneration;
+  return enqueueIntervalOperation(async () => {
+    await cancelIntervalWorkNotificationsInternal();
+    if (generation !== intervalGeneration) return;
 
-  // 설정 로드
-  const intervalSettings = settings || await getWorkIntervalSettings();
+    const intervalSettings = settings || await getWorkIntervalSettings();
+    if (!intervalSettings.enabled || generation !== intervalGeneration) return;
 
-  if (!intervalSettings.enabled) {
-    return;
-  }
+    const intervalMinutes = intervalSettings.intervalMinutes;
+    const intervalSeconds = intervalMinutes * 60;
+    const maxDurationSeconds = 20 * 60 * 60;
+    const elapsedIntervals = Math.floor(elapsedSeconds / intervalSeconds);
+    let nextNotificationNumber = elapsedIntervals + 1;
+    let scheduledCount = 0;
 
-  const intervalMinutes = intervalSettings.intervalMinutes;
-  const intervalSeconds = intervalMinutes * 60;
-  const maxDurationSeconds = 20 * 60 * 60; // 최대 20시간
+    const pending = await Notifications.getAllScheduledNotificationsAsync();
+    const otherNotificationCount = pending.filter(
+      (notification) =>
+        !notification.identifier.startsWith(INTERVAL_NOTIFICATION_PREFIX),
+    ).length;
+    const platformBudget =
+      Platform.OS === 'ios'
+        ? Math.max(0, IOS_PENDING_NOTIFICATION_LIMIT - otherNotificationCount)
+        : MAX_INTERVAL_NOTIFICATIONS;
+    const scheduleLimit = Math.min(
+      MAX_INTERVAL_NOTIFICATIONS,
+      platformBudget,
+    );
 
-  // 다음 알림 시간 계산
-  const elapsedIntervals = Math.floor(elapsedSeconds / intervalSeconds);
-  let nextNotificationNumber = elapsedIntervals + 1;
+    while (scheduledCount < scheduleLimit) {
+      if (generation !== intervalGeneration) return;
 
-  let scheduledCount = 0;
+      const elapsedMinutesAtNotification =
+        nextNotificationNumber * intervalMinutes;
+      const secondsUntilNotification =
+        nextNotificationNumber * intervalSeconds - elapsedSeconds;
 
-  while (scheduledCount < MAX_NOTIFICATIONS) {
-    const elapsedMinutesAtNotification = nextNotificationNumber * intervalMinutes;
-    const secondsUntilNotification = (nextNotificationNumber * intervalSeconds) - elapsedSeconds;
+      if (elapsedMinutesAtNotification * 60 > maxDurationSeconds) break;
 
-    // 20시간 초과하면 중단
-    if (elapsedMinutesAtNotification * 60 > maxDurationSeconds) break;
+      if (secondsUntilNotification <= 0) {
+        nextNotificationNumber++;
+        continue;
+      }
 
-    // 이미 지난 시간은 스킵
-    if (secondsUntilNotification <= 0) {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `${formatElapsedTime(elapsedMinutesAtNotification)} 업무 중`,
+          body: getNotificationMessage(elapsedMinutesAtNotification),
+          sound: true,
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: secondsUntilNotification,
+        },
+        identifier: `${INTERVAL_NOTIFICATION_PREFIX}${nextNotificationNumber}`,
+      });
+
+      scheduledCount++;
       nextNotificationNumber++;
-      continue;
     }
-
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: `${formatElapsedTime(elapsedMinutesAtNotification)} 업무 중`,
-        body: getNotificationMessage(elapsedMinutesAtNotification),
-        sound: true,
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-        seconds: secondsUntilNotification,
-      },
-      identifier: `${INTERVAL_NOTIFICATION_PREFIX}${nextNotificationNumber}`,
-    });
-
-    scheduledCount++;
-    nextNotificationNumber++;
-  }
+  });
 }
 
-// 업무 진행 중 반복 알림 취소
-export async function cancelIntervalWorkNotifications(): Promise<void> {
+async function cancelIntervalWorkNotificationsInternal(): Promise<void> {
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   for (const notification of scheduled) {
     if (notification.identifier.startsWith(INTERVAL_NOTIFICATION_PREFIX)) {
@@ -327,6 +351,12 @@ export async function cancelIntervalWorkNotifications(): Promise<void> {
       }
     }
   }
+}
+
+// 업무 진행 중 반복 알림 취소. generation을 즉시 올려 진행 중 예약도 중단한다.
+export async function cancelIntervalWorkNotifications(): Promise<void> {
+  ++intervalGeneration;
+  return enqueueIntervalOperation(cancelIntervalWorkNotificationsInternal);
 }
 
 // 하위 호환성을 위한 별칭 함수
@@ -350,14 +380,15 @@ function getProjectId(): string | undefined {
   return (fromConfig as string | undefined) ?? fromEas;
 }
 
-// 로그인 후 / 앱 시작 시(이미 로그인 상태) 호출. fire-and-forget 안전.
+// 로그인 후 / 앱 시작 시 호출. 이미 허용된 권한만 사용하며 팝업을 띄우지 않는다.
+// 권한 요청은 첫 타이머 시작 흐름의 requestNotificationPermissions가 담당한다.
 export async function registerForPushNotifications(): Promise<void> {
   try {
     // 시뮬레이터/에뮬레이터는 원격 푸시 토큰을 못 받음 → 조용히 스킵
     if (!Device.isDevice) return;
 
-    const granted = await requestNotificationPermissions();
-    if (!granted) return;
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') return;
 
     const projectId = getProjectId();
     const { data: token } = await Notifications.getExpoPushTokenAsync(
