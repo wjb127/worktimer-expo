@@ -6,6 +6,8 @@ const mockLogOut = jest.fn();
 const mockGetCustomerInfo = jest.fn();
 const mockGetOfferings = jest.fn();
 const mockSetLogLevel = jest.fn();
+const mockPurchasePackage = jest.fn();
+const mockRestorePurchases = jest.fn();
 
 jest.mock('react-native-purchases', () => ({
   __esModule: true,
@@ -16,6 +18,8 @@ jest.mock('react-native-purchases', () => ({
     getCustomerInfo: mockGetCustomerInfo,
     getOfferings: mockGetOfferings,
     setLogLevel: mockSetLogLevel,
+    purchasePackage: mockPurchasePackage,
+    restorePurchases: mockRestorePurchases,
   },
   LOG_LEVEL: { DEBUG: 'DEBUG' },
 }));
@@ -121,5 +125,83 @@ describe('purchases', () => {
     const { initPurchases, hasPremium } = require('./purchases');
     expect(() => initPurchases()).not.toThrow();
     await expect(hasPremium()).resolves.toBe(false);
+  });
+
+  // 결제 결과 구분 — 퍼널에서 "고민하다 취소"와 "결제 장애"를 갈라 보기 위한 계약.
+  // boolean이던 시절엔 둘이 같은 값이라 광고비를 태워도 원인을 못 읽었다.
+  describe('purchasePremiumPackage 결과 구분', () => {
+    const activeInfo = { entitlements: { active: { premium: {} } } };
+    const emptyInfo = { entitlements: { active: {} } };
+    const pkg = { identifier: '$rc_annual' } as never;
+
+    // ⚠️ clearAllMocks는 호출기록만 지우고 mockImplementation은 남긴다.
+    // 앞선 "configure가 던져도" 테스트의 throw 구현이 새어들어오면 SDK가
+    // disabled로 굳어 모든 결과가 error가 된다 → 여기서 명시적으로 되돌린다.
+    beforeEach(() => {
+      mockConfigure.mockReset();
+    });
+
+    it('entitlement가 활성이면 success', async () => {
+      process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY = 'appl_test';
+      mockPurchasePackage.mockResolvedValue({ customerInfo: activeInfo });
+      const { purchasePremiumPackage } = require('./purchases');
+      await expect(purchasePremiumPackage(pkg)).resolves.toBe('success');
+    });
+
+    it('유저 취소(userCancelled)는 cancelled — 에러로 집계하지 않는다', async () => {
+      process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY = 'appl_test';
+      mockPurchasePackage.mockRejectedValue({ userCancelled: true });
+      const { purchasePremiumPackage } = require('./purchases');
+      await expect(purchasePremiumPackage(pkg)).resolves.toBe('cancelled');
+    });
+
+    it('그 외 실패는 error', async () => {
+      process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY = 'appl_test';
+      mockPurchasePackage.mockRejectedValue(new Error('network'));
+      const { purchasePremiumPackage } = require('./purchases');
+      await expect(purchasePremiumPackage(pkg)).resolves.toBe('error');
+    });
+
+    it('결제는 통과했는데 entitlement가 없으면 언락 불가라 error', async () => {
+      process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY = 'appl_test';
+      mockPurchasePackage.mockResolvedValue({ customerInfo: emptyInfo });
+      const { purchasePremiumPackage } = require('./purchases');
+      await expect(purchasePremiumPackage(pkg)).resolves.toBe('error');
+    });
+
+    it('키가 없으면(SDK 비활성) error — 성공으로 오검출하지 않는다', async () => {
+      const { purchasePremiumPackage } = require('./purchases');
+      await expect(purchasePremiumPackage(pkg)).resolves.toBe('error');
+    });
+  });
+
+  describe('restorePurchases 결과 구분', () => {
+    // 위와 동일 사유 — configure의 throw 구현 누수 차단.
+    beforeEach(() => {
+      mockConfigure.mockReset();
+    });
+
+    it('복원돼 entitlement가 살아나면 success', async () => {
+      process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY = 'appl_test';
+      mockRestorePurchases.mockResolvedValue({
+        entitlements: { active: { premium: {} } },
+      });
+      const { restorePurchases } = require('./purchases');
+      await expect(restorePurchases()).resolves.toBe('success');
+    });
+
+    it('복원할 구매가 없으면 none (에러와 구분)', async () => {
+      process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY = 'appl_test';
+      mockRestorePurchases.mockResolvedValue({ entitlements: { active: {} } });
+      const { restorePurchases } = require('./purchases');
+      await expect(restorePurchases()).resolves.toBe('none');
+    });
+
+    it('네트워크 실패는 error — "구매 없음"으로 오안내하지 않는다', async () => {
+      process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY = 'appl_test';
+      mockRestorePurchases.mockRejectedValue(new Error('network'));
+      const { restorePurchases } = require('./purchases');
+      await expect(restorePurchases()).resolves.toBe('error');
+    });
   });
 });

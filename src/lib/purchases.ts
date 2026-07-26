@@ -124,48 +124,59 @@ export async function hasTrialEligibility(
   }
 }
 
+// 결제 결과 — boolean이면 "취소"와 "실패"가 같은 값이 되어 퍼널에서 구분이 불가능하다.
+// 광고 집행 전 이탈 원인을 읽으려면 이 구분이 필수라 명시 타입으로 반환한다.
+export type PurchaseOutcome = 'success' | 'cancelled' | 'error';
+export type RestoreOutcome = 'success' | 'none' | 'error';
+
+function hasActivePremium(info: CustomerInfo): boolean {
+  return typeof info.entitlements.active[PREMIUM_ENTITLEMENT] !== 'undefined';
+}
+
+// RC SDK는 유저 취소를 에러로 던지되 userCancelled 플래그를 붙인다.
+// 취소는 정상 이탈이므로 에러 알림/집계에서 분리한다.
+function isUserCancelled(e: unknown): boolean {
+  return Boolean((e as { userCancelled?: boolean } | null)?.userCancelled);
+}
+
 // 구매 복원 — App Review 3.1.1 필수(명시적 "구매 복원" 버튼에서 호출).
-// 복원 후 premium entitlement 활성 여부 반환. 실패/복원할 것 없음 전부 false (throw 없음).
-export async function restorePurchases(): Promise<boolean> {
-  if (!isReady()) return false;
+// 'none'(복원할 구매 없음)과 'error'(네트워크·SDK 실패)를 구분해야 사용자에게
+// 맞는 안내를 줄 수 있다. throw 하지 않는다.
+export async function restorePurchases(): Promise<RestoreOutcome> {
+  if (!isReady()) return 'error';
   try {
     const info: CustomerInfo = await Purchases.restorePurchases();
-    return typeof info.entitlements.active[PREMIUM_ENTITLEMENT] !== 'undefined';
+    return hasActivePremium(info) ? 'success' : 'none';
   } catch {
-    return false;
+    return 'error';
   }
 }
 
-// 특정 패키지 구매 시도 → premium entitlement 활성 여부 반환.
-// 유저 취소/실패 전부 false (throw 없음). 페이월 2플랜(월간/연간) 선택 구매용.
+// 특정 패키지 구매 시도. 페이월 2플랜(월간/연간) 선택 구매용. throw 하지 않는다.
 export async function purchasePremiumPackage(
   pkg: PurchasesPackage,
-): Promise<boolean> {
-  if (!isReady()) return false;
+): Promise<PurchaseOutcome> {
+  if (!isReady()) return 'error';
   try {
     const { customerInfo } = await Purchases.purchasePackage(pkg);
-    return (
-      typeof customerInfo.entitlements.active[PREMIUM_ENTITLEMENT] !==
-      'undefined'
-    );
-  } catch {
-    // 유저 취소 포함 — 조용히 실패
-    return false;
+    // 결제는 통과했는데 entitlement가 없으면 언락할 수 없으므로 성공이 아니다.
+    return hasActivePremium(customerInfo) ? 'success' : 'error';
+  } catch (e) {
+    return isUserCancelled(e) ? 'cancelled' : 'error';
   }
 }
 
 // 오퍼링의 첫 패키지 구매 시도 → premium entitlement 활성 여부 반환.
 // 유저 취소/실패/오퍼링 없음 전부 false (throw 없음). 스토어 상품+오퍼링이
 // 구성되는 순간 페이월이 자동으로 실결제 플로우가 된다.
-export async function purchasePremium(): Promise<boolean> {
-  if (!isReady()) return false;
+export async function purchasePremium(): Promise<PurchaseOutcome> {
+  if (!isReady()) return 'error';
   try {
     const offering = await getCurrentOffering();
     const pkg = offering?.availablePackages?.[0];
-    if (!pkg) return false;
+    if (!pkg) return 'error';
     return purchasePremiumPackage(pkg);
   } catch {
-    // 유저 취소 포함 — 조용히 실패
-    return false;
+    return 'error';
   }
 }

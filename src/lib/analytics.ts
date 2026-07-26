@@ -18,8 +18,12 @@ export type AnalyticsEvent =
   | 'milestone_achieved'
   | 'paywall_view'
   | 'purchase_start'
+  // 취소와 실패를 나눠야 퍼널에서 "고민하다 이탈"과 "결제 장애"를 구분할 수 있다.
+  | 'purchase_cancel'
+  | 'purchase_error'
   | 'restore_success'
   | 'restore_none'
+  | 'restore_error'
   | 'trial_started'
   | 'premium_interest_click'
   | 'premium_purchase_success'
