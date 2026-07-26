@@ -184,6 +184,25 @@ export default function SettingsScreen() {
   const [shareReq, setShareReq] = useState<ShareRequest | null>(null);
   const [goalSeconds, setGoalSeconds] = useState<number | null>(null);
   const [savingGoal, setSavingGoal] = useState(false);
+  // AI 국외 전송 동의 — 서버가 SSOT. 여기서 끄면 전송이 즉시 차단된다.
+  const [aiConsent, setAiConsent] = useState(false);
+  const [aiConsentSaving, setAiConsentSaving] = useState(false);
+
+  // 낙관적 토글 + 실패 시 원복 (togglePublic과 동일 패턴)
+  const handleToggleAiConsent = async (next: boolean) => {
+    const prev = aiConsent;
+    setAiConsent(next);
+    setAiConsentSaving(true);
+    try {
+      const res = await apiUpdateSettings({ aiConsent: next });
+      setAiConsent(res.aiConsent);
+    } catch {
+      setAiConsent(prev);
+      Alert.alert('오류', 'AI 데이터 설정 변경에 실패했어요.');
+    } finally {
+      setAiConsentSaving(false);
+    }
+  };
 
   // ── 공개 배지 상태 ──
   const [handleInput, setHandleInput] = useState('');
@@ -277,6 +296,7 @@ export default function SettingsScreen() {
         if (meRes.status === 'fulfilled') {
           setMe(meRes.value);
           setGoalSeconds(meRes.value.settings.dailyGoalSeconds);
+          setAiConsent(meRes.value.settings.aiConsent);
         }
         if (statsRes.status === 'fulfilled') {
           setStats(statsRes.value);
@@ -848,6 +868,27 @@ export default function SettingsScreen() {
             </View>
           </View>
         )}
+      </View>
+
+      {/* AI 데이터 섹션 — 동의 철회 경로(동의 모달에서 "언제든 끌 수 있다"고 고지) */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>AI 데이터</Text>
+        <View style={styles.settingItem}>
+          <View style={styles.settingInfo}>
+            <Text style={styles.settingLabel}>AI 분석에 데이터 사용</Text>
+            <Text style={styles.settingDescription}>
+              대화와 업무 기록 요약이 Anthropic(미국)으로 전송돼요. 끄면 전송이
+              즉시 중단되고 AI 분석은 사용할 수 없어요.
+            </Text>
+          </View>
+          <Switch
+            value={aiConsent}
+            disabled={aiConsentSaving}
+            onValueChange={handleToggleAiConsent}
+            trackColor={{ false: colors.line, true: colors.primary }}
+            thumbColor={colors.white}
+          />
+        </View>
       </View>
 
       {/* 구독 섹션 */}

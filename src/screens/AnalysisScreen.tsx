@@ -18,6 +18,8 @@ import { track } from '../lib/analytics';
 import { usePremium } from '../lib/premium';
 import { stripMarkdown } from '../lib/markdown';
 import PaywallModal from '../components/PaywallModal';
+import AiConsentModal from '../components/AiConsentModal';
+import { apiGetMe } from '../lib/api/profile';
 import {
   AnalyzeRange,
   ChatMessage,
@@ -214,6 +216,16 @@ function ChatView({
     null,
   );
   const listRef = useRef<FlatList<ChatMessage>>(null);
+  // AI 국외 전송 동의 — 서버가 SSOT. null=아직 모름(조회 전), false=미동의.
+  const [aiConsent, setAiConsent] = useState<boolean | null>(null);
+  // 동의 후 원래 하려던 전송을 이어가기 위해 보류한 요청.
+  const [pendingBody, setPendingBody] = useState<ChatMessageBody | null>(null);
+
+  useEffect(() => {
+    apiGetMe()
+      .then((me) => setAiConsent(me.settings.aiConsent))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     apiGetChatMessages(session.id)
@@ -225,8 +237,19 @@ function ChatView({
   const scrollToEnd = () =>
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
 
-  const send = async (body: ChatMessageBody) => {
+  // consentJustGranted: 동의 직후 재호출용. setState는 다음 렌더에 반영되므로
+  // 같은 틱에서 aiConsent를 다시 읽으면 여전히 false라 모달이 무한히 다시 열린다.
+  const send = async (
+    body: ChatMessageBody,
+    consentJustGranted = false,
+  ) => {
     if (sending) return;
+    // 미동의면 전송하지 않고 동의 시트를 띄운다. 서버도 403으로 막지만,
+    // 여기서 먼저 잡아야 실패한 말풍선이 대화에 남지 않는다.
+    if (!consentJustGranted && aiConsent === false) {
+      setPendingBody(body);
+      return;
+    }
     setSending(true);
     setFailedAssistantId(null);
     const clientMessageId = makeClientMessageId();
@@ -422,6 +445,19 @@ function ChatView({
           )}
         </TouchableOpacity>
       </View>
+
+      {/* AI 국외 전송 동의 (5.1.2(i)) — 미동의 상태의 첫 전송 시도에서 뜬다 */}
+      <AiConsentModal
+        visible={pendingBody !== null}
+        onClose={() => setPendingBody(null)}
+        onAgreed={() => {
+          const body = pendingBody;
+          setPendingBody(null);
+          setAiConsent(true);
+          // 동의 직후 원래 하려던 전송을 이어간다(사용자가 다시 누르지 않게).
+          if (body) void send(body, true);
+        }}
+      />
     </KeyboardAvoidingView>
   );
 }

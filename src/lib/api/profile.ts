@@ -13,6 +13,8 @@ export interface MeResponse {
   settings: {
     dailyGoalSeconds: number;
     theme: string;
+    // AI 국외 전송(Anthropic) 동의 여부 — 서버가 SSOT. 앱은 게이트 판단에만 쓴다.
+    aiConsent: boolean;
   };
 }
 
@@ -30,12 +32,14 @@ export interface MeStats {
 export interface UpdateSettingsBody {
   dailyGoalSeconds?: number;
   theme?: string;
+  aiConsent?: boolean;
 }
 
 // PATCH /me/settings 응답
 export interface SettingsResponse {
   dailyGoalSeconds: number;
   theme: string;
+  aiConsent: boolean;
 }
 
 // POST /me/push-token 요청 본문 — Expo 푸시 토큰 등록(주간 리캡 등 원격 발송용)
