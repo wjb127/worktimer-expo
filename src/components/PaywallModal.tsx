@@ -98,6 +98,20 @@ export default function PaywallModal({
   const selectedPkg = selected === 'annual' ? annualPkg : monthlyPkg;
   const hasPlans = Boolean(annualPkg ?? monthlyPkg);
 
+  // 갱신 고지 — App Review 3.1.2(c) / Play 구독 고지: 체험 여부와 무관하게
+  // "얼마가 어떤 주기로 자동 갱신되는지"를 CTA 바로 옆에서 항상 밝힌다.
+  // (기존 문구는 "체험 종료 후 자동 갱신"뿐이라 전환 금액이 없었다)
+  // 조사 문제를 피하려고 "연 ₩9,900 자동 갱신" 형태로 붙인다.
+  const renewalNotice = (() => {
+    const period = selected === 'annual' ? '연' : '월';
+    const price = selectedPkg?.product.priceString;
+    if (!price) return '언제든 해지할 수 있어요';
+    const base = `${period} ${price} 자동 갱신 · 언제든 해지할 수 있어요`;
+    return selected === 'annual' && trialEligible
+      ? `7일 무료 체험 후 ${base}`
+      : base;
+  })();
+
   // 연간 절약률 — 양쪽 가격이 있을 때만 (월간×12 대비)
   const savingsPct =
     monthlyPkg && annualPkg && monthlyPkg.product.price > 0
@@ -111,16 +125,25 @@ export default function PaywallModal({
   const handleRestore = async () => {
     if (starting || restoring) return;
     setRestoring(true);
-    const ok = await restorePurchases();
+    const outcome = await restorePurchases();
     setRestoring(false);
-    if (ok) {
+    if (outcome === 'success') {
       track('restore_success', { feature: featureName });
       Alert.alert('복원 완료', '프리미엄 구독이 복원되었어요.');
       onUnlocked();
-    } else {
+      return;
+    }
+    if (outcome === 'none') {
       track('restore_none', { feature: featureName });
       Alert.alert('복원할 구매 없음', '이 계정으로 복원할 구독을 찾지 못했어요.');
+      return;
     }
+    // 'error' — 복원할 게 없는 것과 다르다. 재시도를 안내한다.
+    track('restore_error', { feature: featureName });
+    Alert.alert(
+      '복원하지 못했어요',
+      '네트워크 상태를 확인한 뒤 다시 시도해 주세요.',
+    );
   };
 
   const handlePurchase = async () => {
@@ -129,15 +152,27 @@ export default function PaywallModal({
     track('premium_interest_click', { feature: featureName, plan: selected });
     track('purchase_start', { feature: featureName, plan: selected });
     // 실결제 — 구매/복원 성공 시에만 언락 (실패·취소 시 아무것도 지급하지 않음)
-    const ok = await purchasePremiumPackage(selectedPkg);
+    const outcome = await purchasePremiumPackage(selectedPkg);
     setStarting(false);
-    if (ok) {
+    if (outcome === 'success') {
       track('premium_purchase_success', { plan: selected });
       if (selected === 'annual' && trialEligible) {
         track('trial_started', { plan: selected });
       }
       onUnlocked();
+      return;
     }
+    if (outcome === 'cancelled') {
+      // 정상 이탈 — 알림 없이 집계만 (사용자를 다시 붙잡지 않는다)
+      track('purchase_cancel', { feature: featureName, plan: selected });
+      return;
+    }
+    // 'error' — 지금까지는 조용히 아무 일도 안 일어나서 사용자가 원인을 몰랐다.
+    track('purchase_error', { feature: featureName, plan: selected });
+    Alert.alert(
+      '결제를 완료하지 못했어요',
+      '네트워크 상태를 확인한 뒤 다시 시도해 주세요. 이미 결제하셨다면 아래 구매 복원을 눌러 주세요.',
+    );
   };
 
   const renderPlans = () => (
@@ -252,11 +287,7 @@ export default function PaywallModal({
                       : `${monthlyPkg?.product.priceString ?? ''}/월로 시작하기`}
                 </Text>
               </TouchableOpacity>
-              <Text style={styles.footnote}>
-                {selected === 'annual' && trialEligible
-                  ? '체험 종료 후 자동 갱신 · 언제든 해지할 수 있어요'
-                  : '언제든 해지할 수 있어요'}
-              </Text>
+              <Text style={styles.footnote}>{renewalNotice}</Text>
             </>
           ) : (
             <TouchableOpacity

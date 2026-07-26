@@ -9,6 +9,8 @@ import {
   Switch,
   Modal,
   Alert,
+  Linking,
+  Platform,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -848,7 +850,33 @@ export default function SettingsScreen() {
         )}
       </View>
 
-      {/* 정보 섹션 */}
+      {/* 구독 섹션 */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>구독</Text>
+        {/* Google Play 구독 정책: 앱 안에서 구독 관리·해지 경로를 제공해야 한다.
+            iOS도 동일 위치에 Apple 구독 설정으로 보낸다(스토어별 딥링크). */}
+        <TouchableOpacity
+          style={styles.settingItem}
+          onPress={() => {
+            const url =
+              Platform.OS === 'ios'
+                ? 'https://apps.apple.com/account/subscriptions'
+                : 'https://play.google.com/store/account/subscriptions?package=kr.codeatlas.worktimer';
+            Linking.openURL(url).catch(() =>
+              Alert.alert(
+                '열 수 없어요',
+                Platform.OS === 'ios'
+                  ? '설정 앱 > Apple 계정 > 구독에서 관리할 수 있어요.'
+                  : 'Play 스토어 앱 > 메뉴 > 결제 및 정기 결제에서 관리할 수 있어요.',
+              ),
+            );
+          }}
+        >
+          <Text style={styles.settingLabel}>구독 관리 · 해지</Text>
+          <Ionicons name="open-outline" size={18} color={colors.inkSub} />
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>정보</Text>
         <View style={styles.settingItem}>
