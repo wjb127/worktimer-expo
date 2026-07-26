@@ -5,6 +5,21 @@
 v1.0.1 재배포+구독 심사 제출 완료 시점의 전체 현황과 "심사 후 마케팅" 로드맵.
 펴볼 때: "지금 어디까지 왔지", "마케팅 언제·뭐부터", "심사 상태", "안드 수익화 갭".
 
+## ✅✅ iOS 승인·출시 + Gate C 1단계 완료 (07-26)
+- **iOS 1.0.1 = READY_FOR_SALE** (구독 2개 동반 승인). Android vc4도 공개중 → **양대 스토어 라이브**.
+- **Sentry "에러 급증" 조사 결론 = 실사용자 영향 0.** 45건짜리 WatchdogTermination은 전부
+  `release=1.0.1+5`(build 5) · `device=iPhone18,2`(iPhone 17 Pro Max) · 1 user · **07-22 13:38~13:42 UTC(4분18초)**.
+  애플 반려 메시지 시각(22:44 KST=13:44 UTC) 직전 → **애플 심사관 기기의 심사 세션**이었음.
+  watchdog은 Sentry 휴리스틱(강제종료·비정상종료 추정)이고, 애플이 2.1(크래시) 아닌 3.1.x로만 반려 = 앱은 정상 작동했다는 뜻.
+  최근 24h 이벤트 0건, 현재 라이브 build 6 이벤트 0건. 백엔드 24h 에러 0건. → 테스트이벤트·해당 이슈 resolve 처리.
+- **Gate C-1 완료: XFF 스푸핑 방어 배포 + 실증 검증** (`d83d54f`+`9be81f3`+`2aa84d2`)
+  - ★서버엔 이미 `conf.d/10-cloudflare-realip.conf`가 있었음(v4 15+v6 7+header=23). 스니펫 중복설치하면 `real_ip_header` 중복으로 `nginx -t` 실패 → deploy.sh가 기존 구성 감지 시 **설치 건너뛰도록** 수정.
+  - 실제 취약점은 사이트 conf의 `X-Forwarded-For $proxy_add_x_forwarded_for` + 앱 `trust proxy=true` 조합이었고, 둘 다 교정.
+  - **수용 테스트 실측**: XFF `9.9.9.9`로 12회 → 401×10 후 429. XFF를 `8.8.8.8`로 바꿔도 **429 유지**. XFF 제거해도 429. → 위조로 버킷 리셋 불가 확인.
+  - 부수피해 0 (429는 내 테스트 8건뿐, 5xx 0, 앱 에러 0).
+  - deploy.sh가 nginx→단언→앱재시작 순서 강제 + 실패 시 자동 원복. 사이트 conf 백업 `/etc/nginx/sites-available/api.codeatlas.kr.bak-20260726-094534`.
+- **남은 것**: ①폰 1회 로그인으로 `login_event.ip`가 실기기 공인 IP인지 최종 단언(Wi-Fi/셀룰러 독립) ②OTA A~D ③iOS·Android 실결제·복원 스모크 ④filltime.app 구매 결정
+
 ## ✅ 3차 제출 완료 (07-24 03:52 KST) — build 6, 심사 대기중
 - 버전 1.0.1(build 6)+구독 2개 전부 WAITING_FOR_REVIEW. 3.1.1(복원버튼)·3.1.2c(페이월 링크) 해소본.
 - ★재제출 함정: 앱 반려로 자동 반환된 구독(REJECTED)은 **각 구독 페이지의 "심사 업데이트"**를 눌러야 "심사 준비됨"으로 복귀 → 그래야 제출건의 "다시 제출" 활성화.
