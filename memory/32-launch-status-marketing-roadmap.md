@@ -5,6 +5,32 @@
 v1.0.1 재배포+구독 심사 제출 완료 시점의 전체 현황과 "심사 후 마케팅" 로드맵.
 펴볼 때: "지금 어디까지 왔지", "마케팅 언제·뭐부터", "심사 상태", "안드 수익화 갭".
 
+## 🚨 Android 구글 로그인 프로덕션 장애 + 결제 E2E 성공 (07-27)
+
+**장애: Play 설치본에서 구글 로그인 100% 401 — 실기기 결제 스모크 중 발견**
+- 원인: `fe181f3`(07-17) azp 강제검증 도입 → `resolveAppIdByAudience`가 azp를 독립 검증하는데
+  서버에 `GOOGLE_ANDROID_CLIENT_ID` 미설정 → azp 미등록 판정 → `unknown app audience` 401.
+- **사이드로드 빌드로만 테스트해서 안 드러남.** Android vc4 제출(07-20)이 azp 검증(07-17) 이후인데
+  그 뒤로 실기기 구글 로그인을 한 번도 안 했다. 유저 0명이라 신고도 없었음.
+- 값 확보 방법(★재사용): `google-services.json`엔 WEB만 있고 gcloud로는 OAuth 클라이언트 조회 불가.
+  → **서버에 aud/azp warn 로그를 심고 폰에서 1회 로그인** → 로그에 azp 그대로 찍힘(`5bb75b7`).
+  GCP 콘솔 로그인 없이 해결. aud/azp는 공개 식별자라 로깅해도 안전.
+- 조치: 서버 `.env`에 `GOOGLE_ANDROID_CLIENT_ID=1052634480432-0kmimdu6c53m0pe62qv6d1kcklen0boo...` 추가
+  → 재시작 → `/auth/google 201` 확인.
+- ★교훈: **Play 서명본은 사이드로드와 다른 경로다.** 스토어 출시 전 반드시 Play 설치본으로
+  로그인·결제를 실기기 검증할 것. `installer=com.android.vending` 확인이 그 게이트.
+
+**결제 E2E 성공 (Android, 실기기 Galaxy A16)**
+- 사이드로드 제거 → Play 설치(`installer=com.android.vending`, vc4) → 구글 로그인 → 페이월 →
+  연간 7일 무료체험 구매 → **서버 반영까지 전 구간 통과**.
+- 페이월 실제 로드 확인: 연 ₩29,000(7일 체험, 월간 대비 51% 절약) / 월 ₩4,900.
+- 서버 실측: 웹훅 200 → `subscriptions: trial | filltime_premium:yearly | PLAY_STORE | PRODUCTION`,
+  `subscription_events: INITIAL_PURCHASE`, **user_id 매핑됨(jbwi0721@gmail.com, app_id=worktimer)**.
+  → 우려했던 "RC 익명ID라 서버 프리미엄 안 열림" 시나리오는 발생하지 않음.
+- ⚠️ **체험 만료 2026-08-03** — 그 전에 해지하지 않으면 ₩29,000 청구됨.
+- 페이월 문구가 구버전("체험 종료 후 자동 갱신", 금액 없음)인 것도 화면으로 확인 →
+  **Android OTA 미도달 재확인**(런타임 `b602a6e6` vs OTA `dfc77e82`). vc5 빌드 필요.
+
 ## ✅✅ iOS 승인·출시 + Gate C 1단계 완료 (07-26)
 - **iOS 1.0.1 = READY_FOR_SALE** (구독 2개 동반 승인). Android vc4도 공개중 → **양대 스토어 라이브**.
 - **Sentry "에러 급증" 조사 결론 = 실사용자 영향 0.** 45건짜리 WatchdogTermination은 전부
