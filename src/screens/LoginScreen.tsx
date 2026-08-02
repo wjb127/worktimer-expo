@@ -28,6 +28,15 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
 
   const google = async () => {
+    // web(=Tauri 데스크탑)에는 구글 네이티브 SDK가 없다. 그냥 두면 정체불명의
+    // TypeError가 Alert로 튀어나오므로, 왜 안 되는지와 대안을 알려준다.
+    if (Platform.OS === 'web') {
+      Alert.alert(
+        '데스크탑에서는 구글 로그인이 안 돼요',
+        '구글 로그인은 모바일 앱에서만 지원해요. 데스크탑에서는 아래 "게스트로 둘러보기"로 사용할 수 있어요.',
+      );
+      return;
+    }
     try {
       setBusy(true);
       await GoogleSignin.hasPlayServices();
