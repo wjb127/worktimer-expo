@@ -25,6 +25,7 @@ import { colors } from './src/theme/colors';
 import { initAnalytics, track } from './src/lib/analytics';
 import { initPurchases } from './src/lib/purchases';
 import { installWebAlert } from './src/lib/webAlert';
+import { setupPwa } from './src/lib/pwa';
 import { getOnboardingSeen } from './src/lib/onboarding';
 import {
   registerForPushNotifications,
@@ -197,6 +198,7 @@ function App() {
     // 웹(데스크탑)에서 Alert가 통째로 무반응인 걸 먼저 고쳐둔다 —
     // 아래 초기화들이 실패했을 때 그 알림조차 안 보이면 원인을 못 찾는다.
     installWebAlert();
+    setupPwa();
     initAnalytics();
     initPurchases();
     track('app_open');

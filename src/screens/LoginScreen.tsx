@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -12,8 +12,8 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiJson } from '../lib/api/client';
-import { desktopGoogleSignIn, isDesktop } from '../lib/desktopAuth';
 import { useAuth } from '../lib/auth/AuthContext';
+import { renderGoogleButton } from '../lib/webGoogleAuth';
 import { colors } from '../theme/colors';
 
 GoogleSignin.configure({
@@ -29,32 +29,42 @@ export default function LoginScreen() {
   // 화면에 직접 렌더하는 안내 문구. 웹에서는 Alert가 무반응이라 이게 유일한 통로다.
   const [notice, setNotice] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
+  // GIS가 구글 버튼을 그려 넣을 컨테이너 (웹 전용)
+  const gsiRef = useRef<View | null>(null);
 
-  const google = async () => {
-    // 데스크탑(Tauri)은 네이티브 SDK 대신 시스템 브라우저 + 루프백 + PKCE로 로그인한다.
-    // 구글이 임베디드 웹뷰 안의 OAuth를 차단하기 때문에 이 경로가 유일하다.
-    if (isDesktop()) {
+  // 웹에서 온 구글 id_token을 우리 토큰쌍으로 교환한다.
+  // 네이티브(google())와 서버 계약이 동일하다 — id_token만 넘기면 된다.
+  const exchangeGoogleIdToken = useCallback(
+    async (idToken: string) => {
       try {
         setBusy(true);
-        setNotice('브라우저에서 구글 로그인을 진행해 주세요.');
-        const pair = await desktopGoogleSignIn();
+        setNotice(null);
+        const pair = await apiJson<Pair>('/auth/google', {
+          method: 'POST',
+          body: JSON.stringify({ idToken }),
+        });
         await signInWithTokens(pair.accessToken, pair.refreshToken);
       } catch (e) {
-        // 웹에서는 Alert가 무반응이라(react-native-web의 Alert는 빈 구현)
-        // 실패 사유도 화면에 직접 렌더해야 한다.
+        // 웹에서는 Alert가 무반응(react-native-web의 Alert는 빈 구현)이라
+        // 실패 사유를 화면에 직접 렌더해야 한다.
         setNotice(`구글 로그인 실패\n${String((e as Error)?.message ?? e)}`);
       } finally {
         setBusy(false);
       }
-      return;
-    }
-    // 데스크탑이 아닌 웹(브라우저로 직접 연 경우)은 네이티브 SDK가 없어 불가.
-    if (Platform.OS === 'web') {
-      setNotice(
-        '구글 로그인은 모바일 앱과 데스크탑 앱에서만 지원해요.\n여기서는 아래 "게스트로 둘러보기"로 이용할 수 있어요.',
-      );
-      return;
-    }
+    },
+    [signInWithTokens],
+  );
+
+  // 웹에서는 구글 공식 버튼(GIS)을 직접 렌더한다. 커스텀 버튼을 코드로 클릭하는
+  // 우회는 GIS가 막고 있어서, 시도하면 "눌러도 반응 없음"으로 되돌아간다.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const el = gsiRef.current as unknown as HTMLElement | null;
+    if (!el) return;
+    void renderGoogleButton(el, exchangeGoogleIdToken, setNotice);
+  }, [exchangeGoogleIdToken]);
+
+  const google = async () => {
     try {
       setBusy(true);
       await GoogleSignin.hasPlayServices();
@@ -161,13 +171,17 @@ export default function LoginScreen() {
         />
       )}
 
-      <TouchableOpacity
-        style={styles.googleBtn}
-        onPress={google}
-        disabled={busy}
-      >
-        <Text style={styles.googleText}>Google로 계속하기</Text>
-      </TouchableOpacity>
+      {Platform.OS === 'web' ? (
+        <View ref={gsiRef} style={styles.gsiHost} accessibilityLabel="구글로 계속하기" />
+      ) : (
+        <TouchableOpacity
+          style={styles.googleBtn}
+          onPress={google}
+          disabled={busy}
+        >
+          <Text style={styles.googleText}>Google로 계속하기</Text>
+        </TouchableOpacity>
+      )}
 
       {notice && (
         <Text style={styles.notice} accessibilityLabel="로그인 안내">
@@ -252,7 +266,13 @@ const styles = StyleSheet.create({
     color: colors.inkSub,
     textDecorationLine: 'underline',
   },
-  // 웹(데스크탑)에서 Alert가 무반응이라, 안내는 화면에 직접 렌더한다
+  // GIS가 구글 버튼을 그려 넣는 자리 (웹 전용)
+  gsiHost: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // 웹에서 Alert가 무반응이라, 안내는 화면에 직접 렌더한다
   notice: {
     marginTop: 14,
     marginHorizontal: 8,
