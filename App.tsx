@@ -24,6 +24,7 @@ import AnnouncementBell from './src/components/AnnouncementBell';
 import { colors } from './src/theme/colors';
 import { initAnalytics, track } from './src/lib/analytics';
 import { initPurchases } from './src/lib/purchases';
+import { installWebAlert } from './src/lib/webAlert';
 import { getOnboardingSeen } from './src/lib/onboarding';
 import {
   registerForPushNotifications,
@@ -193,6 +194,9 @@ function App() {
   // 애널리틱스는 마운트 시 초기화 + 앱 오픈 이벤트 (키 없으면 no-op)
   // RevenueCat도 함께 초기화 (키 없으면 no-op, 수익화 스위치 OFF 상태)
   useEffect(() => {
+    // 웹(데스크탑)에서 Alert가 통째로 무반응인 걸 먼저 고쳐둔다 —
+    // 아래 초기화들이 실패했을 때 그 알림조차 안 보이면 원인을 못 찾는다.
+    installWebAlert();
     initAnalytics();
     initPurchases();
     track('app_open');

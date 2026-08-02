@@ -25,15 +25,18 @@ type Pair = { accessToken: string; refreshToken: string };
 export default function LoginScreen() {
   const { signInWithTokens } = useAuth();
   const [busy, setBusy] = useState(false);
+  // 화면에 직접 렌더하는 안내 문구. 웹에서는 Alert가 무반응이라 이게 유일한 통로다.
+  const [notice, setNotice] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
 
   const google = async () => {
-    // web(=Tauri 데스크탑)에는 구글 네이티브 SDK가 없다. 그냥 두면 정체불명의
-    // TypeError가 Alert로 튀어나오므로, 왜 안 되는지와 대안을 알려준다.
+    // web(=Tauri 데스크탑)에는 구글 네이티브 SDK가 없다.
+    // 안내를 Alert로 띄우면 안 된다 — react-native-web의 Alert는 구현이 비어 있어
+    // (class Alert { static alert() {} }) 버튼을 눌러도 아무 반응이 없다(실측).
+    // 그래서 화면에 직접 렌더되는 문구로 알린다.
     if (Platform.OS === 'web') {
-      Alert.alert(
-        '데스크탑에서는 구글 로그인이 안 돼요',
-        '구글 로그인은 모바일 앱에서만 지원해요. 데스크탑에서는 아래 "게스트로 둘러보기"로 사용할 수 있어요.',
+      setNotice(
+        '구글 로그인은 모바일 앱에서만 지원해요.\n데스크탑에서는 아래 "게스트로 둘러보기"로 이용할 수 있어요.',
       );
       return;
     }
@@ -151,6 +154,12 @@ export default function LoginScreen() {
         <Text style={styles.googleText}>Google로 계속하기</Text>
       </TouchableOpacity>
 
+      {notice && (
+        <Text style={styles.notice} accessibilityLabel="로그인 안내">
+          {notice}
+        </Text>
+      )}
+
       <TouchableOpacity
         style={styles.guestBtn}
         onPress={guest}
@@ -227,6 +236,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.inkSub,
     textDecorationLine: 'underline',
+  },
+  // 웹(데스크탑)에서 Alert가 무반응이라, 안내는 화면에 직접 렌더한다
+  notice: {
+    marginTop: 14,
+    marginHorizontal: 8,
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.inkSub,
+    textAlign: 'center',
   },
   // 개발/E2E 전용 버튼 — 보조(secondary) 톤으로 1차 CTA가 아님을 명확히
   devBtn: {
