@@ -12,6 +12,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiJson } from '../lib/api/client';
+import { desktopGoogleSignIn, isDesktop } from '../lib/desktopAuth';
 import { useAuth } from '../lib/auth/AuthContext';
 import { colors } from '../theme/colors';
 
@@ -30,13 +31,27 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
 
   const google = async () => {
-    // web(=Tauri 데스크탑)에는 구글 네이티브 SDK가 없다.
-    // 안내를 Alert로 띄우면 안 된다 — react-native-web의 Alert는 구현이 비어 있어
-    // (class Alert { static alert() {} }) 버튼을 눌러도 아무 반응이 없다(실측).
-    // 그래서 화면에 직접 렌더되는 문구로 알린다.
+    // 데스크탑(Tauri)은 네이티브 SDK 대신 시스템 브라우저 + 루프백 + PKCE로 로그인한다.
+    // 구글이 임베디드 웹뷰 안의 OAuth를 차단하기 때문에 이 경로가 유일하다.
+    if (isDesktop()) {
+      try {
+        setBusy(true);
+        setNotice('브라우저에서 구글 로그인을 진행해 주세요.');
+        const pair = await desktopGoogleSignIn();
+        await signInWithTokens(pair.accessToken, pair.refreshToken);
+      } catch (e) {
+        // 웹에서는 Alert가 무반응이라(react-native-web의 Alert는 빈 구현)
+        // 실패 사유도 화면에 직접 렌더해야 한다.
+        setNotice(`구글 로그인 실패\n${String((e as Error)?.message ?? e)}`);
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    // 데스크탑이 아닌 웹(브라우저로 직접 연 경우)은 네이티브 SDK가 없어 불가.
     if (Platform.OS === 'web') {
       setNotice(
-        '구글 로그인은 모바일 앱에서만 지원해요.\n데스크탑에서는 아래 "게스트로 둘러보기"로 이용할 수 있어요.',
+        '구글 로그인은 모바일 앱과 데스크탑 앱에서만 지원해요.\n여기서는 아래 "게스트로 둘러보기"로 이용할 수 있어요.',
       );
       return;
     }
