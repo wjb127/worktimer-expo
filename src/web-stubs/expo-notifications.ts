@@ -1,12 +1,12 @@
-// 웹(=Tauri 데스크탑) 번들 전용 expo-notifications 셰임 —
+// 웹(PWA) 번들 전용 expo-notifications 셰임 —
 // metro.config.js가 web 플랫폼에서만 갈아끼운다.
 //
 // expo-notifications는 웹에서 대부분의 메서드가 "not available on web"으로 **throw** 한다.
 // 앱은 세션 종료 흐름에서 예약 알림을 재계산하므로, 그냥 두면 종료 버튼이 먹통이 된다
 // (실측: 타이머가 계속 돌고 종료가 안 됨).
 //
-// 데스크탑 알림은 Tauri 쪽 트레이 앱이 idle 알림으로 이미 담당한다. 여기서는
-// "조용히 아무 일도 하지 않는다"가 맞는 동작이라 no-op + 빈 배열로 둔다.
+// 웹 알림이 필요해지면 Web Push로 따로 붙여야 한다(expo-notifications로는 안 된다).
+// 그 전까지는 "조용히 아무 일도 하지 않는다"가 맞는 동작이라 no-op + 빈 배열로 둔다.
 
 export type NotificationRequest = {
   identifier: string;
@@ -62,7 +62,7 @@ export async function setNotificationChannelAsync(
 }
 
 export async function getExpoPushTokenAsync(): Promise<{ data: string; type: string }> {
-  // 푸시 토큰은 데스크탑에 없다. 호출부가 문자열을 기대하므로 형태만 맞춘다.
+  // Expo 푸시 토큰은 웹에 없다. 호출부가 문자열을 기대하므로 형태만 맞춘다.
   return { data: '', type: 'expo' };
 }
 

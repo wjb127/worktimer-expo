@@ -21,7 +21,7 @@ let disabled = false; // 키 없음/초기화 실패 → 완전 no-op
 
 // 플랫폼별 공개 SDK 키. env는 런타임에 읽는다(테스트에서 주입 가능하도록 함수 내부 접근).
 function readKey(): string {
-  // web(=Tauri 데스크탑)은 스토어 결제 자체가 없다. iOS/Android 키를 그대로 넘기면
+  // web(PWA)은 스토어 결제 자체가 없다. iOS/Android 키를 그대로 넘기면
   // RevenueCat이 "Invalid API key. Use your Web Billing API key."로 거부하며
   // 부팅 때마다 콘솔 에러를 뱉는다. 키 없음 = 아래 disabled 경로(완전 no-op)로 보낸다.
   if (Platform.OS === 'web') return '';

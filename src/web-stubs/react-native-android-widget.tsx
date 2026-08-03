@@ -1,8 +1,8 @@
-// 웹(=Tauri 데스크탑) 번들 전용 스텁 — metro.config.js가 web 플랫폼에서만 갈아끼운다.
+// 웹(PWA) 번들 전용 스텁 — metro.config.js가 web 플랫폼에서만 갈아끼운다.
 //
 // 실제 모듈의 registerWidgetTaskHandler는 AppRegistry.registerHeadlessTask를 부르는데
 // react-native-web에는 그 API가 없어 번들 평가 도중 TypeError로 앱이 통째로 안 뜬다.
-// Android 홈화면 위젯은 데스크탑에 존재하지 않는 개념이라 전부 no-op으로 둔다.
+// Android 홈화면 위젯은 웹에 존재하지 않는 개념이라 전부 no-op으로 둔다.
 //
 // index.ts는 건드리지 않는다 — 그 파일에는 "Platform.OS 분기 금지"(headless 컨텍스트에서
 // PlatformConstants 조회가 죽는 실사고) 주석이 붙어 있어 네이티브 경로를 그대로 보존한다.
