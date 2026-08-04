@@ -21,6 +21,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { AuthProvider, useAuth } from './src/lib/auth/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
 import AnnouncementBell from './src/components/AnnouncementBell';
+import WebShell from './src/components/WebShell';
 import { colors } from './src/theme/colors';
 import { initAnalytics, track } from './src/lib/analytics';
 import { initPurchases } from './src/lib/purchases';
@@ -230,9 +231,12 @@ function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <AuthProvider>
-          <Root />
-        </AuthProvider>
+        {/* 웹에서만 폰 폭으로 가운데 고정 — 네이티브는 그대로 통과 */}
+        <WebShell>
+          <AuthProvider>
+            <Root />
+          </AuthProvider>
+        </WebShell>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

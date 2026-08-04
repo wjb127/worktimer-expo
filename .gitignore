@@ -51,3 +51,5 @@ report-codeatlas-*.html
 implementation-notes.html
 google-services.json
 .gstack/
+.vercel
+.env*
