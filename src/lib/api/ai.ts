@@ -23,6 +23,8 @@ export interface ChatMessage {
 export type ChatMessageBody = {
   content?: string;
   analyze?: AnalyzeRange;
+  /** 0=현재 기간, 1=직전 기간(어제/지난 주/지난 달). 미지정 시 서버가 0으로 본다. */
+  offset?: number;
   clientMessageId?: string;
 };
 

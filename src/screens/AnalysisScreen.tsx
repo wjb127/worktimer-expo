@@ -43,11 +43,27 @@ const RANGES: { key: AnalyzeRange; label: string }[] = [
   { key: 'month', label: '이번 달 분석' },
 ];
 
-const RANGE_USER_TEXT: Record<AnalyzeRange, string> = {
-  day: '오늘 업무 분석해줘',
-  week: '이번 주 업무 분석해줘',
-  month: '이번 달 업무 분석해줘',
+// 기간 오프셋 — 0=진행 중, 1=직전(끝난 기간).
+const OFFSETS: { value: number; label: string }[] = [
+  { value: 0, label: '이번' },
+  { value: 1, label: '지난' },
+];
+
+// 서버의 windowLabel과 같은 규약. 낙관적 말풍선이 서버 기록과 어긋나면 안 된다.
+const windowLabel = (range: AnalyzeRange, offset: number): string => {
+  if (offset === 0)
+    return range === 'day' ? '오늘' : range === 'week' ? '이번 주' : '이번 달';
+  if (range === 'day') return '어제';
+  if (range === 'week') return '지난 주';
+  return '지난 달';
 };
+
+// 칩 문구도 오프셋에 따라 바뀐다 — 무엇을 요청하는지 버튼에서 보이게.
+const chipLabel = (r: { key: AnalyzeRange; label: string }, offset: number) =>
+  offset === 0 ? r.label : `${windowLabel(r.key, offset)} 분석`;
+
+const rangeUserText = (range: AnalyzeRange, offset: number) =>
+  `${windowLabel(range, offset)} 업무 분석해줘`;
 
 const makeClientMessageId = () =>
   `client-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
@@ -209,6 +225,8 @@ function ChatView({
   const [loading, setLoading] = useState(true);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  // 분석 대상 기간 오프셋(0=이번, 1=지난)
+  const [offset, setOffset] = useState(0);
   const [streamingAssistantId, setStreamingAssistantId] = useState<
     string | null
   >(null);
@@ -256,7 +274,7 @@ function ChatView({
     const assistantTempId = `${clientMessageId}:pending`;
     const createdAt = new Date().toISOString();
     const userText = body.analyze
-      ? RANGE_USER_TEXT[body.analyze]
+      ? rangeUserText(body.analyze, body.offset ?? 0)
       : (body.content ?? '').trim();
     const requestBody = { ...body, clientMessageId };
     setStreamingAssistantId(assistantTempId);
@@ -406,18 +424,46 @@ function ChatView({
         />
       )}
 
+      {/* 기간 선택: 이번 / 지난 — 끝난 기간을 돌아보는 게 리캡의 본질이라 분리한다 */}
+      <View style={styles.offsetRow}>
+        {OFFSETS.map((o) => (
+          <TouchableOpacity
+            key={o.value}
+            style={[
+              styles.offsetBtn,
+              offset === o.value && styles.offsetBtnOn,
+              sending && styles.chipDisabled,
+            ]}
+            onPress={() => setOffset(o.value)}
+            disabled={sending}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityState={{ selected: offset === o.value }}
+          >
+            <Text
+              style={[
+                styles.offsetText,
+                offset === o.value && styles.offsetTextOn,
+              ]}
+            >
+              {o.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       {/* 분석 칩 */}
       <View style={styles.chipRow}>
         {RANGES.map((r) => (
           <TouchableOpacity
             key={r.key}
             style={[styles.chip, sending && styles.chipDisabled]}
-            onPress={() => void send({ analyze: r.key })}
+            onPress={() => void send({ analyze: r.key, offset })}
             disabled={sending}
             activeOpacity={0.8}
           >
             <Ionicons name="analytics" size={14} color={colors.primary} />
-            <Text style={styles.chipText}>{r.label}</Text>
+            <Text style={styles.chipText}>{chipLabel(r, offset)}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -646,6 +692,26 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   chipDisabled: { opacity: 0.5 },
+  offsetRow: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+  },
+  offsetBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.white,
+  },
+  offsetBtnOn: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryFaint,
+  },
+  offsetText: { fontSize: 12, fontWeight: '600', color: colors.inkSub },
+  offsetTextOn: { color: colors.primary },
   chipText: { fontSize: 12, fontWeight: '600', color: colors.primary },
   inputBar: {
     flexDirection: 'row',
