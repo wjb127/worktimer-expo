@@ -204,6 +204,18 @@ function SessionList({
                   {new Date(item.updatedAt).toLocaleDateString('ko-KR')}
                 </Text>
               </View>
+              {/* 웹에서는 롱프레스가 드래그·길게누르기로 승격되지 않아 삭제에 닿을 길이
+                  아예 없었다. 마우스 환경에서만 눈에 보이는 삭제 버튼을 둔다. */}
+              {Platform.OS === 'web' && (
+                <TouchableOpacity
+                  onPress={() => handleDelete(item)}
+                  hitSlop={8}
+                  accessibilityLabel={`${item.title} 삭제`}
+                  style={{ padding: 4 }}
+                >
+                  <Ionicons name="trash-outline" size={16} color={colors.inkSub} />
+                </TouchableOpacity>
+              )}
               <Ionicons name="chevron-forward" size={16} color={colors.inkSub} />
             </TouchableOpacity>
           )}

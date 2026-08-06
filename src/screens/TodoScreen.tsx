@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Keyboard,
   Modal,
+  Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -125,8 +126,68 @@ function RowBody({
 }
 
 // 진행중 행 — 길게 누르면 드래그 정렬 (행 전체 + 핸들 아이콘 둘 다)
-function PendingRow({ item, ...actions }: { item: Todo } & RowActions) {
+//
+// ★ 웹에서는 이 방식이 성립하지 않는다.
+// react-native-reorderable-list 는 RNGH 의 Pan 제스처로 끌기를 구현하는데,
+// 마우스로는 롱프레스가 드래그로 승격되지 않고 그대로 클릭으로 처리돼
+// (실측) 정렬 대신 '할 일 수정' 모달이 열려버렸다.
+// 그래서 웹에서는 드래그 핸들 자리에 위/아래 이동 버튼을 놓는다.
+function PendingRow({
+  item,
+  index,
+  count,
+  onMove,
+  ...actions
+}: {
+  item: Todo;
+  index: number;
+  count: number;
+  onMove: (from: number, to: number) => void;
+} & RowActions) {
   const drag = useReorderableDrag();
+
+  if (Platform.OS === 'web') {
+    const canUp = index > 0;
+    const canDown = index < count - 1;
+    return (
+      <View style={styles.todoRow}>
+        <RowBody
+          item={item}
+          meta={formatDuration(item.totalDuration ?? 0)}
+          {...actions}
+        />
+        <View style={styles.moveGroup}>
+          <TouchableOpacity
+            onPress={() => onMove(index, index - 1)}
+            disabled={!canUp}
+            hitSlop={6}
+            accessibilityLabel={`${item.title} 위로 이동`}
+            style={styles.moveBtn}
+          >
+            <Ionicons
+              name="chevron-up"
+              size={18}
+              color={canUp ? colors.inkSub : colors.line}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => onMove(index, index + 1)}
+            disabled={!canDown}
+            hitSlop={6}
+            accessibilityLabel={`${item.title} 아래로 이동`}
+            style={styles.moveBtn}
+          >
+            <Ionicons
+              name="chevron-down"
+              size={18}
+              color={canDown ? colors.inkSub : colors.line}
+            />
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <TouchableOpacity
       style={styles.todoRow}
@@ -437,7 +498,15 @@ export default function TodoScreen() {
           data={pending}
           keyExtractor={(t) => t.id}
           onReorder={handleReorder}
-          renderItem={({ item }) => <PendingRow item={item} {...rowActions} />}
+          renderItem={({ item, index }) => (
+            <PendingRow
+              item={item}
+              index={index}
+              count={pending.length}
+              onMove={(from, to) => handleReorder({ from, to })}
+              {...rowActions}
+            />
+          )}
           contentContainerStyle={styles.listContent}
         />
       ) : (
@@ -609,6 +678,9 @@ const styles = StyleSheet.create({
   todoMeta: { fontSize: 12, color: colors.inkSub, marginTop: 4 },
   deleteBtn: { marginLeft: 8, padding: 4 },
   dragHandle: { marginLeft: 6, padding: 2 },
+  // 웹 전용 순서 이동 버튼 (드래그 핸들 대체)
+  moveGroup: { marginLeft: 6, justifyContent: 'center' },
+  moveBtn: { paddingHorizontal: 2, paddingVertical: 1 },
   // 수정 시트
   editOverlay: {
     flex: 1,

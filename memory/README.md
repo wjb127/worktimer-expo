@@ -60,6 +60,7 @@
 | `32-launch-status-marketing-roadmap.md` | ★ 출시현황+마케팅로드맵(07-19밤) — **압축 후 재개 1순위**. iOS v1.0.1+구독 심사제출 완료 / 마케팅 게이트(iOS+Android 승인) / store_click 0 병목 / ⚠️Android 구독세팅 갭 / "마케팅 시작"=채널·랜딩→스토어·대시보드측정 |
 | `29-session-2026-07-18-ui-sprint.md` | ★ 세션종합(07-18) — **압축 후 재개 1순위**. UI스프린트(알림페이지·할일3탭·롤링피커·명예의전당·잔디입체감·공유복사저장·히트맵토글·통계리캡·버전자동)+OTA설정+Live Activity마크+브랜드색A+ASO메타 / 빌드6442ede2 설치·검증 / 다음=동적배지URL |
 | `33-pwa-and-ai-recap.md` | ★ PWA전환+AI기간+리캡(08-06) — **압축 후 재개 1순위**. 데스크탑앱 폐기→app.filltime.app PWA / 아이콘 두부(node_modules 404) 사고 / 웹스텁 3종+Alert 빈구현 / AI 후속대화 range 버그·offset·직전기간비교 / 룰베이스 리캡 무료+주간월간 푸시 / ⚠️예정외 실발송 사고→dry-run 기본 / **앱은 OTA 미반영** |
+| `34-recap-ui-roadmap.md` | ★ 리캡 앱 UI 로드맵(08-06) — **다음 개발 1순위**. 서버는 라이브(`GET /worktimer/recap`·크론·옵트아웃)인데 앱엔 화면·딥링크·토글 전부 없어 푸시 탭해도 앱만 열림. 응답 스키마(`empty`/`comparable`/`lines` 그대로 렌더)·푸시 payload(`type:'recap'`)·구현 순서(딥링크→화면→토글)·OTA 가능 조건(runtimeVersion, 새 의존성 금지) |
 | `raw/` | 원문 작업 로그(날짜별, 기본 비노출·지시 시에만 열람) |
 | `.private/01-codeatlas-infra.md` | (private) VPS·DB·op 시크릿 참조 |
 

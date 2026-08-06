@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   NativeScrollEvent,
   NativeSyntheticEvent,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,6 +20,9 @@ const VISIBLE = 5; // 홀수 — 가운데 강조 밴드
 const PAD = (VISIBLE - 1) / 2;
 const WHEEL_H = ITEM_H * VISIBLE;
 const SETTLE_DELAY_MS = 100;
+// 웹은 스크롤이 멎은 걸 알려주는 이벤트가 없어 정지를 직접 감지한다.
+// 마우스 휠은 틱 간격이 100ms를 넘길 수 있어 네이티브보다 넉넉히 둔다.
+const WEB_SETTLE_DELAY_MS = 220;
 
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
 const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
@@ -79,6 +83,19 @@ function Wheel({
     const clamped = getIndex(e.nativeEvent.contentOffset.y);
     latestIndex.current = clamped;
     setActive((current) => (clamped === current ? current : clamped));
+
+    // ★ 웹에서는 값이 영영 확정되지 않던 경로를 여기서 닫는다.
+    // react-native-web 의 ScrollView 는 onScrollEndDrag·onMomentumScrollEnd 를
+    // 발생시키지 않는다(터치 이벤트 기반이라 마우스 휠에는 아무것도 안 옴).
+    // 그래서 휠을 굴리면 하이라이트만 움직이고 onIndexChange 가 불리지 않아
+    // 고른 시각이 반영되지 않았다. 스크롤이 멎으면 확정한다.
+    if (Platform.OS === 'web') {
+      clearSettleTimer();
+      settleTimer.current = setTimeout(() => {
+        settleTimer.current = null;
+        settle(latestIndex.current);
+      }, WEB_SETTLE_DELAY_MS);
+    }
   };
 
   const settle = (clamped: number) => {

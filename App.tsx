@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, AppState, View } from 'react-native';
+import { ActivityIndicator, AppState, Platform, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -77,7 +77,10 @@ function MainTabs() {
         tabBarLabelStyle: { fontSize: 13, fontWeight: '600', marginBottom: 4 },
         tabBarIconStyle: { marginTop: 4 },
         tabBarStyle: {
-          height: 64 + insets.bottom,
+          // 웹에서는 64px 안에 아이콘(30+marginTop 4)과 라벨(13pt)이 다 들어가지 못해
+          // 라벨이 높이 1px로 눌려 글자가 통째로 사라졌다. 웹만 높이를 키운다
+          // (네이티브는 안전영역 인셋 덕에 여유가 있어 픽셀 그대로 둔다).
+          height: (Platform.OS === 'web' ? 80 : 64) + insets.bottom,
           paddingTop: 8,
           paddingBottom: insets.bottom + 8,
           borderTopWidth: 1,
