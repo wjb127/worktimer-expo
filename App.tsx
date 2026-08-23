@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
-import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, AppState, Platform, View } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useState } from "react";
+import { StatusBar } from "expo-status-bar";
+import { ActivityIndicator, AppState, Platform, View } from "react-native";
+import { NavigationContainer } from "@react-navigation/native";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
 import {
   TimerScreen,
   HistoryScreen,
@@ -14,29 +14,33 @@ import {
   OnboardingScreen,
   NotificationsScreen,
   DashboardScreen,
-} from './src/screens';
-import type { RootStackParamList } from './src/navigation/types';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AuthProvider, useAuth } from './src/lib/auth/AuthContext';
-import LoginScreen from './src/screens/LoginScreen';
-import AnnouncementBell from './src/components/AnnouncementBell';
-import WebShell from './src/components/WebShell';
-import { colors } from './src/theme/colors';
-import { initAnalytics, track } from './src/lib/analytics';
-import { initPurchases } from './src/lib/purchases';
-import { installWebAlert } from './src/lib/webAlert';
-import { setupPwa } from './src/lib/pwa';
-import { getOnboardingSeen } from './src/lib/onboarding';
+} from "./src/screens";
+import type { RootStackParamList } from "./src/navigation/types";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { AuthProvider, useAuth } from "./src/lib/auth/AuthContext";
+import LoginScreen from "./src/screens/LoginScreen";
+import AnnouncementBell from "./src/components/AnnouncementBell";
+import WebShell from "./src/components/WebShell";
+import { colors } from "./src/theme/colors";
+import { initAnalytics, track } from "./src/lib/analytics";
+import { initPurchases } from "./src/lib/purchases";
+import { installWebAlert } from "./src/lib/webAlert";
+import { installWebModalClamp } from "./src/lib/webModalClamp";
+import { setupPwa } from "./src/lib/pwa";
+import { getOnboardingSeen } from "./src/lib/onboarding";
 import {
   registerForPushNotifications,
   setupNotificationInbox,
   syncPresentedToInbox,
-} from './src/lib/notifications';
-import { checkAndApplyUpdate } from './src/lib/otaUpdates';
-import { publishWidgetData } from './src/lib/widget';
-import { initErrorTracking } from './src/lib/errorTracking';
-import * as Sentry from '@sentry/react-native';
+} from "./src/lib/notifications";
+import { checkAndApplyUpdate } from "./src/lib/otaUpdates";
+import { publishWidgetData } from "./src/lib/widget";
+import { initErrorTracking } from "./src/lib/errorTracking";
+import * as Sentry from "@sentry/react-native";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -51,36 +55,36 @@ function MainTabs() {
           let iconName: keyof typeof Ionicons.glyphMap;
 
           switch (route.name) {
-            case '타이머':
-              iconName = focused ? 'timer' : 'timer-outline';
+            case "타이머":
+              iconName = focused ? "timer" : "timer-outline";
               break;
-            case '기록':
-              iconName = focused ? 'calendar' : 'calendar-outline';
+            case "기록":
+              iconName = focused ? "calendar" : "calendar-outline";
               break;
-            case '할일':
-              iconName = focused ? 'checkbox' : 'checkbox-outline';
+            case "할일":
+              iconName = focused ? "checkbox" : "checkbox-outline";
               break;
-            case 'AI분석':
-              iconName = focused ? 'sparkles' : 'sparkles-outline';
+            case "AI분석":
+              iconName = focused ? "sparkles" : "sparkles-outline";
               break;
-            case '설정':
-              iconName = focused ? 'settings' : 'settings-outline';
+            case "설정":
+              iconName = focused ? "settings" : "settings-outline";
               break;
             default:
-              iconName = 'ellipse';
+              iconName = "ellipse";
           }
 
           return <Ionicons name={iconName} size={30} color={color} />;
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.inkSub,
-        tabBarLabelStyle: { fontSize: 13, fontWeight: '600', marginBottom: 4 },
+        tabBarLabelStyle: { fontSize: 13, fontWeight: "600", marginBottom: 4 },
         tabBarIconStyle: { marginTop: 4 },
         tabBarStyle: {
           // 웹에서는 64px 안에 아이콘(30+marginTop 4)과 라벨(13pt)이 다 들어가지 못해
           // 라벨이 높이 1px로 눌려 글자가 통째로 사라졌다. 웹만 높이를 키운다
           // (네이티브는 안전영역 인셋 덕에 여유가 있어 픽셀 그대로 둔다).
-          height: (Platform.OS === 'web' ? 80 : 64) + insets.bottom,
+          height: (Platform.OS === "web" ? 80 : 64) + insets.bottom,
           paddingTop: 8,
           paddingBottom: insets.bottom + 8,
           borderTopWidth: 1,
@@ -88,11 +92,11 @@ function MainTabs() {
         },
         headerShown: true,
         // 모든 화면 헤더에 브랜드명 "필타임"을 좌측 정렬, 블루/볼드로 표시
-        headerTitle: '필타임',
-        headerTitleAlign: 'left',
+        headerTitle: "필타임",
+        headerTitleAlign: "left",
         headerTitleStyle: {
           color: colors.primary,
-          fontWeight: '800',
+          fontWeight: "800",
           fontSize: 22,
         },
         // 헤더 우측 공지 종 아이콘
@@ -128,24 +132,24 @@ function AppNavigator() {
           name="알림"
           component={NotificationsScreen}
           options={{
-            title: '알림',
+            title: "알림",
             headerTintColor: colors.primary,
-            headerTitleStyle: { color: colors.ink, fontWeight: '700' },
+            headerTitleStyle: { color: colors.ink, fontWeight: "700" },
             headerStyle: { backgroundColor: colors.white },
             headerShadowVisible: false,
-            headerBackButtonDisplayMode: 'minimal',
+            headerBackButtonDisplayMode: "minimal",
           }}
         />
         <Stack.Screen
           name="대시보드"
           component={DashboardScreen}
           options={{
-            title: '상세 분석',
+            title: "상세 분석",
             headerTintColor: colors.primary,
-            headerTitleStyle: { color: colors.ink, fontWeight: '700' },
+            headerTitleStyle: { color: colors.ink, fontWeight: "700" },
             headerStyle: { backgroundColor: colors.white },
             headerShadowVisible: false,
-            headerBackButtonDisplayMode: 'minimal',
+            headerBackButtonDisplayMode: "minimal",
           }}
         />
       </Stack.Navigator>
@@ -176,7 +180,7 @@ function Root() {
   // 인증 로딩 또는 온보딩 플래그 로딩 중이면 스피너
   if (loading || onboardingSeen === null) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" />
       </View>
     );
@@ -202,10 +206,12 @@ function App() {
     // 웹(PWA)에서 Alert가 통째로 무반응인 걸 먼저 고쳐둔다 —
     // 아래 초기화들이 실패했을 때 그 알림조차 안 보이면 원인을 못 찾는다.
     installWebAlert();
+    // Modal은 WebShell 트리 밖 포털로 렌더돼 480px 클램프가 안 걸린다 — 여기서 CSS로 잡는다
+    installWebModalClamp();
     setupPwa();
     initAnalytics();
     initPurchases();
-    track('app_open');
+    track("app_open");
   }, []);
 
   // OTA 자동 적용 + 수신 알림 인박스 누적
@@ -216,8 +222,8 @@ function App() {
     // 포그라운드 수신·탭 알림을 인박스에 누적
     const cleanupInbox = setupNotificationInbox();
     // 포그라운드 복귀마다 OTA 재확인 + 트레이 동기화
-    const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
         checkAndApplyUpdate();
         syncPresentedToInbox();
       }
