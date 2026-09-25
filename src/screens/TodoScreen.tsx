@@ -30,6 +30,7 @@ import {
 } from "../lib/api/todos";
 import { colors } from "../theme/colors";
 import TodoTrendGraph from "../components/TodoTrendGraph";
+import LoadErrorView from "../components/LoadErrorView";
 
 // 할일 탭 — 진행중(삭제 전까지 영구) / 완료(오늘) / 기록(과거 완료 전체) 3분류.
 // 우선순위 높음은 상단 고정, 진행중은 길게 눌러 드래그 정렬, 목록 전체 복사 지원.
@@ -256,6 +257,10 @@ export default function TodoScreen() {
   const [copied, setCopied] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>("manual");
   const [historyView, setHistoryView] = useState<HistoryView>("list");
+  // 로딩 실패를 '할 일이 없어요'로 그리면 할일이 사라진 것처럼 읽힌다 — 실패로 보여준다.
+  // 성공 때만 false로 되돌린다(다시 시도 순간 빈 목록이 번쩍이지 않게).
+  const [loadError, setLoadError] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   // 수정 시트 상태
   const [editing, setEditing] = useState<Todo | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -265,8 +270,10 @@ export default function TodoScreen() {
     try {
       const list = await apiListTodos({ includeTime: true });
       setTodos(list);
+      setLoadError(false);
     } catch (e) {
       console.error("load todos error:", e);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -277,6 +284,12 @@ export default function TodoScreen() {
       load();
     }, [load]),
   );
+
+  const retryLoad = async () => {
+    setRetrying(true);
+    await load();
+    setRetrying(false);
+  };
 
   // 진행중 정렬. manual 이 기본이자 유일하게 순서를 '저장'하는 모드다 —
   // 다른 모드는 보기 방식일 뿐이라, 그 상태에서 순서를 옮기면 저장된 순서와
@@ -599,6 +612,12 @@ export default function TodoScreen() {
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
+      ) : loadError ? (
+        <LoadErrorView
+          message="할 일을 불러오지 못했어요"
+          onRetry={retryLoad}
+          retrying={retrying}
+        />
       ) : filter === "history" && historyView === "graph" ? (
         <TodoTrendGraph todos={history} />
       ) : current.length === 0 ? (

@@ -11,6 +11,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { apiListSessions } from '../../lib/api/sessions';
 import { colors, getHeatColor } from '../../theme/colors';
+import LoadErrorView from '../../components/LoadErrorView';
 
 // 명예의 전당 — 친구 랭킹(소셜) 대신 '나 자신'의 최고 몰입 기록을 랭킹.
 // 일/주/월 토글로 TOP 10. 실제 세션 데이터만(자작 수치 없음). 기록 없으면 빈 상태.
@@ -67,6 +68,9 @@ export default function BestView() {
   const [period, setPeriod] = useState<Period>('day');
   const [dayTotals, setDayTotals] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  // 로딩 실패를 '아직 기록이 없어요'로 그리면 기록이 사라진 것처럼 읽힌다 — 실패로 보여준다
+  const [loadError, setLoadError] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -81,8 +85,10 @@ export default function BestView() {
         grouped[s.date] = (grouped[s.date] || 0) + (s.duration || 0);
       });
       setDayTotals(grouped);
+      setLoadError(false);
     } catch (e) {
       console.error('best load error:', e);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -93,6 +99,12 @@ export default function BestView() {
       load();
     }, [load]),
   );
+
+  const retryLoad = async () => {
+    setRetrying(true);
+    await load();
+    setRetrying(false);
+  };
 
   const ranks = useMemo<Rank[]>(() => {
     const bucket: Record<string, { total: number; days: Set<string> }> = {};
@@ -145,7 +157,9 @@ export default function BestView() {
         })}
       </View>
 
-      {ranks.length === 0 ? (
+      {loadError ? (
+        <LoadErrorView onRetry={retryLoad} retrying={retrying} />
+      ) : ranks.length === 0 ? (
         <View style={styles.center}>
           <Ionicons name="trophy-outline" size={48} color={colors.line} />
           <Text style={styles.emptyText}>

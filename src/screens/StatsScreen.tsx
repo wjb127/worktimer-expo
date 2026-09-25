@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { apiListSessions } from '../lib/api/sessions';
 import { formatDateString, getMonthStart, getMonthEnd } from '../lib/dateUtils';
 import { colors } from '../theme/colors';
+import LoadErrorView from '../components/LoadErrorView';
 import ShareCardModal, { ShareRequest } from '../components/ShareCardModal';
 import { WeeklyData } from '../components/ShareCard';
 
@@ -49,6 +50,14 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 export default function StatsScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>('daily');
   const [chartData, setChartData] = useState<ChartData[]>([]);
+  // 로딩 실패 상태. 예전엔 로더에 try/catch 자체가 없어서 실패가 처리되지 않은 채
+  // 직전 기간 차트가 새 기간 제목 밑에 그대로 남았다. 실패는 실패로 보여준다.
+  // 성공 때만 false로 되돌린다(다시 시도 순간 빈 차트가 번쩍이지 않게).
+  const [loadError, setLoadError] = useState(false);
+  // 화살표 사이 기간 표시. 예전엔 chartData 첫·끝 날짜에서 뽑아서, 로딩이 실패하면
+  // 직전 기간 날짜가 남거나(수정 전) 빈칸이 됐다. 조회 '전에' 같은 두 날짜로 정해둔다.
+  const [rangeText, setRangeText] = useState('');
+  const [retrying, setRetrying] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [shareReq, setShareReq] = useState<ShareRequest | null>(null);
   const [recapLoading, setRecapLoading] = useState(false);
@@ -133,6 +142,7 @@ export default function StatsScreen() {
     // 최근 7일 — 범위 한 번 조회
     const start = new Date(baseDate);
     start.setDate(start.getDate() - 6);
+    setRangeText(`${formatDateString(start)} ~ ${formatDateString(baseDate)}`);
     const byDate = await sumByDate(formatDateString(start), formatDateString(baseDate));
 
     const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
@@ -156,6 +166,12 @@ export default function StatsScreen() {
     oldestWeekStart.setDate(oldestWeekStart.getDate() - oldestWeekStart.getDay() - 7 * 7);
     const newestWeekEnd = new Date(baseDate);
     newestWeekEnd.setDate(newestWeekEnd.getDate() - newestWeekEnd.getDay() + 6);
+    // 차트 막대의 date는 각 주의 시작일 — 마지막 막대 = 기준주 시작일
+    const newestWeekStart = new Date(baseDate);
+    newestWeekStart.setDate(newestWeekStart.getDate() - newestWeekStart.getDay());
+    setRangeText(
+      `${formatDateString(oldestWeekStart)} ~ ${formatDateString(newestWeekStart)}`,
+    );
     const byDate = await sumByDate(
       formatDateString(oldestWeekStart),
       formatDateString(newestWeekEnd),
@@ -182,6 +198,10 @@ export default function StatsScreen() {
     // 최근 6개월 — 6개월 전 1일 ~ 기준월 말일 한 번에 조회
     const oldest = new Date(baseDate.getFullYear(), baseDate.getMonth() - 5, 1);
     const newestEnd = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0);
+    // 차트 막대의 date는 각 달의 1일 — 마지막 막대 = 기준월 1일
+    setRangeText(
+      `${getMonthStart(oldest.getFullYear(), oldest.getMonth())} ~ ${getMonthStart(baseDate.getFullYear(), baseDate.getMonth())}`,
+    );
     const byDate = await sumByDate(
       getMonthStart(oldest.getFullYear(), oldest.getMonth()),
       getMonthEnd(newestEnd.getFullYear(), newestEnd.getMonth()),
@@ -202,17 +222,31 @@ export default function StatsScreen() {
   };
 
   const loadData = async () => {
-    switch (viewMode) {
-      case 'daily':
-        await loadDailyData(currentDate);
-        break;
-      case 'weekly':
-        await loadWeeklyData(currentDate);
-        break;
-      case 'monthly':
-        await loadMonthlyData(currentDate);
-        break;
+    try {
+      switch (viewMode) {
+        case 'daily':
+          await loadDailyData(currentDate);
+          break;
+        case 'weekly':
+          await loadWeeklyData(currentDate);
+          break;
+        case 'monthly':
+          await loadMonthlyData(currentDate);
+          break;
+      }
+      setLoadError(false);
+    } catch (e) {
+      console.error('stats load error:', e);
+      // 직전 기간 막대가 남지 않게 비운다(리캡 공유 버튼도 이걸로 잠긴다)
+      setChartData([]);
+      setLoadError(true);
     }
+  };
+
+  const retryLoad = async () => {
+    setRetrying(true);
+    await loadData();
+    setRetrying(false);
   };
 
   useFocusEffect(
@@ -280,12 +314,7 @@ export default function StatsScreen() {
     }
   };
 
-  const getDateRangeText = () => {
-    if (chartData.length === 0) return '';
-    const first = chartData[0];
-    const last = chartData[chartData.length - 1];
-    return `${first.date} ~ ${last.date}`;
-  };
+  const getDateRangeText = () => rangeText;
 
   const barWidth = useMemo(() => {
     const availableWidth = SCREEN_WIDTH - 80;
@@ -335,6 +364,10 @@ export default function StatsScreen() {
         </TouchableOpacity>
       </View>
 
+      {loadError ? (
+        <LoadErrorView onRetry={retryLoad} retrying={retrying} />
+      ) : (
+        <>
       {/* 요약 통계 */}
       <View style={styles.summaryContainer}>
         <View style={styles.summaryItem}>
@@ -393,6 +426,8 @@ export default function StatsScreen() {
           </View>
         </View>
       </ScrollView>
+        </>
+      )}
 
       <ShareCardModal request={shareReq} onClose={() => setShareReq(null)} />
     </View>

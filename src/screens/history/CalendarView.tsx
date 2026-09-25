@@ -27,6 +27,7 @@ import { colors, getHeatColor, getHeatTextColor } from '../../theme/colors';
 import { usePremium } from '../../lib/premium';
 import PaywallModal from '../../components/PaywallModal';
 import TimeRangeWheel from '../../components/TimeRangeWheel';
+import LoadErrorView from '../../components/LoadErrorView';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -76,6 +77,12 @@ export default function CalendarView() {
   const [editEndTime, setEditEndTime] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [monthTotal, setMonthTotal] = useState(0);
+  // 로딩 실패 상태. 실패를 빈 달력으로 그리면 "기록이 없다"로 읽힌다(LoadErrorView 주석 참고).
+  // 로드 '시작' 때가 아니라 '성공' 때 false로 되돌린다 — 다시 시도 누르는 순간
+  // 에러뷰가 사라지고 빈 달력이 번쩍이지 않게.
+  const [monthError, setMonthError] = useState(false);
+  const [dayError, setDayError] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   // 모달이 add 모드인지 edit 모드인지
   const isAddMode = addingHour !== null;
   const modalVisible = editingSession !== null || addingHour !== null;
@@ -94,6 +101,10 @@ export default function CalendarView() {
       );
     } catch (error) {
       console.error('loadMonthData error:', error);
+      // 이전 달 데이터를 남겨두면 새 달 날짜에 엉뚱한 색이 칠해진다 — 비우고 실패를 표시
+      setMonthData({});
+      setMonthTotal(0);
+      setMonthError(true);
       return;
     }
 
@@ -109,6 +120,7 @@ export default function CalendarView() {
 
     setMonthData(grouped);
     setMonthTotal(total);
+    setMonthError(false);
   };
 
   const loadDaySessions = async (date: string) => {
@@ -117,9 +129,20 @@ export default function CalendarView() {
         (s) => s.end_time !== null,
       );
       setSessions(data);
+      setDayError(false);
     } catch (error) {
       console.error('loadDaySessions error:', error);
+      // 직전에 본 날짜의 기록이 새 날짜 제목 밑에 남지 않게 비운다
+      setSessions([]);
+      setDayError(true);
     }
+  };
+
+  const retryLoad = async () => {
+    setRetrying(true);
+    await loadMonthData();
+    if (selectedDate) await loadDaySessions(selectedDate);
+    setRetrying(false);
   };
 
   const closeModal = () => {
@@ -289,7 +312,9 @@ export default function CalendarView() {
       {/* 이번달 총 업무시간 */}
       <View style={styles.monthTotalContainer}>
         <Text style={styles.monthTotalLabel}>{month + 1}월 총 업무시간</Text>
-        <Text style={styles.monthTotalValue}>{formatDuration(monthTotal)}</Text>
+        <Text style={styles.monthTotalValue}>
+          {monthError ? '—' : formatDuration(monthTotal)}
+        </Text>
       </View>
 
       <View style={styles.header}>
@@ -314,6 +339,9 @@ export default function CalendarView() {
         />
       </View>
 
+      {monthError ? (
+        <LoadErrorView onRetry={retryLoad} retrying={retrying} />
+      ) : (
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -381,7 +409,15 @@ export default function CalendarView() {
         })}
       </View>
 
-      {selectedDate && (
+      {/* 그날 기록 로딩 실패 — '0개'로 그리면 그날 한 일이 없는 것처럼 보인다 */}
+      {selectedDate && dayError && (
+        <View style={styles.timelineContainer}>
+          <Text style={styles.sessionListTitle}>{selectedDate} 기록</Text>
+          <LoadErrorView compact onRetry={retryLoad} retrying={retrying} />
+        </View>
+      )}
+
+      {selectedDate && !dayError && (
         <View style={styles.timelineContainer}>
           <Text style={styles.sessionListTitle}>
             {selectedDate} 기록 ({sessions.length}개)
@@ -460,6 +496,7 @@ export default function CalendarView() {
         </View>
       )}
       </ScrollView>
+      )}
 
       {/* 세션 추가/수정 모달 (add/edit 겸용) */}
       <Modal

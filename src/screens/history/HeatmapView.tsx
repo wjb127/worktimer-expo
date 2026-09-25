@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { apiListSessions } from '../../lib/api/sessions';
 import { formatDateString } from '../../lib/dateUtils';
 import { colors, getHeatColor } from '../../theme/colors';
+import LoadErrorView from '../../components/LoadErrorView';
 
 const MONTHS = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -46,6 +47,10 @@ export default function HeatmapView() {
   const [yearData, setYearData] = useState<Record<string, number>>({});
   const [totalDuration, setTotalDuration] = useState(0);
   const [totalDays, setTotalDays] = useState(0);
+  // 로딩 실패를 빈 히트맵(총 0분)으로 그리면 "기록이 없다"로 읽힌다 — 실패로 보여준다.
+  // 성공했을 때만 false로 되돌린다(다시 시도 순간 빈 그리드가 번쩍이지 않게).
+  const [loadError, setLoadError] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   const yearOptions = useMemo(() => getYearOptions(), []);
 
@@ -60,6 +65,11 @@ export default function HeatmapView() {
       );
     } catch (error) {
       console.error('loadYearData error:', error);
+      // 이전 연도 데이터가 새 연도 칸에 남지 않게 비운다
+      setYearData({});
+      setTotalDuration(0);
+      setTotalDays(0);
+      setLoadError(true);
       return;
     }
 
@@ -77,6 +87,13 @@ export default function HeatmapView() {
     setYearData(grouped);
     setTotalDuration(total);
     setTotalDays(Object.keys(grouped).length);
+    setLoadError(false);
+  };
+
+  const retryLoad = async () => {
+    setRetrying(true);
+    await loadYearData(selectedYear);
+    setRetrying(false);
   };
 
   useFocusEffect(
@@ -212,6 +229,10 @@ export default function HeatmapView() {
         </TouchableOpacity>
       </View>
 
+      {loadError ? (
+        <LoadErrorView onRetry={retryLoad} retrying={retrying} />
+      ) : (
+        <>
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
           <Text style={styles.statValue}>{formatDuration(totalDuration)}</Text>
@@ -335,6 +356,8 @@ export default function HeatmapView() {
           </View>
         </View>
       </ScrollView>
+        </>
+      )}
 
       {/* 연도 선택 모달 */}
       <Modal
