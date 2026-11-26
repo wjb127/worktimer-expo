@@ -66,8 +66,10 @@ deploy/    codeatlas-api.service(systemd), nginx conf, deploy.sh
   - 터널: `codeatlas-api` (ID `d42bc1b4-fcc1-4aea-9033-3817032145bc`, 원격 관리형 — 라우팅은 CF API `cfd_tunnel/{id}/configurations`). DNS `api` = CNAME `<id>.cfargotunnel.com` (proxied).
   - VPS: systemd `cloudflared-codeatlas` (DynamicUser, `/etc/cloudflared/tunnel.env` 600에 실행 토큰). 패키지는 pkg.cloudflare.com apt 저장소.
   - nginx `conf.d/10-cloudflare-realip.conf`에 `set_real_ip_from 127.0.0.1;` 추가 — 없으면 전 사용자가 127.0.0.1로 묶여 레이트리밋이 전체에 걸린다. 백업 `/root/10-cloudflare-realip.conf.bak-20261126`.
-  - 롤백: api DNS를 A `45.77.135.225`(proxied)로 되돌리면 즉시 기존 경로. UFW 80/443(CF 대역)은 admin·bot이 아직 직접 경로라 유지 중.
-  - ⚠️ `admin.codeatlas.kr`·`bot.codeatlas.kr`는 아직 직접 경로(같은 유실 영향 가능). 옮기려면 같은 터널 ingress에 호스트 추가 + DNS CNAME.
+  - 롤백: 해당 호스트 DNS를 A `45.77.135.225`(proxied)로 되돌리면 즉시 기존 경로. UFW 80/443(CF 대역) 규칙은 롤백 대비로 아직 유지.
+  - 2026-11-27 `admin.codeatlas.kr`·`bot.codeatlas.kr`도 같은 터널로 전환(전환 전 25회 중 10~11회 타임아웃 → 전환 후 0회). ingress는 호스트마다 `https://127.0.0.1:443` + SNI/Host=자기 이름.
+  - bot 인증서는 webroot(HTTP-01) 갱신이라, 터널(443)로 오는 검증 요청을 위해 `sites-available/bot.codeatlas.kr` 443 블록에도 `/.well-known/acme-challenge/` 위치를 추가함(백업 `/root/bot.codeatlas.kr.bak-20261127`). admin·api는 DNS-01이라 무관.
+- 2026-11-27 km-312 본식스냅 시연(:8312, systemd `km312`) 폐기: 서비스·유닛·`/opt/km312`·UFW 8312 삭제. 소스·데이터 압축본 `/root/archive/km312-20261127.tar.gz`(node_modules 제외).
 - Cloudflare 프록시 → nginx → Node :3000 + Let's Encrypt DNS-01 자동갱신 + systemd `codeatlas-api`(Restart=always).
 - 하드닝: 80/443은 Cloudflare 대역만 UFW 허용, fail2ban, SSH 키 전용, systemd 비root `codeatlas` + sandboxing.
 - 배포: 로컬 `pnpm build` → `deploy/deploy.sh`(rsync dist + pnpm install --prod + `pnpm dlx prisma generate` + systemctl restart). **VPS에서 tsc 안 돌림.**
