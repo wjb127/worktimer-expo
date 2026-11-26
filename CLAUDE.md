@@ -69,3 +69,11 @@ Related: `todos`, `session_todos` (M:N link), `session_meta` (category/descripti
 - Calendar/heatmap use a **blue** 2-hour-bucket scale (`src/theme/colors.ts`), not green
 - Timer progress ring completes once per minute
 - New native build NOT needed for JS-only changes — Metro serves them live (see `memory/08-expo-gotchas.md`)
+
+## Infra credentials (1Password references only — never write values)
+
+- `api.codeatlas.kr` runs through **Cloudflare Tunnel** `codeatlas-api` since 2026-11-27 (details: `memory/04-platform-backend.md`).
+- Cloudflare API token for Tunnel edit + `codeatlas.kr` DNS edit: `op://AI-Agents/4oj2qbb3nyduuug3e7ttwma2r4/credential`
+  - ⚠️ Title is "CF API 토큰 codeatlas-tunnel-dns (qhv147 계정, …)" — searching "filltime"/"worktimer" will NOT find it. Use the ID.
+  - Use it piped as `Authorization: Bearer` for `accounts/46e9985a2cd78037a239e6a0a1a4067d/cfd_tunnel/...` and `zones/a6b374a69ec4558c86093424711a7a82/dns_records/...`
+- Older CF token `op://Dev-Clients/otdvwuq4kkzw7xakwqwrcamshi/password` (title "개발자 CF 계정 토큰(위승빈)") — R2 backup/rclone credential source; it has Tunnel **read only**, no Tunnel edit.

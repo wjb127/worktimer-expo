@@ -61,6 +61,13 @@ deploy/    codeatlas-api.service(systemd), nginx conf, deploy.sh
 
 ## 배포 / 운영
 
+- ★ **2026-11-27부터 `api.codeatlas.kr`는 Cloudflare Tunnel 경유**: Cloudflare 엣지 → 터널(cloudflared, VPS→NRT 아웃바운드 4연결) → nginx `https://127.0.0.1:443`(SNI·Host=api.codeatlas.kr) → Node :3000.
+  - 이유: 한국 요청 다수가 CF **HKG**에서 처리되는데, HKG→VPS 인바운드 TCP에서 VPS의 SYN-ACK가 유실돼 요청 15~25%가 10초 멈춤(ICMP는 0% 유실). 터널 전환 후 80/80 정상, SYN 재전송 0. 진단 근거: 이 세션 2026-11-26 패킷 캡처.
+  - 터널: `codeatlas-api` (ID `d42bc1b4-fcc1-4aea-9033-3817032145bc`, 원격 관리형 — 라우팅은 CF API `cfd_tunnel/{id}/configurations`). DNS `api` = CNAME `<id>.cfargotunnel.com` (proxied).
+  - VPS: systemd `cloudflared-codeatlas` (DynamicUser, `/etc/cloudflared/tunnel.env` 600에 실행 토큰). 패키지는 pkg.cloudflare.com apt 저장소.
+  - nginx `conf.d/10-cloudflare-realip.conf`에 `set_real_ip_from 127.0.0.1;` 추가 — 없으면 전 사용자가 127.0.0.1로 묶여 레이트리밋이 전체에 걸린다. 백업 `/root/10-cloudflare-realip.conf.bak-20261126`.
+  - 롤백: api DNS를 A `45.77.135.225`(proxied)로 되돌리면 즉시 기존 경로. UFW 80/443(CF 대역)은 admin·bot이 아직 직접 경로라 유지 중.
+  - ⚠️ `admin.codeatlas.kr`·`bot.codeatlas.kr`는 아직 직접 경로(같은 유실 영향 가능). 옮기려면 같은 터널 ingress에 호스트 추가 + DNS CNAME.
 - Cloudflare 프록시 → nginx → Node :3000 + Let's Encrypt DNS-01 자동갱신 + systemd `codeatlas-api`(Restart=always).
 - 하드닝: 80/443은 Cloudflare 대역만 UFW 허용, fail2ban, SSH 키 전용, systemd 비root `codeatlas` + sandboxing.
 - 배포: 로컬 `pnpm build` → `deploy/deploy.sh`(rsync dist + pnpm install --prod + `pnpm dlx prisma generate` + systemctl restart). **VPS에서 tsc 안 돌림.**
